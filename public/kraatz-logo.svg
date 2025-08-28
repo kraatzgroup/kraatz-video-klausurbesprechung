@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <!-- Building structure -->
+  <polygon points="297,217 512,100 727,217 735,351 297,351" fill="#4A90E2"/>
+  <rect x="297" y="351" width="438" height="15" fill="#4A90E2"/>
+  
+  <!-- Columns top -->
+  <rect x="341" y="382" width="35" height="18" fill="#4A90E2"/>
+  <rect x="480" y="382" width="35" height="18" fill="#4A90E2"/>
+  <rect x="619" y="382" width="35" height="18" fill="#4A90E2"/>
+  
+  <!-- Column bases -->
+  <rect x="358" y="418" width="18" height="18" fill="#4A90E2"/>
+  <rect x="497" y="418" width="18" height="18" fill="#4A90E2"/>
+  <rect x="636" y="418" width="18" height="18" fill="#4A90E2"/>
+  
+  <!-- Text "Kraatz" -->
+  <text x="42" y="580" font-family="Arial, sans-serif" font-size="140" font-weight="bold" fill="#4A90E2">Kraatz</text>
+  
+  <!-- Text "Group" -->
+  <text x="540" y="580" font-family="Arial, sans-serif" font-size="140" font-weight="bold" fill="#000">Group</text>
+  
+  <!-- Bottom building structure -->
+  <rect x="320" y="600" width="35" height="18" fill="#4A90E2"/>
+  <rect x="480" y="600" width="35" height="18" fill="#4A90E2"/>
+  <rect x="640" y="600" width="35" height="18" fill="#4A90E2"/>
+  
+  <rect x="297" y="650" width="438" height="15" fill="#4A90E2"/>
+  <rect x="297" y="685" width="438" height="40" fill="#4A90E2"/>
+</svg>
