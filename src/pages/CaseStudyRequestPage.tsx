@@ -20,6 +20,7 @@ export const CaseStudyRequestPage: React.FC = () => {
   const [error, setError] = useState('')
 
   const [formData, setFormData] = useState({
+    studyPhase: '',
     legalArea: '',
     subArea: '',
     focusArea: '',
@@ -30,6 +31,7 @@ export const CaseStudyRequestPage: React.FC = () => {
     if (user) {
       fetchUserProfile()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   const fetchUserProfile = async () => {
@@ -53,6 +55,7 @@ export const CaseStudyRequestPage: React.FC = () => {
   const handleLegalAreaChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newLegalArea = e.target.value
     setFormData({
+      studyPhase: formData.studyPhase,
       legalArea: newLegalArea,
       subArea: '',
       focusArea: '',
@@ -98,6 +101,7 @@ export const CaseStudyRequestPage: React.FC = () => {
         .from('case_study_requests')
         .insert({
           user_id: user!.id,
+          study_phase: formData.studyPhase,
           legal_area: formData.legalArea,
           sub_area: formData.randomAssignment ? null : formData.subArea,
           focus_area: formData.randomAssignment ? 'Beliebige Klausur gewünscht' : formData.focusArea,
@@ -186,6 +190,23 @@ export const CaseStudyRequestPage: React.FC = () => {
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div>
+            <label htmlFor="studyPhase" className="block text-sm font-medium text-text-secondary mb-2">
+              In welcher Phase des Studiums befindest Du Dich? *
+            </label>
+            <select
+              id="studyPhase"
+              value={formData.studyPhase}
+              onChange={(e) => setFormData({...formData, studyPhase: e.target.value})}
+              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+              required
+            >
+              <option value="">Bitte wähle Deine Studienphase</option>
+              <option value="Grund- und Hauptstudium">Grund- und Hauptstudium</option>
+              <option value="1. Examensvorbereitung">1. Examensvorbereitung</option>
+            </select>
+          </div>
+
           <div>
             <label htmlFor="legalArea" className="block text-sm font-medium text-text-secondary mb-2">
               Rechtsgebiet *
@@ -286,7 +307,7 @@ export const CaseStudyRequestPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={submitting || !formData.legalArea || (!formData.randomAssignment && (!formData.subArea || !formData.focusArea))}
+              disabled={submitting || !formData.studyPhase || !formData.legalArea || (!formData.randomAssignment && (!formData.subArea || !formData.focusArea))}
               className="flex-1 bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? 'Wird angefordert...' : 'Sachverhalt anfordern (1 Klausur)'}

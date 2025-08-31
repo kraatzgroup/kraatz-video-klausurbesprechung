@@ -40,11 +40,21 @@ CREATE TABLE public.orders (
 CREATE TABLE public.case_study_requests (
     id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
     user_id UUID REFERENCES public.users(id) ON DELETE CASCADE NOT NULL,
+    case_study_number INTEGER,
+    study_phase TEXT NOT NULL,
     legal_area TEXT NOT NULL,
     sub_area TEXT NOT NULL,
     focus_area TEXT NOT NULL,
-    status TEXT DEFAULT 'requested' CHECK (status IN ('requested', 'materials_ready', 'submitted', 'corrected')),
+    status TEXT DEFAULT 'requested' CHECK (status IN ('requested', 'materials_ready', 'submitted', 'under_review', 'corrected', 'completed')),
     pdf_url TEXT,
+    case_study_material_url TEXT,
+    additional_materials_url TEXT,
+    submission_url TEXT,
+    submission_downloaded_at TIMESTAMP WITH TIME ZONE,
+    video_correction_url TEXT,
+    written_correction_url TEXT,
+    video_viewed_at TIMESTAMP WITH TIME ZONE,
+    pdf_downloaded_at TIMESTAMP WITH TIME ZONE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -58,6 +68,8 @@ CREATE TABLE public.submissions (
     status TEXT DEFAULT 'submitted' CHECK (status IN ('submitted', 'under_review', 'corrected')),
     correction_video_url TEXT,
     landing_page_url TEXT,
+    grade NUMERIC(4,2) CHECK (grade >= 0 AND grade <= 18),
+    grade_text TEXT,
     submitted_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     corrected_at TIMESTAMP WITH TIME ZONE
 );
@@ -70,6 +82,7 @@ CREATE TABLE public.notifications (
     message TEXT NOT NULL,
     type TEXT DEFAULT 'info' CHECK (type IN ('info', 'success', 'warning')),
     read BOOLEAN DEFAULT false,
+    related_case_study_id UUID REFERENCES public.case_study_requests(id) ON DELETE CASCADE,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
@@ -190,10 +203,18 @@ BEGIN
     VALUES (
         NEW.id,
         NEW.email,
-        COALESCE(NEW.raw_user_meta_data->>'first_name', ''),
-        COALESCE(NEW.raw_user_meta_data->>'last_name', '')
+        COALESCE(NEW.raw_user_meta_data->>'first_name', COALESCE(NEW.user_metadata->>'first_name', '')),
+        COALESCE(NEW.raw_user_meta_data->>'last_name', COALESCE(NEW.user_metadata->>'last_name', ''))
     );
     RETURN NEW;
+EXCEPTION
+    WHEN unique_violation THEN
+        -- User already exists, just return
+        RETURN NEW;
+    WHEN OTHERS THEN
+        -- Log error but don't fail the auth user creation
+        RAISE WARNING 'Failed to create user profile: %', SQLERRM;
+        RETURN NEW;
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 

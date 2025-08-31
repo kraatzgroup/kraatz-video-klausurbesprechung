@@ -11,7 +11,12 @@ import { PackagesPage } from './pages/PackagesPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CaseStudiesPage } from './pages/CaseStudiesPage'
 import { CaseStudyRequestPage } from './pages/CaseStudyRequestPage'
+import { ResultsPage } from './pages/ResultsPage'
 import InstructorDashboard from './pages/InstructorDashboard'
+import SuperAdminDashboard from './pages/SuperAdminDashboard'
+import AdminUserManagement from './pages/AdminUserManagement'
+import SettingsPage from './pages/SettingsPage'
+import { ProfilePage } from './pages/ProfilePage'
 
 function App() {
   return (
@@ -54,12 +59,52 @@ function App() {
               }
             />
             <Route
-              path="/instructor"
+              path="/results"
               element={
                 <ProtectedRoute>
-                  <RoleBasedRoute allowedRoles={['instructor']}>
-                    <InstructorDashboard />
+                  <RoleBasedRoute allowedRoles={['student']}>
+                    <ResultsPage />
                   </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/instructor"
+              element={
+                <ProtectedRoute requiredRole="instructor">
+                  <InstructorDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <SuperAdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/users"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <AdminUserManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/settings"
+              element={
+                <ProtectedRoute>
+                  <SettingsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <ProfilePage />
                 </ProtectedRoute>
               }
             />

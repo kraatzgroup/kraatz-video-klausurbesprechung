@@ -66,12 +66,33 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       email,
       password,
     })
-    return { error }
+
+    if (error) {
+      return { error }
+    }
+
+    return { error: null }
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    try {
+      // Clear local state first
+      setUser(null)
+      setSession(null)
+      
+      // Then attempt Supabase signout
+      const { error } = await supabase.auth.signOut()
+      
+      // Even if there's an error (like session missing), we've cleared local state
+      // so the user appears logged out in the UI
+      return { error: null }
+    } catch (error) {
+      console.error('SignOut error:', error)
+      // Still clear local state even if Supabase call fails
+      setUser(null)
+      setSession(null)
+      return { error: null }
+    }
   }
 
   const resetPassword = async (email: string) => {

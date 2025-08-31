@@ -2,33 +2,36 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { Bell, User, LogOut, CreditCard, BookOpen, Users } from 'lucide-react'
+import { User, CreditCard, LogOut, Users } from 'lucide-react'
+import { NotificationDropdown } from '../NotificationDropdown'
 
 export const Header: React.FC = () => {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [userRole, setUserRole] = useState<string>('student')
+  const [userCredits, setUserCredits] = useState<number>(0)
 
   useEffect(() => {
-    const fetchUserRole = async () => {
+    const fetchUserData = async () => {
       if (user) {
         try {
           const { data, error } = await supabase
             .from('users')
-            .select('role')
+            .select('role, account_credits')
             .eq('id', user.id)
             .single()
           
           if (data && !error) {
             setUserRole(data.role || 'student')
+            setUserCredits(data.account_credits || 0)
           }
         } catch (error) {
-          console.error('Error fetching user role:', error)
+          console.error('Error fetching user data:', error)
         }
       }
     }
 
-    fetchUserRole()
+    fetchUserData()
   }, [user])
 
   const handleSignOut = async () => {
@@ -47,15 +50,17 @@ export const Header: React.FC = () => {
           </div>
 
           <nav className="hidden md:flex items-center space-x-8">
-            <Link
-              to="/packages"
-              className="text-text-secondary hover:text-primary transition-colors"
-            >
-              Pakete
-            </Link>
             {user && (
               <>
-                {userRole === 'instructor' ? (
+                {userRole === 'admin' ? (
+                  <Link
+                    to="/admin"
+                    className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
+                  >
+                    <Users className="w-4 h-4" />
+                    Admin Dashboard
+                  </Link>
+                ) : userRole === 'instructor' ? (
                   <Link
                     to="/instructor"
                     className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
@@ -77,6 +82,12 @@ export const Header: React.FC = () => {
                     >
                       Sachverhalte
                     </Link>
+                    <Link
+                      to="/results"
+                      className="text-text-secondary hover:text-primary transition-colors"
+                    >
+                      Ergebnisse
+                    </Link>
                   </>
                 )}
               </>
@@ -86,14 +97,11 @@ export const Header: React.FC = () => {
           <div className="flex items-center space-x-4">
             {user ? (
               <>
-                <button className="relative p-2 text-text-secondary hover:text-primary transition-colors">
-                  <Bell className="w-5 h-5" />
-                  <span className="absolute top-0 right-0 block h-2 w-2 rounded-full bg-red-400"></span>
-                </button>
+                <NotificationDropdown />
                 
                 <div className="flex items-center space-x-2">
                   <CreditCard className="w-4 h-4 text-text-secondary" />
-                  <span className="text-sm text-text-secondary">Klausuren: 0</span>
+                  <span className="text-sm text-text-secondary">Klausuren: {userCredits}</span>
                 </div>
 
                 <div className="relative group">

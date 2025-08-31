@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 export const testSupabaseConnection = async () => {
   try {
     // Test basic connection
-    const { data, error } = await supabase.from('packages').select('count', { count: 'exact' })
+    const { error } = await supabase.from('packages').select('count', { count: 'exact' })
     
     if (error) {
       console.error('Supabase connection error:', error)

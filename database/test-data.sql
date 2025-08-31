@@ -22,7 +22,8 @@
 -- Sample case study requests for testing
 -- INSERT INTO public.case_study_requests (user_id, legal_area, sub_area, focus_area, status) VALUES
 -- ('00000000-0000-0000-0000-000000000002', 'Zivilrecht', 'BGB AT (General Part of Civil Code)', 'Geschäftsfähigkeit von Minderjährigen', 'requested'),
--- ('00000000-0000-0000-0000-000000000002', 'Strafrecht', 'Strafrecht AT (General Criminal Law)', 'Vorsatz und Fahrlässigkeit', 'materials_ready');
+-- ('00000000-0000-0000-0000-000000000002', 'Strafrecht', 'Strafrecht AT (General Criminal Law)', 'Vorsatz und Fahrlässigkeit', 'materials_ready'),
+-- ('00000000-0000-0000-0000-000000000002', 'Öffentliches Recht', 'Staatsrecht', 'Grundrechte', 'materials_ready');
 
 -- Instructions for manual setup:
 -- 1. Register users through the web interface:

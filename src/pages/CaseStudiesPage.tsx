@@ -11,6 +11,7 @@ interface CaseStudyRequest {
   focus_area: string
   status: 'requested' | 'materials_ready' | 'submitted' | 'corrected'
   pdf_url: string | null
+  case_study_material_url: string | null
   created_at: string
   updated_at: string
 }
@@ -39,6 +40,7 @@ export const CaseStudiesPage: React.FC = () => {
       fetchCaseStudies()
       fetchSubmissions()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
   const fetchCaseStudies = async () => {
@@ -254,9 +256,9 @@ export const CaseStudiesPage: React.FC = () => {
                 </div>
 
                 <div className="flex space-x-3">
-                  {caseStudy.status === 'materials_ready' && caseStudy.pdf_url && (
+                  {caseStudy.status === 'materials_ready' && caseStudy.case_study_material_url && (
                     <a
-                      href={caseStudy.pdf_url}
+                      href={caseStudy.case_study_material_url}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors flex items-center space-x-2"

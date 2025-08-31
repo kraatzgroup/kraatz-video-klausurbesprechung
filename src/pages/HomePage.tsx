@@ -34,21 +34,13 @@ export const HomePage: React.FC = () => {
               <ArrowRight className="w-5 h-5" />
             </Link>
           ) : (
-            <>
-              <Link
-                to="/register"
-                className="bg-primary text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center space-x-2"
-              >
-                <span>Jetzt starten</span>
-                <ArrowRight className="w-5 h-5" />
-              </Link>
-              <Link
-                to="/packages"
-                className="border border-primary text-primary px-8 py-3 rounded-lg hover:bg-primary hover:text-white transition-colors"
-              >
-                Pakete ansehen
-              </Link>
-            </>
+            <Link
+              to="/packages"
+              className="bg-primary text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors inline-flex items-center space-x-2"
+            >
+              <span>Pakete ansehen</span>
+              <ArrowRight className="w-5 h-5" />
+            </Link>
           )}
         </div>
       </section>
@@ -133,24 +125,6 @@ export const HomePage: React.FC = () => {
         </div>
       </section>
 
-      {/* CTA Section */}
-      {!user && (
-        <section className="bg-primary text-white rounded-lg p-8 text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Bereit für den nächsten Schritt?
-          </h2>
-          <p className="text-xl mb-6 opacity-90">
-            Starten Sie noch heute mit Ihrem ersten Sachverhalts-Paket
-          </p>
-          <Link
-            to="/register"
-            className="bg-white text-primary px-8 py-3 rounded-lg hover:bg-gray-100 transition-colors inline-flex items-center space-x-2 font-semibold"
-          >
-            <span>Kostenlos registrieren</span>
-            <ArrowRight className="w-5 h-5" />
-          </Link>
-        </section>
-      )}
     </div>
   )
 }
