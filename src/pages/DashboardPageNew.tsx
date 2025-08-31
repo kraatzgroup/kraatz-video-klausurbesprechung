@@ -300,12 +300,21 @@ export const DashboardPageNew: React.FC = () => {
   const requestedCases = caseStudies.filter(cs => cs.status === 'requested')
   const materialsReadyCases = caseStudies.filter(cs => cs.status === 'materials_ready')
   const submittedCases = caseStudies.filter(cs => cs.status === 'submitted')
-  const correctedCases = caseStudies.filter(cs => false) // No longer used - moved to completed status
-  const completedCases = caseStudies.filter(cs => cs.status === 'completed')
+  const completedCases = caseStudies.filter(cs => cs.status === 'corrected' || cs.status === 'completed')
   
   // Separate new and viewed corrections
   const newCorrections = completedCases.filter(cs => !cs.video_viewed_at)
   const viewedCorrections = completedCases.filter(cs => cs.video_viewed_at)
+
+  // Add debug logging to see what data we have
+  useEffect(() => {
+    console.log('All case studies:', caseStudies)
+    console.log('Completed cases:', completedCases)
+    console.log('New corrections:', newCorrections)
+    console.log('Viewed corrections:', viewedCorrections)
+    console.log('Case studies with video_correction_url:', caseStudies.filter(cs => cs.video_correction_url))
+    console.log('Case studies with corrected status:', caseStudies.filter(cs => cs.status === 'corrected'))
+  }, [caseStudies, completedCases, newCorrections, viewedCorrections])
 
   if (loading) {
     return (
@@ -654,7 +663,7 @@ export const DashboardPageNew: React.FC = () => {
                   
                   <h3 className="text-md font-semibold text-gray-900 mb-3">Neue Video-Klausurenkorrekturen</h3>
                   <div className="space-y-3">
-                    {correctedCases.map((caseStudy, index) => {
+                    {newCorrections.map((caseStudy, index) => {
                       const style = getCompletedCaseStyle(caseStudy)
                       return (
                         <div 
@@ -679,6 +688,46 @@ export const DashboardPageNew: React.FC = () => {
                               </span>
                             </div>
                             <p className="text-sm text-gray-600">Schwerpunkt: {caseStudy.focus_area}</p>
+                          </div>
+                          
+                          {/* Original Materials and Submission */}
+                          <div className="bg-gray-50 p-3 rounded border border-gray-200 mb-3">
+                            <p className="text-sm text-gray-800 font-medium mb-2">📚 Deine Unterlagen:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {caseStudy.case_study_material_url && (
+                                <a
+                                  href={caseStudy.case_study_material_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                  <span>Sachverhalt</span>
+                                </a>
+                              )}
+                              {caseStudy.additional_materials_url && (
+                                <a
+                                  href={caseStudy.additional_materials_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-2 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                  <span>Zusatzmaterial</span>
+                                </a>
+                              )}
+                              {caseStudy.submission_url && (
+                                <a
+                                  href={caseStudy.submission_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-2 rounded-lg text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                                >
+                                  <Upload className="w-4 h-4" />
+                                  <span>Meine Bearbeitung</span>
+                                </a>
+                              )}
+                            </div>
                           </div>
                           
                           <div className="bg-white p-3 rounded border border-green-200 mb-3">
@@ -758,6 +807,46 @@ export const DashboardPageNew: React.FC = () => {
                               </span>
                             </div>
                             <p className="text-sm text-gray-600">Schwerpunkt: {caseStudy.focus_area}</p>
+                          </div>
+                          
+                          {/* Original Materials and Submission */}
+                          <div className="bg-gray-50 p-3 rounded border border-gray-200 mb-3">
+                            <p className="text-sm text-gray-800 font-medium mb-2">📚 Deine Unterlagen:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {caseStudy.case_study_material_url && (
+                                <a
+                                  href={caseStudy.case_study_material_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                  <span>Sachverhalt</span>
+                                </a>
+                              )}
+                              {caseStudy.additional_materials_url && (
+                                <a
+                                  href={caseStudy.additional_materials_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-2 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                                >
+                                  <FileText className="w-4 h-4" />
+                                  <span>Zusatzmaterial</span>
+                                </a>
+                              )}
+                              {caseStudy.submission_url && (
+                                <a
+                                  href={caseStudy.submission_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="px-3 py-2 rounded-lg text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                                >
+                                  <Upload className="w-4 h-4" />
+                                  <span>Meine Bearbeitung</span>
+                                </a>
+                              )}
+                            </div>
                           </div>
                           
                           <div className="bg-white p-3 rounded border border-green-200 mb-3">
