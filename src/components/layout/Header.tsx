@@ -99,10 +99,12 @@ export const Header: React.FC = () => {
               <>
                 <NotificationDropdown />
                 
-                <div className="flex items-center space-x-2">
-                  <CreditCard className="w-4 h-4 text-text-secondary" />
-                  <span className="text-sm text-text-secondary">Klausuren: {userCredits}</span>
-                </div>
+                {userRole === 'student' && (
+                  <div className="flex items-center space-x-2">
+                    <CreditCard className="w-4 h-4 text-text-secondary" />
+                    <span className="text-sm text-text-secondary">Klausuren: {userCredits}</span>
+                  </div>
+                )}
 
                 <div className="relative group">
                   <button className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-100 transition-colors">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { CreditCard, BookOpen, Plus, Download, Upload, FileText, Video, X, Clock, CheckCircle } from 'lucide-react'
+import { CreditCard, BookOpen, Plus, Download, Upload, FileText, Video, X, Clock, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 
 interface UserProfile {
@@ -49,6 +49,7 @@ export const DashboardPageNew: React.FC = () => {
   const [videoModalOpen, setVideoModalOpen] = useState(false)
   const [currentVideoUrl, setCurrentVideoUrl] = useState<string | null>(null)
   const [highlightedCaseId, setHighlightedCaseId] = useState<string | null>(null)
+  const [expandedCases, setExpandedCases] = useState<Set<string>>(new Set())
 
   // Track video view
   const handleVideoView = async (caseStudyId: string) => {
@@ -114,6 +115,19 @@ export const DashboardPageNew: React.FC = () => {
   const closeVideoModal = () => {
     setVideoModalOpen(false)
     setCurrentVideoUrl(null)
+  }
+
+  // Toggle case study expansion
+  const toggleCaseExpansion = (caseId: string) => {
+    setExpandedCases(prev => {
+      const newSet = new Set(prev)
+      if (newSet.has(caseId)) {
+        newSet.delete(caseId)
+      } else {
+        newSet.add(caseId)
+      }
+      return newSet
+    })
   }
 
   // Determine styling based on access status
@@ -675,13 +689,22 @@ export const DashboardPageNew: React.FC = () => {
                               : ''
                           }`}
                         >
-                          <div className="mb-4">
+                          {/* Case Study Header - Always Visible */}
+                          <div 
+                            className="cursor-pointer"
+                            onClick={() => toggleCaseExpansion(caseStudy.id)}
+                          >
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
                                 <span className="bg-kraatz-primary text-white text-xs font-bold px-2 py-1 rounded">
                                   #{caseStudy.case_study_number}
                                 </span>
                                 <h3 className="font-medium text-gray-900">{caseStudy.legal_area} - {caseStudy.sub_area}</h3>
+                                {expandedCases.has(caseStudy.id) ? (
+                                  <ChevronUp className="w-4 h-4 text-gray-500" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                                )}
                               </div>
                               <span className={style.badgeClass}>
                                 {style.badgeText}
@@ -690,86 +713,99 @@ export const DashboardPageNew: React.FC = () => {
                             <p className="text-sm text-gray-600">Schwerpunkt: {caseStudy.focus_area}</p>
                           </div>
                           
-                          {/* Original Materials and Submission */}
-                          <div className="bg-gray-50 p-3 rounded border border-gray-200 mb-3">
-                            <p className="text-sm text-gray-800 font-medium mb-2">📚 Deine Unterlagen:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {caseStudy.case_study_material_url && (
-                                <a
-                                  href={caseStudy.case_study_material_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                                >
-                                  <FileText className="w-4 h-4" />
-                                  <span>Sachverhalt</span>
-                                </a>
-                              )}
-                              {caseStudy.additional_materials_url && (
-                                <a
-                                  href={caseStudy.additional_materials_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-3 py-2 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2"
-                                >
-                                  <FileText className="w-4 h-4" />
-                                  <span>Zusatzmaterial</span>
-                                </a>
-                              )}
-                              {caseStudy.submission_url && (
-                                <a
-                                  href={caseStudy.submission_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-3 py-2 rounded-lg text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2"
-                                >
-                                  <Upload className="w-4 h-4" />
-                                  <span>Meine Bearbeitung</span>
-                                </a>
-                              )}
+                          {/* Expandable Details Section */}
+                          {expandedCases.has(caseStudy.id) && (
+                            <div className="mt-4 space-y-3 animate-in slide-in-from-top-2 duration-300">
+                              <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                                <p className="text-sm text-gray-800 font-medium mb-2">📚 Deine Unterlagen:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {caseStudy.case_study_material_url && (
+                                    <a
+                                      href={caseStudy.case_study_material_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      <span>Sachverhalt</span>
+                                    </a>
+                                  )}
+                                  {caseStudy.additional_materials_url && (
+                                    <a
+                                      href={caseStudy.additional_materials_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-3 py-2 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      <span>Zusatzmaterial</span>
+                                    </a>
+                                  )}
+                                  {caseStudy.submission_url && (
+                                    <a
+                                      href={caseStudy.submission_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-3 py-2 rounded-lg text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Upload className="w-4 h-4" />
+                                      <span>Meine Bearbeitung</span>
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="bg-white p-3 rounded border border-green-200">
+                                <p className="text-sm text-green-800 font-medium mb-2">🎓 Deine Korrekturen:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {caseStudy.video_correction_url && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        openVideoModal(caseStudy.video_correction_url!, caseStudy.id)
+                                      }}
+                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
+                                        caseStudy.video_viewed_at 
+                                          ? 'bg-green-600 text-white hover:bg-green-700' 
+                                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                                      }`}
+                                    >
+                                      <Video className="w-4 h-4" />
+                                      <span>Video ansehen</span>
+                                      {caseStudy.video_viewed_at && <span className="text-xs">✓</span>}
+                                    </button>
+                                  )}
+                                  {caseStudy.written_correction_url && (
+                                    <a
+                                      href={caseStudy.written_correction_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handlePdfDownload(caseStudy.id)
+                                      }}
+                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
+                                        caseStudy.pdf_downloaded_at 
+                                          ? 'bg-green-600 text-white hover:bg-green-700' 
+                                          : 'bg-gray-600 text-white hover:bg-gray-700'
+                                      }`}
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      <span>PDF herunterladen</span>
+                                      {caseStudy.pdf_downloaded_at && <span className="text-xs">✓</span>}
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                                💡 Schaue Dir sowohl die Video-Korrektur, als auch die schriftliche Bewertung Deines Dozenten an, um einen maximalen Mehrwert in der Nachbereitung zu erhalten!
+                              </div>
                             </div>
-                          </div>
-                          
-                          <div className="bg-white p-3 rounded border border-green-200 mb-3">
-                            <p className="text-sm text-green-800 font-medium mb-2">🎓 Deine Korrekturen:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {caseStudy.video_correction_url && (
-                                <button
-                                  onClick={() => openVideoModal(caseStudy.video_correction_url!, caseStudy.id)}
-                                  className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
-                                    caseStudy.video_viewed_at 
-                                      ? 'bg-green-600 text-white hover:bg-green-700' 
-                                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                                  }`}
-                                >
-                                  <Video className="w-4 h-4" />
-                                  <span>Video ansehen</span>
-                                  {caseStudy.video_viewed_at && <span className="text-xs">✓</span>}
-                                </button>
-                              )}
-                              {caseStudy.written_correction_url && (
-                                <a
-                                  href={caseStudy.written_correction_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => handlePdfDownload(caseStudy.id)}
-                                  className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
-                                    caseStudy.pdf_downloaded_at 
-                                      ? 'bg-green-600 text-white hover:bg-green-700' 
-                                      : 'bg-gray-600 text-white hover:bg-gray-700'
-                                  }`}
-                                >
-                                  <FileText className="w-4 h-4" />
-                                  <span>PDF herunterladen</span>
-                                  {caseStudy.pdf_downloaded_at && <span className="text-xs">✓</span>}
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                            💡 Schaue Dir sowohl die Video-Korrektur, als auch die schriftliche Bewertung Deines Dozenten an, um einen maximalen Mehrwert in der Nachbereitung zu erhalten!
-                          </div>
+                          )}
                         </div>
                       )
                     })}
@@ -794,13 +830,22 @@ export const DashboardPageNew: React.FC = () => {
                               : ''
                           }`}
                         >
-                          <div className="mb-4">
+                          {/* Case Study Header - Always Visible */}
+                          <div 
+                            className="cursor-pointer"
+                            onClick={() => toggleCaseExpansion(caseStudy.id)}
+                          >
                             <div className="flex items-center justify-between mb-2">
                               <div className="flex items-center gap-2">
                                 <span className="bg-kraatz-primary text-white text-xs font-bold px-2 py-1 rounded">
                                   #{caseStudy.case_study_number}
                                 </span>
                                 <h3 className="font-medium text-gray-900">{caseStudy.legal_area} - {caseStudy.sub_area}</h3>
+                                {expandedCases.has(caseStudy.id) ? (
+                                  <ChevronUp className="w-4 h-4 text-gray-500" />
+                                ) : (
+                                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                                )}
                               </div>
                               <span className={style.badgeClass}>
                                 {style.badgeText}
@@ -809,86 +854,99 @@ export const DashboardPageNew: React.FC = () => {
                             <p className="text-sm text-gray-600">Schwerpunkt: {caseStudy.focus_area}</p>
                           </div>
                           
-                          {/* Original Materials and Submission */}
-                          <div className="bg-gray-50 p-3 rounded border border-gray-200 mb-3">
-                            <p className="text-sm text-gray-800 font-medium mb-2">📚 Deine Unterlagen:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {caseStudy.case_study_material_url && (
-                                <a
-                                  href={caseStudy.case_study_material_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                                >
-                                  <FileText className="w-4 h-4" />
-                                  <span>Sachverhalt</span>
-                                </a>
-                              )}
-                              {caseStudy.additional_materials_url && (
-                                <a
-                                  href={caseStudy.additional_materials_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-3 py-2 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2"
-                                >
-                                  <FileText className="w-4 h-4" />
-                                  <span>Zusatzmaterial</span>
-                                </a>
-                              )}
-                              {caseStudy.submission_url && (
-                                <a
-                                  href={caseStudy.submission_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="px-3 py-2 rounded-lg text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2"
-                                >
-                                  <Upload className="w-4 h-4" />
-                                  <span>Meine Bearbeitung</span>
-                                </a>
-                              )}
+                          {/* Expandable Details Section */}
+                          {expandedCases.has(caseStudy.id) && (
+                            <div className="mt-4 space-y-3 animate-in slide-in-from-top-2 duration-300">
+                              <div className="bg-gray-50 p-3 rounded border border-gray-200">
+                                <p className="text-sm text-gray-800 font-medium mb-2">📚 Deine Unterlagen:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {caseStudy.case_study_material_url && (
+                                    <a
+                                      href={caseStudy.case_study_material_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      <span>Sachverhalt</span>
+                                    </a>
+                                  )}
+                                  {caseStudy.additional_materials_url && (
+                                    <a
+                                      href={caseStudy.additional_materials_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-3 py-2 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      <span>Zusatzmaterial</span>
+                                    </a>
+                                  )}
+                                  {caseStudy.submission_url && (
+                                    <a
+                                      href={caseStudy.submission_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="px-3 py-2 rounded-lg text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                                      onClick={(e) => e.stopPropagation()}
+                                    >
+                                      <Upload className="w-4 h-4" />
+                                      <span>Meine Bearbeitung</span>
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="bg-white p-3 rounded border border-green-200">
+                                <p className="text-sm text-green-800 font-medium mb-2">🎓 Deine Korrekturen:</p>
+                                <div className="flex flex-wrap gap-2">
+                                  {caseStudy.video_correction_url && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        openVideoModal(caseStudy.video_correction_url!, caseStudy.id)
+                                      }}
+                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
+                                        caseStudy.video_viewed_at 
+                                          ? 'bg-green-600 text-white hover:bg-green-700' 
+                                          : 'bg-blue-600 text-white hover:bg-blue-700'
+                                      }`}
+                                    >
+                                      <Video className="w-4 h-4" />
+                                      <span>Video ansehen</span>
+                                      {caseStudy.video_viewed_at && <span className="text-xs">✓</span>}
+                                    </button>
+                                  )}
+                                  {caseStudy.written_correction_url && (
+                                    <a
+                                      href={caseStudy.written_correction_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handlePdfDownload(caseStudy.id)
+                                      }}
+                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
+                                        caseStudy.pdf_downloaded_at 
+                                          ? 'bg-green-600 text-white hover:bg-green-700' 
+                                          : 'bg-gray-600 text-white hover:bg-gray-700'
+                                      }`}
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      <span>PDF herunterladen</span>
+                                      {caseStudy.pdf_downloaded_at && <span className="text-xs">✓</span>}
+                                    </a>
+                                  )}
+                                </div>
+                              </div>
+                              
+                              <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
+                                💡 Schaue Dir sowohl die Video-Korrektur, als auch die schriftliche Bewertung Deines Dozenten an, um einen maximalen Mehrwert in der Nachbereitung zu erhalten!
+                              </div>
                             </div>
-                          </div>
-                          
-                          <div className="bg-white p-3 rounded border border-green-200 mb-3">
-                            <p className="text-sm text-green-800 font-medium mb-2">🎓 Deine Korrekturen:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {caseStudy.video_correction_url && (
-                                <button
-                                  onClick={() => openVideoModal(caseStudy.video_correction_url!, caseStudy.id)}
-                                  className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
-                                    caseStudy.video_viewed_at 
-                                      ? 'bg-green-600 text-white hover:bg-green-700' 
-                                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                                  }`}
-                                >
-                                  <Video className="w-4 h-4" />
-                                  <span>Video ansehen</span>
-                                  {caseStudy.video_viewed_at && <span className="text-xs">✓</span>}
-                                </button>
-                              )}
-                              {caseStudy.written_correction_url && (
-                                <a
-                                  href={caseStudy.written_correction_url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  onClick={() => handlePdfDownload(caseStudy.id)}
-                                  className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
-                                    caseStudy.pdf_downloaded_at 
-                                      ? 'bg-green-600 text-white hover:bg-green-700' 
-                                      : 'bg-gray-600 text-white hover:bg-gray-700'
-                                  }`}
-                                >
-                                  <FileText className="w-4 h-4" />
-                                  <span>PDF herunterladen</span>
-                                  {caseStudy.pdf_downloaded_at && <span className="text-xs">✓</span>}
-                                </a>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
-                            💡 Schaue Dir sowohl die Video-Korrektur, als auch die schriftliche Bewertung Deines Dozenten an, um einen maximalen Mehrwert in der Nachbereitung zu erhalten!
-                          </div>
+                          )}
                         </div>
                       )
                     })}

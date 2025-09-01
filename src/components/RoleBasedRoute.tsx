@@ -63,7 +63,15 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
     if (userRole === 'student' && allowedRoles.includes('instructor')) {
       return <Navigate to="/dashboard" replace />;
     }
-    return <Navigate to="/" replace />;
+    // Redirect instructors to instructor dashboard if they try to access student routes
+    if (userRole === 'instructor' && allowedRoles.includes('student') && !allowedRoles.includes('instructor')) {
+      return <Navigate to="/instructor" replace />;
+    }
+    // Redirect admin users to user management if they try to access student/instructor routes
+    if (userRole === 'admin' && (allowedRoles.includes('student') || allowedRoles.includes('instructor'))) {
+      return <Navigate to="/admin/users" replace />;
+    }
+    return <Navigate to={redirectTo} replace />;
   }
 
   return <>{children}</>;

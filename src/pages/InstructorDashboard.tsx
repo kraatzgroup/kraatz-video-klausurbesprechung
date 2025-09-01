@@ -65,7 +65,6 @@ interface Submission {
 const InstructorDashboard: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'requests' | 'materials_sent' | 'submissions' | 'pending_videos' | 'completed'>('requests');
-;
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [uploadData, setUploadData] = useState({
     videoUrl: '',
@@ -84,6 +83,7 @@ const InstructorDashboard: React.FC = () => {
   const [requests, setRequests] = useState<CaseStudyRequest[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
+  const [grades, setGrades] = useState<{[key: string]: {grade: number, gradeText?: string}}>({});
   const [materialUrl, setMaterialUrl] = useState('');
   const [additionalMaterialUrl, setAdditionalMaterialUrl] = useState('');
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
@@ -92,35 +92,152 @@ const InstructorDashboard: React.FC = () => {
     fetchData();
   }, []);
 
+  const createTestData = async () => {
+    try {
+      // First, ensure we have a test user
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', 'test@student.de')
+        .single();
+
+      let userId = existingUser?.id;
+
+      if (!userId) {
+        // Create a test user
+        const { data: newUser, error: userError } = await supabase
+          .from('users')
+          .insert({
+            email: 'test@student.de',
+            first_name: 'Max',
+            last_name: 'Mustermann',
+            role: 'student',
+            account_credits: 5
+          })
+          .select('id')
+          .single();
+
+        if (userError) {
+          console.error('Error creating test user:', userError);
+          return;
+        }
+        userId = newUser.id;
+      }
+
+      // Create test case study requests
+      const testRequests = [
+        {
+          user_id: userId,
+          case_study_number: 1,
+          study_phase: '1. Semester',
+          legal_area: 'Zivilrecht',
+          sub_area: 'BGB AT',
+          focus_area: 'Willenserklärung',
+          status: 'requested'
+        },
+        {
+          user_id: userId,
+          case_study_number: 2,
+          study_phase: '2. Semester',
+          legal_area: 'Strafrecht',
+          sub_area: 'Strafrecht AT',
+          focus_area: 'Tatbestand',
+          status: 'materials_ready'
+        },
+        {
+          user_id: userId,
+          case_study_number: 3,
+          study_phase: '3. Semester',
+          legal_area: 'Öffentliches Recht',
+          sub_area: 'Staatsrecht',
+          focus_area: 'Grundrechte',
+          status: 'submitted'
+        }
+      ];
+
+      const { error: requestsError } = await supabase
+        .from('case_study_requests')
+        .insert(testRequests);
+
+      if (requestsError) {
+        console.error('Error creating test requests:', requestsError);
+      } else {
+        console.log('Test data created successfully');
+      }
+    } catch (error) {
+      console.error('Error in createTestData:', error);
+    }
+  };
+
   const fetchData = async () => {
     try {
-      // Fetch case study requests
+      // Debug: Check users and case study requests separately
+      const { data: usersCheck } = await supabase
+        .from('users')
+        .select('id, first_name, last_name, email')
+        .limit(10);
+      
+      console.log('Available users:', usersCheck);
+
+      const { data: requestsCheck } = await supabase
+        .from('case_study_requests')
+        .select('id, user_id, legal_area, sub_area')
+        .limit(10);
+      
+      console.log('Available case study requests:', requestsCheck);
+
+      // Fetch case study requests with user data
       const { data: requestsData, error: requestsError } = await supabase
         .from('case_study_requests')
         .select(`
           *,
-          case_study_number,
-          user:users(first_name, last_name, email)
+          user:users!case_study_requests_user_id_fkey(first_name, last_name, email)
         `)
         .order('created_at', { ascending: false });
 
-      if (requestsError) throw requestsError;
-      setRequests(requestsData || []);
+      if (requestsError) {
+        console.error('Error fetching requests:', requestsError);
+        throw requestsError;
+      }
 
-      // Fetch submissions
+      console.log('Fetched requests with user data:', requestsData);
+      
+      // Check if any requests have missing user data
+      if (requestsData && requestsData.length > 0) {
+        const requestsWithoutUsers = requestsData.filter(req => !req.user);
+        if (requestsWithoutUsers.length > 0) {
+          console.log('Found requests without user data:', requestsWithoutUsers);
+          console.log('This indicates RLS policy issues or missing user records in the users table');
+          
+          // For debugging: show user_id values for requests without user data
+          requestsWithoutUsers.forEach(req => {
+            console.log(`Request ${req.id} has user_id: ${req.user_id} but no user data`);
+          });
+        }
+        setRequests(requestsData || []);
+      } else {
+        setRequests([]);
+      }
+
       const { data: submissionsData, error: submissionsError } = await supabase
         .from('submissions')
-        .select(`
-          *,
-          case_study_request:case_study_requests(
-            title,
-            user:users(first_name, last_name, email)
-          )
-        `)
+        .select('*')
         .order('submitted_at', { ascending: false });
 
       if (submissionsError) throw submissionsError;
       setSubmissions(submissionsData || []);
+
+      // Fetch existing grades for display
+      const gradesMap: {[key: string]: {grade: number, gradeText?: string}} = {};
+      submissionsData?.forEach(submission => {
+        if (submission.grade) {
+          gradesMap[submission.case_study_request_id] = {
+            grade: submission.grade,
+            gradeText: submission.grade_text
+          };
+        }
+      });
+      setGrades(gradesMap);
 
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -131,21 +248,6 @@ const InstructorDashboard: React.FC = () => {
 
   const updateRequestStatus = async (requestId: string, newStatus: string) => {
     try {
-      // Handle special status changes that require creating submissions
-      if (newStatus === 'submitted' || newStatus === 'pending_video') {
-        // Create a submission entry when moving to submitted or pending_video status
-        const { error: submissionError } = await supabase
-          .from('submissions')
-          .insert({
-            case_study_request_id: requestId,
-            file_url: 'placeholder-url', // This would be set when student uploads
-            submitted_at: new Date().toISOString(),
-            status: newStatus === 'submitted' ? 'submitted' : 'submitted'
-          });
-
-        if (submissionError) throw submissionError;
-      }
-
       const { error } = await supabase
         .from('case_study_requests')
         .update({ status: newStatus })
@@ -153,15 +255,61 @@ const InstructorDashboard: React.FC = () => {
 
       if (error) throw error;
 
-      setRequests(prev => prev.map(req => 
-        req.id === requestId ? { ...req, status: newStatus as any } : req
-      ));
-
       // Refresh data to update all tabs
       fetchData();
     } catch (error) {
       console.error('Error updating request status:', error);
       alert('Fehler beim Aktualisieren des Status');
+    }
+  };
+
+  const updateGrade = async (requestId: string, grade: number, gradeText?: string) => {
+    try {
+      // First check if a submission exists for this case study
+      const { data: existingSubmission, error: fetchError } = await supabase
+        .from('submissions')
+        .select('id')
+        .eq('case_study_request_id', requestId)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existingSubmission) {
+        // Update existing submission
+        const { error } = await supabase
+          .from('submissions')
+          .update({ 
+            grade: grade,
+            grade_text: gradeText || null
+          })
+          .eq('case_study_request_id', requestId);
+
+        if (error) throw error;
+      } else {
+        // Create new submission entry
+        const { error } = await supabase
+          .from('submissions')
+          .insert({
+            case_study_request_id: requestId,
+            file_url: 'placeholder-url',
+            file_type: 'pdf',
+            status: 'corrected',
+            grade: grade,
+            grade_text: gradeText || null,
+            corrected_at: new Date().toISOString()
+          });
+
+        if (error) throw error;
+      }
+
+      // Refresh data to update display
+      fetchData();
+      alert('Note erfolgreich gespeichert!');
+    } catch (error) {
+      console.error('Error updating grade:', error);
+      alert('Fehler beim Speichern der Note');
     }
   };
 
@@ -532,8 +680,9 @@ const InstructorDashboard: React.FC = () => {
       requested: { label: 'Angefragt', color: 'bg-yellow-100 text-yellow-800' },
       materials_ready: { label: 'Sachverhalt hochgeladen', color: 'bg-blue-100 text-blue-800' },
       submitted: { label: 'Eingereicht', color: 'bg-purple-100 text-purple-800' },
-      pending_video: { label: 'Videokorrektur ausstehend', color: 'bg-orange-100 text-orange-800' },
-      corrected: { label: 'Korrigiert', color: 'bg-green-100 text-green-800' }
+      under_review: { label: 'Videokorrektur ausstehend', color: 'bg-orange-100 text-orange-800' },
+      corrected: { label: 'Korrigiert', color: 'bg-green-100 text-green-800' },
+      completed: { label: 'Abgeschlossen', color: 'bg-green-100 text-green-800' }
     };
 
     const config = statusConfig[status as keyof typeof statusConfig] || 
@@ -549,8 +698,8 @@ const InstructorDashboard: React.FC = () => {
   // Filter data for different tabs
   const pendingRequests = requests.filter(r => r.status === 'requested');
   const materialsSentCases = requests.filter(r => r.status === 'materials_ready');
-  const submittedCases = requests.filter(r => r.status === 'submitted' && r.submission_url && !r.submission_downloaded_at);
-  const pendingVideoCorrections = requests.filter(r => r.status === 'under_review' || (r.status === 'submitted' && r.submission_downloaded_at));
+  const submittedCases = requests.filter(r => r.status === 'submitted');
+  const pendingVideoCorrections = requests.filter(r => r.status === 'under_review');
   const completedCases = requests.filter(r => r.status === 'completed');
 
   const stats = {
@@ -579,14 +728,6 @@ const InstructorDashboard: React.FC = () => {
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">Dozenten-Dashboard</h1>
               <p className="text-gray-600 text-sm sm:text-base">Verwalten Sie Klausur-Anfragen und Einreichungen</p>
             </div>
-            <Link
-              to="/admin/users"
-              className="flex items-center gap-2 px-3 py-2 sm:px-4 bg-kraatz-primary text-white rounded-lg hover:bg-kraatz-primary/90 transition-colors text-sm w-full sm:w-auto justify-center"
-            >
-              <Settings className="w-4 h-4" />
-              <span className="hidden sm:inline">Benutzerverwaltung</span>
-              <span className="sm:hidden">Benutzer</span>
-            </Link>
           </div>
         </div>
 
@@ -753,7 +894,10 @@ const InstructorDashboard: React.FC = () => {
                             <h3 className="text-base sm:text-lg font-semibold text-gray-900">{request.legal_area} - {request.sub_area}</h3>
                           </div>
                           <p className="text-sm text-gray-600 mt-1 truncate">
-                            {request.user ? `${request.user.first_name || 'Demo'} ${request.user.last_name || ''} (${request.user.email})` : 'Demo (demo@kraatz-club.de)'}
+                            {request.user ? 
+                              `${[request.user.first_name, request.user.last_name].filter(Boolean).join(' ')} (${request.user.email})` : 
+                              'Unbekannter Benutzer'
+                            }
                           </p>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-2">
                             <span className="text-sm text-gray-500">Schwerpunkt: {request.focus_area}</span>
@@ -774,7 +918,8 @@ const InstructorDashboard: React.FC = () => {
                               <option value="requested">Angefragt</option>
                               <option value="materials_ready">Sachverhalt hochgeladen</option>
                               <option value="submitted">Eingereichte Klausuren</option>
-                              <option value="pending_video">Videokorrektur ausstehend</option>
+                              <option value="under_review">Videokorrektur ausstehend</option>
+                              <option value="completed">Abgeschlossen</option>
                             </select>
                             <div className="flex flex-col sm:flex-row gap-2">
                               <button
@@ -824,6 +969,59 @@ const InstructorDashboard: React.FC = () => {
                                 )}
                               </button>
                             </div>
+                            {/* Grade Input for Requests Tab */}
+                            <div className="mt-3 p-3 bg-gray-50 rounded border">
+                              <h4 className="text-sm font-medium text-gray-700 mb-2">Note eingeben</h4>
+                              <div className="flex flex-col gap-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="15"
+                                  step="0.5"
+                                  placeholder="Note (0-15)"
+                                  value={grades[request.id]?.grade || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setGrades(prev => ({
+                                      ...prev,
+                                      [request.id]: {
+                                        ...prev[request.id],
+                                        grade: value ? parseFloat(value) : 0
+                                      }
+                                    }));
+                                  }}
+                                  onBlur={(e) => {
+                                    const grade = parseFloat(e.target.value);
+                                    if (grade >= 0 && grade <= 15) {
+                                      updateGrade(request.id, grade, grades[request.id]?.gradeText);
+                                    }
+                                  }}
+                                  className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent"
+                                />
+                                <textarea
+                                  placeholder="Notenbeschreibung (optional)"
+                                  value={grades[request.id]?.gradeText || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setGrades(prev => ({
+                                      ...prev,
+                                      [request.id]: {
+                                        ...prev[request.id],
+                                        gradeText: value
+                                      }
+                                    }));
+                                  }}
+                                  onBlur={() => {
+                                    const currentGrade = grades[request.id];
+                                    if (currentGrade?.grade) {
+                                      updateGrade(request.id, currentGrade.grade, currentGrade.gradeText);
+                                    }
+                                  }}
+                                  rows={2}
+                                  className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                                />
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
@@ -849,7 +1047,10 @@ const InstructorDashboard: React.FC = () => {
                             <h3 className="text-base sm:text-lg font-semibold text-gray-900">{request.legal_area} - {request.sub_area}</h3>
                           </div>
                           <p className="text-sm text-gray-600 mt-1 truncate">
-                            {request.user ? `${request.user.first_name || 'Demo'} ${request.user.last_name || ''} (${request.user.email})` : 'Demo (demo@kraatz-club.de)'}
+                            {request.user ? 
+                              `${[request.user.first_name, request.user.last_name].filter(Boolean).join(' ')} (${request.user.email})` : 
+                              'Unbekannter Benutzer'
+                            }
                           </p>
                           <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-2">
                             <span className="text-sm text-gray-500">Schwerpunkt: {request.focus_area}</span>
@@ -870,7 +1071,8 @@ const InstructorDashboard: React.FC = () => {
                               <option value="requested">Angefragt</option>
                               <option value="materials_ready">Sachverhalt hochgeladen</option>
                               <option value="submitted">Eingereichte Klausuren</option>
-                              <option value="pending_video">Videokorrektur ausstehend</option>
+                              <option value="under_review">Videokorrektur ausstehend</option>
+                              <option value="completed">Abgeschlossen</option>
                             </select>
                             <div className="flex flex-col sm:flex-row gap-2">
                               <button
@@ -919,6 +1121,59 @@ const InstructorDashboard: React.FC = () => {
                                   </span>
                                 )}
                               </button>
+                            </div>
+                            {/* Grade Input for Materials Sent Tab */}
+                            <div className="mt-3 p-3 bg-gray-50 rounded border">
+                              <h4 className="text-sm font-medium text-gray-700 mb-2">Note eingeben</h4>
+                              <div className="flex flex-col gap-2">
+                                <input
+                                  type="number"
+                                  min="0"
+                                  max="15"
+                                  step="0.5"
+                                  placeholder="Note (0-15)"
+                                  value={grades[request.id]?.grade || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setGrades(prev => ({
+                                      ...prev,
+                                      [request.id]: {
+                                        ...prev[request.id],
+                                        grade: value ? parseFloat(value) : 0
+                                      }
+                                    }));
+                                  }}
+                                  onBlur={(e) => {
+                                    const grade = parseFloat(e.target.value);
+                                    if (grade >= 0 && grade <= 15) {
+                                      updateGrade(request.id, grade, grades[request.id]?.gradeText);
+                                    }
+                                  }}
+                                  className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent"
+                                />
+                                <textarea
+                                  placeholder="Notenbeschreibung (optional)"
+                                  value={grades[request.id]?.gradeText || ''}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    setGrades(prev => ({
+                                      ...prev,
+                                      [request.id]: {
+                                        ...prev[request.id],
+                                        gradeText: value
+                                      }
+                                    }));
+                                  }}
+                                  onBlur={() => {
+                                    const currentGrade = grades[request.id];
+                                    if (currentGrade?.grade) {
+                                      updateGrade(request.id, currentGrade.grade, currentGrade.gradeText);
+                                    }
+                                  }}
+                                  rows={2}
+                                  className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                                />
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -952,9 +1207,19 @@ const InstructorDashboard: React.FC = () => {
                           </p>
                         </div>
                         <div className="flex flex-col sm:items-end gap-2">
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                            Eingereicht
-                          </span>
+                          {getStatusBadge(caseStudy.status)}
+                          <div className="flex flex-col gap-3">
+                            <select
+                              value={caseStudy.status}
+                              onChange={(e) => updateRequestStatus(caseStudy.id, e.target.value as any)}
+                              className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent w-full"
+                            >
+                              <option value="requested">Angefragt</option>
+                              <option value="materials_ready">Sachverhalt hochgeladen</option>
+                              <option value="submitted">Eingereichte Klausuren</option>
+                              <option value="under_review">Videokorrektur ausstehend</option>
+                              <option value="completed">Abgeschlossen</option>
+                            </select>
                           <div className="flex gap-2">
                             <button
                               onClick={() => handleDownloadSubmission(caseStudy.id, caseStudy.submission_url!)}
@@ -963,6 +1228,60 @@ const InstructorDashboard: React.FC = () => {
                               <Download className="w-3 h-3" />
                               Bearbeitung herunterladen
                             </button>
+                          </div>
+                          {/* Grade Input for Submissions Tab */}
+                          <div className="mt-3 p-3 bg-gray-50 rounded border">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Note eingeben</h4>
+                            <div className="flex flex-col gap-2">
+                              <input
+                                type="number"
+                                min="0"
+                                max="15"
+                                step="0.5"
+                                placeholder="Note (0-15)"
+                                value={grades[caseStudy.id]?.grade || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setGrades(prev => ({
+                                    ...prev,
+                                    [caseStudy.id]: {
+                                      ...prev[caseStudy.id],
+                                      grade: value ? parseFloat(value) : 0
+                                    }
+                                  }));
+                                }}
+                                onBlur={(e) => {
+                                  const grade = parseFloat(e.target.value);
+                                  if (grade >= 0 && grade <= 15) {
+                                    updateGrade(caseStudy.id, grade, grades[caseStudy.id]?.gradeText);
+                                  }
+                                }}
+                                className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent"
+                              />
+                              <textarea
+                                placeholder="Notenbeschreibung (optional)"
+                                value={grades[caseStudy.id]?.gradeText || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setGrades(prev => ({
+                                    ...prev,
+                                    [caseStudy.id]: {
+                                      ...prev[caseStudy.id],
+                                      gradeText: value
+                                    }
+                                  }));
+                                }}
+                                onBlur={() => {
+                                  const currentGrade = grades[caseStudy.id];
+                                  if (currentGrade?.grade) {
+                                    updateGrade(caseStudy.id, currentGrade.grade, currentGrade.gradeText);
+                                  }
+                                }}
+                                rows={2}
+                                className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                              />
+                            </div>
+                          </div>
                           </div>
                         </div>
                       </div>
@@ -985,7 +1304,10 @@ const InstructorDashboard: React.FC = () => {
                             {caseStudy.legal_area} - {caseStudy.sub_area}
                           </h3>
                           <p className="text-sm text-gray-600 mt-1">
-                            {caseStudy.user ? `${caseStudy.user.first_name || 'Demo'} ${caseStudy.user.last_name || ''} (${caseStudy.user.email})` : 'Demo (demo@kraatz-club.de)'}
+                            {caseStudy.user ? 
+                              `${[caseStudy.user.first_name, caseStudy.user.last_name].filter(Boolean).join(' ')} (${caseStudy.user.email})` : 
+                              'Unbekannter Benutzer'
+                            }
                           </p>
                           <p className="text-sm text-gray-500 mt-2">
                             Schwerpunkt: {caseStudy.focus_area}
@@ -995,9 +1317,19 @@ const InstructorDashboard: React.FC = () => {
                           </p>
                         </div>
                         <div className="ml-4 flex flex-col items-end gap-2">
-                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                            Video ausstehend
-                          </span>
+                          {getStatusBadge(caseStudy.status)}
+                          <div className="flex flex-col gap-3">
+                            <select
+                              value={caseStudy.status}
+                              onChange={(e) => updateRequestStatus(caseStudy.id, e.target.value as any)}
+                              className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent w-full"
+                            >
+                              <option value="requested">Angefragt</option>
+                              <option value="materials_ready">Sachverhalt hochgeladen</option>
+                              <option value="submitted">Eingereichte Klausuren</option>
+                              <option value="under_review">Videokorrektur ausstehend</option>
+                              <option value="completed">Abgeschlossen</option>
+                            </select>
                           <div className="flex gap-2">
                             <a
                               href={caseStudy.submission_url || '#'}
@@ -1015,6 +1347,60 @@ const InstructorDashboard: React.FC = () => {
                               <Upload className="w-3 h-3" />
                               Korrektur hochladen
                             </button>
+                          </div>
+                          {/* Grade Input for Pending Videos Tab */}
+                          <div className="mt-3 p-3 bg-gray-50 rounded border">
+                            <h4 className="text-sm font-medium text-gray-700 mb-2">Note eingeben</h4>
+                            <div className="flex flex-col gap-2">
+                              <input
+                                type="number"
+                                min="0"
+                                max="15"
+                                step="0.5"
+                                placeholder="Note (0-15)"
+                                value={grades[caseStudy.id]?.grade || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setGrades(prev => ({
+                                    ...prev,
+                                    [caseStudy.id]: {
+                                      ...prev[caseStudy.id],
+                                      grade: value ? parseFloat(value) : 0
+                                    }
+                                  }));
+                                }}
+                                onBlur={(e) => {
+                                  const grade = parseFloat(e.target.value);
+                                  if (grade >= 0 && grade <= 15) {
+                                    updateGrade(caseStudy.id, grade, grades[caseStudy.id]?.gradeText);
+                                  }
+                                }}
+                                className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent"
+                              />
+                              <textarea
+                                placeholder="Notenbeschreibung (optional)"
+                                value={grades[caseStudy.id]?.gradeText || ''}
+                                onChange={(e) => {
+                                  const value = e.target.value;
+                                  setGrades(prev => ({
+                                    ...prev,
+                                    [caseStudy.id]: {
+                                      ...prev[caseStudy.id],
+                                      gradeText: value
+                                    }
+                                  }));
+                                }}
+                                onBlur={() => {
+                                  const currentGrade = grades[caseStudy.id];
+                                  if (currentGrade?.grade) {
+                                    updateGrade(caseStudy.id, currentGrade.grade, currentGrade.gradeText);
+                                  }
+                                }}
+                                rows={2}
+                                className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                              />
+                            </div>
+                          </div>
                           </div>
                         </div>
                       </div>
@@ -1036,7 +1422,10 @@ const InstructorDashboard: React.FC = () => {
                           <div className="flex-1">
                             <h3 className="text-lg font-semibold text-gray-900">{request.legal_area} - {request.sub_area}</h3>
                             <p className="text-sm text-gray-600 mt-1">
-                              {request.user ? `${request.user.first_name || 'Demo'} ${request.user.last_name || ''} (${request.user.email})` : 'Demo (demo@kraatz-club.de)'}
+                              {request.user ? 
+                                `${[request.user.first_name, request.user.last_name].filter(Boolean).join(' ')} (${request.user.email})` : 
+                                'Unbekannter Benutzer'
+                              }
                             </p>
                             <div className="flex items-center gap-4 mt-2">
                               <span className="text-sm text-gray-500">Schwerpunkt: {request.focus_area}</span>
@@ -1047,9 +1436,20 @@ const InstructorDashboard: React.FC = () => {
                             </div>
                           </div>
                           <div className="ml-4 flex flex-col items-end gap-2">
-                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              Abgeschlossen
-                            </span>
+                            {getStatusBadge(request.status)}
+                            <div className="flex flex-col gap-3">
+                              <select
+                                value={request.status}
+                                onChange={(e) => updateRequestStatus(request.id, e.target.value as any)}
+                                className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent w-full"
+                              >
+                                <option value="requested">Angefragt</option>
+                                <option value="materials_ready">Sachverhalt hochgeladen</option>
+                                <option value="submitted">Eingereichte Klausuren</option>
+                                <option value="under_review">Videokorrektur ausstehend</option>
+                                <option value="completed">Abgeschlossen</option>
+                              </select>
+                            </div>
                           </div>
                         </div>
 
@@ -1226,6 +1626,71 @@ const InstructorDashboard: React.FC = () => {
                                   <Settings className="w-3 h-3" />
                                   Bearbeiten
                                 </button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Grade Input Section */}
+                          <div className="border-t pt-3 mt-3">
+                            <div className="space-y-3">
+                              <label className="text-sm font-medium text-gray-700">Note vergeben</label>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div className="space-y-2">
+                                  <label className="text-xs text-gray-600">Punkte (0-15)</label>
+                                  <input
+                                    type="number"
+                                    min="0"
+                                    max="15"
+                                    step="0.5"
+                                    placeholder="Note (0-15)"
+                                    value={grades[request.id]?.grade || ''}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      setGrades(prev => ({
+                                        ...prev,
+                                        [request.id]: {
+                                          ...prev[request.id],
+                                          grade: value ? parseFloat(value) : 0
+                                        }
+                                      }));
+                                    }}
+                                    onBlur={(e) => {
+                                      const grade = parseFloat(e.target.value);
+                                      if (grade >= 0 && grade <= 15) {
+                                        updateGrade(request.id, grade, grades[request.id]?.gradeText);
+                                      }
+                                    }}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent"
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className="text-xs text-gray-600">Notenbeschreibung (optional)</label>
+                                  <textarea
+                                    placeholder="Notenbeschreibung (optional)"
+                                    value={grades[request.id]?.gradeText || ''}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      setGrades(prev => ({
+                                        ...prev,
+                                        [request.id]: {
+                                          ...prev[request.id],
+                                          gradeText: value
+                                        }
+                                      }));
+                                    }}
+                                    onBlur={() => {
+                                      const currentGrade = grades[request.id];
+                                      if (currentGrade?.grade) {
+                                        updateGrade(request.id, currentGrade.grade, currentGrade.gradeText);
+                                      }
+                                    }}
+                                    rows={2}
+                                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
+                                  />
+                                </div>
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                💡 Die Note wird automatisch in der Ergebnis-Statistik des Studenten angezeigt
                               </div>
                             </div>
                           </div>
@@ -1478,7 +1943,10 @@ const InstructorDashboard: React.FC = () => {
                       {selectedCaseForCorrection.legal_area} - {selectedCaseForCorrection.sub_area}
                     </p>
                     <p className="text-xs text-gray-600">
-                      {selectedCaseForCorrection.user ? `${selectedCaseForCorrection.user.first_name || 'Demo'} ${selectedCaseForCorrection.user.last_name || ''} (${selectedCaseForCorrection.user.email})` : 'Demo (demo@kraatz-club.de)'}
+                      {selectedCaseForCorrection.user ? 
+                        `${[selectedCaseForCorrection.user.first_name, selectedCaseForCorrection.user.last_name].filter(Boolean).join(' ')} (${selectedCaseForCorrection.user.email})` : 
+                        'Unbekannter Benutzer'
+                      }
                     </p>
                   </div>
                 )}

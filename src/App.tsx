@@ -24,7 +24,19 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route path="/" element={<HomePage />} />
+            <Route 
+              path="/" 
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute 
+                    allowedRoles={['student']} 
+                    redirectTo="/admin/users"
+                  >
+                    <HomePage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              } 
+            />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/packages" element={<PackagesPage />} />

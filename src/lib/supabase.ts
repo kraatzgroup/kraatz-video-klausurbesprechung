@@ -108,7 +108,7 @@ export type Database = {
           legal_area: string
           sub_area: string
           focus_area: string
-          status: 'requested' | 'materials_ready' | 'submitted' | 'corrected'
+          status: 'requested' | 'materials_ready' | 'submitted' | 'under_review' | 'corrected' | 'completed'
           pdf_url: string | null
           created_at: string
           updated_at: string
@@ -119,7 +119,7 @@ export type Database = {
           legal_area: string
           sub_area: string
           focus_area: string
-          status?: 'requested' | 'materials_ready' | 'submitted' | 'corrected'
+          status?: 'requested' | 'materials_ready' | 'submitted' | 'under_review' | 'corrected' | 'completed'
           pdf_url?: string | null
           created_at?: string
           updated_at?: string
@@ -130,7 +130,7 @@ export type Database = {
           legal_area?: string
           sub_area?: string
           focus_area?: string
-          status?: 'requested' | 'materials_ready' | 'submitted' | 'corrected'
+          status?: 'requested' | 'materials_ready' | 'submitted' | 'under_review' | 'corrected' | 'completed'
           pdf_url?: string | null
           created_at?: string
           updated_at?: string
