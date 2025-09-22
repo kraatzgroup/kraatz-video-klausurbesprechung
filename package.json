@@ -50,6 +50,10 @@
       "last 1 safari version"
     ]
   },
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "devDependencies": {
     "@types/node": "^24.3.0",
     "autoprefixer": "^10.4.14",
