@@ -2,18 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { 
   Users, 
-  Clock, 
-  CheckCircle, 
-  AlertCircle, 
-  TrendingUp, 
-  Activity,
+  Clock,Activity,
   Calendar,
-  User,
-  RefreshCw,
-  Zap,
-  Upload,
-  Download,
-  MessageCircle,
+  User,Zap,MessageCircle,
   Award,
   Video
 } from 'lucide-react'
@@ -175,8 +166,7 @@ const AdminActivityDashboard: React.FC = () => {
         timestamp: sachverhaltDate.toISOString(),
         action: 'Sachverhalt bereitgestellt',
         description: `${instructor.first_name} ${instructor.last_name} hat Sachverhalt zur Verfügung gestellt`,
-        icon: Download,
-        color: 'text-blue-600 bg-blue-100'
+        icon:color: 'text-blue-600 bg-blue-100'
       })
     }
 
@@ -188,8 +178,7 @@ const AdminActivityDashboard: React.FC = () => {
         timestamp: case_.status === 'submitted' ? case_.updated_at : case_.created_at,
         action: 'Bearbeitung eingereicht',
         description: `Student hat Bearbeitung eingereicht - bereit zur Korrektur`,
-        icon: Upload,
-        color: 'text-indigo-600 bg-indigo-100'
+        icon:color: 'text-indigo-600 bg-indigo-100'
       })
 
       // 3b. Automatic notification to instructor
@@ -230,8 +219,7 @@ const AdminActivityDashboard: React.FC = () => {
         timestamp: case_.status === 'corrected' ? case_.updated_at : case_.updated_at,
         action: 'Korrektur hochgeladen',
         description: `${instructor.first_name} ${instructor.last_name} hat Korrektur und Bewertung hochgeladen`,
-        icon: CheckCircle,
-        color: 'text-green-600 bg-green-100'
+        icon:color: 'text-green-600 bg-green-100'
       })
     }
 
@@ -394,7 +382,7 @@ const AdminActivityDashboard: React.FC = () => {
               className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-full"
               title="Manuell aktualisieren"
             >
-              <RefreshCw className="w-4 h-4" />
+              <className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -467,7 +455,7 @@ const AdminActivityDashboard: React.FC = () => {
               <p className="text-sm font-medium text-gray-500">Heute fertig</p>
               <p className="text-2xl font-semibold text-orange-600">{stats.completedToday}</p>
             </div>
-            <CheckCircle className="h-8 w-8 text-orange-600" />
+            <className="h-8 w-8 text-orange-600" />
           </div>
         </div>
 
@@ -477,7 +465,7 @@ const AdminActivityDashboard: React.FC = () => {
               <p className="text-sm font-medium text-gray-500">Ø Reaktionszeit</p>
               <p className="text-2xl font-semibold text-indigo-600">{stats.avgResponseTime}</p>
             </div>
-            <TrendingUp className="h-8 w-8 text-indigo-600" />
+            <className="h-8 w-8 text-indigo-600" />
           </div>
         </div>
       </div>

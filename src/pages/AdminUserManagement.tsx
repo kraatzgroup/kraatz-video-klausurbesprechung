@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Users, Plus, Eye, Award, UserPlus, BarChart3, Crown, Trash2, FileText } from 'lucide-react';
+import { Users, Plus,Award, UserPlus, BarChart3, Crown, Trash2} from 'lucide-react';
 import { createUserAsAdmin, CreateUserData } from '../utils/adminUtils';
-import { getUserLegalAreas, formatLegalAreasDisplay, getAllLegalAreas, type LegalArea } from '../utils/legalAreaUtils';
+import { getUserLegalAreas, formatLegalAreasDisplay, type LegalArea } from '../utils/legalAreaUtils';
 import LegalAreaMultiSelect from '../components/LegalAreaMultiSelect';
 import AdminCasesOverview from '../components/AdminCasesOverview';
 import AdminActivityDashboard from '../components/AdminActivityDashboard';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 
 // Create admin client for user management operations
 // In production, this should be moved to a secure server-side environment
@@ -43,8 +43,8 @@ const AdminUserManagement: React.FC = () => {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [grantModalOpen, setGrantModalOpen] = useState(false);
   const [grantAmount, setGrantAmount] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'instructor' | 'admin' | 'springer'>('all');
+  const [searchTerm, setTerm] = useState('');
+  const [rolesetRole] = useState<'all' | 'student' | 'instructor' | 'admin' | 'springer'>('all');
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
   const [newUserData, setNewUserData] = useState({
     email: '',
@@ -292,23 +292,23 @@ const AdminUserManagement: React.FC = () => {
     }
   };
 
-  // Filter users based on search and role
+  //users based on search and role
   const filteredUsers = users.filter(userStat => {
-    const matchesSearch = searchTerm === '' || 
+    const matches= searchTerm === '' || 
       (userStat.user.first_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (userStat.user.last_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       userStat.user.email.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesRole = roleFilter === 'all' || userStat.user.role === roleFilter;
-    return matchesSearch && matchesRole;
+    const matchesRole = role=== 'all' || userStat.user.role === role;
+    return matches&& matchesRole;
   });
 
   // Debug filtering
-  console.log('🔍 Filtering Debug:');
+  console.log('🔍ing Debug:');
   console.log('  - users array length:', users.length);
   console.log('  - users array:', users);
   console.log('  - searchTerm:', searchTerm);
-  console.log('  - roleFilter:', roleFilter);
+  console.log('  - role:', role);
   console.log('  - filteredUsers length:', filteredUsers.length);
   console.log('  - filteredUsers:', filteredUsers);
 
@@ -522,7 +522,7 @@ const AdminUserManagement: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <FileText className="w-4 h-4" />
+                  <className="w-4 h-4" />
                   Alle Aufträge
                 </div>
               </button>
@@ -610,7 +610,7 @@ const AdminUserManagement: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <Eye className="h-8 w-8 text-purple-600" />
+                <className="h-8 w-8 text-purple-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Gesamt Klausuren</p>
@@ -636,7 +636,7 @@ const AdminUserManagement: React.FC = () => {
           </div>
         </div>
 
-        {/* Search and Filter */}
+        {/*and*/}
         <div className="bg-white shadow rounded-lg p-6 mb-6">
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1">
@@ -644,14 +644,14 @@ const AdminUserManagement: React.FC = () => {
                 type="text"
                 placeholder="Benutzer suchen (Name, E-Mail)..."
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => setTerm(e.target.value)}
                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-kraatz-primary focus:border-transparent"
               />
             </div>
             <div>
               <select
-                value={roleFilter}
-                onChange={(e) => setRoleFilter(e.target.value as any)}
+                value={role}
+                onChange={(e) => setRole(e.target.value as any)}
                 className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-kraatz-primary"
               >
                 <option value="all">Alle Rollen</option>

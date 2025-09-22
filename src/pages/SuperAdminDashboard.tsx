@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Users, Settings, Shield, Activity, BarChart3, UserCheck, AlertTriangle, TrendingUp, Clock, CheckCircle, XCircle, Eye, Plus, Search, Filter, Download, Upload, RefreshCw, Trash2, Crown, Video, GraduationCap, UserPlus, Play } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Users, Settings,Activity, BarChart3,Clock,Plus,Trash2, Crown, Video, GraduationCap, UserPlus, Play } from 'lucide-react'
+import {} from 'react-router-dom'
 
 interface User {
   id: string
@@ -32,8 +32,8 @@ const SuperAdminDashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'instructors' | 'create-user' | 'videos'>('overview')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'instructor' | 'admin'>('all')
+  const [searchTerm, setTerm] = useState('')
+  const [rolesetRole] = useState<'all' | 'student' | 'instructor' | 'admin'>('all')
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [grantModalOpen, setGrantModalOpen] = useState(false)
   const [grantAmount, setGrantAmount] = useState('')
@@ -41,8 +41,8 @@ const SuperAdminDashboard: React.FC = () => {
     email: '', first_name: '', last_name: '', role: 'student', password: ''
   })
   const [videos, setVideos] = useState<VideoLesson[]>([])
-  const [videoSearchTerm, setVideoSearchTerm] = useState('')
-  const [videoCategoryFilter, setVideoCategoryFilter] = useState<string>('all')
+  const [videoTerm, setVideoTerm] = useState('')
+  const [videoCategorysetVideoCategory] = useState<string>('all')
 
   useEffect(() => {
     fetchUsersWithStats()
@@ -90,7 +90,7 @@ const SuperAdminDashboard: React.FC = () => {
 
   const fetchVideos = async () => {
     try {
-      const { data, error } = await supabase
+      const {error } = await supabase
         .from('video_lessons')
         .select('*')
         .order('created_at', { ascending: false })
@@ -236,22 +236,20 @@ const SuperAdminDashboard: React.FC = () => {
   }
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = searchTerm === '' || 
+    const matches= searchTerm === '' || 
       user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesRole = roleFilter === 'all' || user.role === roleFilter
-    return matchesSearch && matchesRole
+    const matchesRole = role=== 'all' || user.role === rolereturn matches&& matchesRole
   })
 
   const filteredVideos = videos.filter(video => {
-    const matchesSearch = videoSearchTerm === '' ||
-      video.title.toLowerCase().includes(videoSearchTerm.toLowerCase()) ||
-      video.description.toLowerCase().includes(videoSearchTerm.toLowerCase())
+    const matches= videoTerm === '' ||
+      video.title.toLowerCase().includes(videoTerm.toLowerCase()) ||
+      video.description.toLowerCase().includes(videoTerm.toLowerCase())
     
-    const matchesCategory = videoCategoryFilter === 'all' || video.category === videoCategoryFilter
-    return matchesSearch && matchesCategory
+    const matchesCategory = videoCategory=== 'all' || video.category === videoCategoryreturn matches&& matchesCategory
   })
 
   if (loading) {
@@ -278,19 +276,18 @@ const SuperAdminDashboard: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <Link
-                to="/admin/users"
+              <to="/admin/users"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 font-medium transition-colors"
               >
                 <Users className="w-4 h-4" />
                 Benutzerverwaltung
-              </Link>
+              </>
               <div className="text-right">
                 <div className="text-sm text-yellow-300 font-medium">System Status</div>
                 <div className="text-xs text-purple-300">Alle Systeme aktiv</div>
               </div>
               <div className="bg-green-500/20 p-2 rounded-lg">
-                <Shield className="w-8 h-8 text-green-400" />
+                <className="w-8 h-8 text-green-400" />
               </div>
             </div>
           </div>
@@ -469,18 +466,18 @@ const SuperAdminDashboard: React.FC = () => {
             <div className="bg-black/30 backdrop-blur-sm border border-purple-500/30 rounded-xl p-6">
               <div className="flex flex-col md:flex-row gap-4 mb-6">
                 <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-400" />
+                  <className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-400" />
                   <input
                     type="text"
                     placeholder="Benutzer suchen..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => setTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-black/40 border border-purple-500/50 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                   />
                 </div>
                 <select
-                  value={roleFilter}
-                  onChange={(e) => setRoleFilter(e.target.value as any)}
+                  value={role}
+                  onChange={(e) => setRole(e.target.value as any)}
                   className="px-4 py-3 bg-black/40 border border-purple-500/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 >
                   <option value="all">Alle Rollen</option>
@@ -693,30 +690,29 @@ const SuperAdminDashboard: React.FC = () => {
                   Video-Lektionen Management
                 </h2>
                 <div className="flex gap-4 ml-auto">
-                  <Link
-                    to="/masterclass"
+                  <to="/masterclass"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                   >
                     <Play className="w-4 h-4" />
                     Zur Masterclass
-                  </Link>
+                  </>
                 </div>
               </div>
 
               <div className="flex flex-col md:flex-row gap-4 mb-6">
                 <div className="flex-1 relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-400" />
+                  <className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-400" />
                   <input
                     type="text"
                     placeholder="Videos suchen..."
-                    value={videoSearchTerm}
-                    onChange={(e) => setVideoSearchTerm(e.target.value)}
+                    value={videoTerm}
+                    onChange={(e) => setVideoTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-3 bg-black/40 border border-purple-500/50 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
                   />
                 </div>
                 <select
-                  value={videoCategoryFilter}
-                  onChange={(e) => setVideoCategoryFilter(e.target.value)}
+                  value={videoCategory}
+                  onChange={(e) => setVideoCategory(e.target.value)}
                   className="px-4 py-3 bg-black/40 border border-purple-500/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
                 >
                   <option value="all">Alle Kategorien</option>
@@ -826,17 +822,16 @@ const SuperAdminDashboard: React.FC = () => {
                     Keine Videos gefunden
                   </h3>
                   <p className="text-purple-300 mb-4">
-                    {videoSearchTerm || videoCategoryFilter !== 'all' 
+                    {videoTerm || videoCategory!== 'all' 
                       ? 'Keine Videos entsprechen den Suchkriterien.'
                       : 'Noch keine Video-Lektionen hochgeladen.'}
                   </p>
-                  <Link
-                    to="/masterclass"
+                  <to="/masterclass"
                     className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
                   >
                     <Plus className="w-4 h-4" />
                     Erstes Video hochladen
-                  </Link>
+                  </>
                 </div>
               )}
             </div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Play, Clock, BookOpen, Upload, X, FileVideo, Edit, Trash2, Settings, Eye, CheckCircle, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
+import { Play, Clock, BookOpen,X,Edit, Trash2, Settings,GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useUserRole } from '../hooks/useUserRole'
 import { supabase } from '../lib/supabase'
@@ -32,20 +32,20 @@ export const MasterclassPage: React.FC = () => {
   const { userProfile } = useUserRole()
   const [lessons, setLessons] = useState<VideoLesson[]>([])
   const [loading, setLoading] = useState(true)
-  const [showUploadModal, setShowUploadModal] = useState(false)
-  const [uploadData, setUploadData] = useState({
+  const [showModal, setShowModal] = useState(false)
+  const [uploadData, setData] = useState({
     title: '',
     description: '',
     youtube_url: '',
     duration: 0
   })
   const [editingLesson, setEditingLesson] = useState<VideoLesson | null>(null)
-  const [uploading, setUploading] = useState(false)
+  const [uploading, seting] = useState(false)
   const [showVideoModal, setShowVideoModal] = useState(false)
   const [selectedVideo, setSelectedVideo] = useState<VideoLesson | null>(null)
   const [showAdminView, setShowAdminView] = useState(false)
   const [videoProgress, setVideoProgress] = useState<VideoProgress[]>([])
-  const [videoOrder, setVideoOrder] = useState<string[]>([])
+  const [setVideoOrder] = useState<string[]>([])
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
   const [dragOverItem, setDragOverItem] = useState<string | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -66,12 +66,12 @@ export const MasterclassPage: React.FC = () => {
       console.log('User profile:', userProfile)
       
       // Try without RLS first to see if that's the issue
-      const { data, error } = await supabase
+      const {error } = await supabase
         .from('video_lessons')
         .select('*')
         .eq('is_active', true)
 
-      console.log('Supabase response:', { data, error })
+      console.log('Supabase response:', {error })
 
       if (error) {
         console.error('Supabase error:', error)
@@ -150,7 +150,7 @@ export const MasterclassPage: React.FC = () => {
     if (!user) return
     
     try {
-      const { data, error } = await supabase
+      const {error } = await supabase
         .from('video_progress')
         .select('*')
         .eq('user_id', user.id)
@@ -315,7 +315,7 @@ export const MasterclassPage: React.FC = () => {
   }
 
   const handleYouTubeUrlChange = (url: string) => {
-    setUploadData(prev => ({ ...prev, youtube_url: url }))
+    setData(prev => ({ ...prev, youtube_url: url }))
     
     // Auto-extract video ID and validate
     const videoId = extractYouTubeId(url)
@@ -337,7 +337,7 @@ export const MasterclassPage: React.FC = () => {
       return
     }
 
-    setUploading(true)
+    seting(true)
     
     try {
       // Generate YouTube embed URL and thumbnail
@@ -360,20 +360,20 @@ export const MasterclassPage: React.FC = () => {
       if (dbError) throw dbError
 
       alert('YouTube-Video erfolgreich hinzugefügt!')
-      setShowUploadModal(false)
-      setUploadData({ title: '', description: '', youtube_url: '', duration: 0 })
+      setShowModal(false)
+      setData({ title: '', description: '', youtube_url: '', duration: 0 })
       fetchLessons()
     } catch (error) {
       console.error('Error saving video:', error)
       alert('Fehler beim Speichern des Videos: ' + (error as Error).message)
     } finally {
-      setUploading(false)
+      seting(false)
     }
   }
 
-  const resetUploadForm = () => {
-    setUploadData({ title: '', description: '', youtube_url: '', duration: 0 })
-    setShowUploadModal(false)
+  const resetForm = () => {
+    setData({ title: '', description: '', youtube_url: '', duration: 0 })
+    setShowModal(false)
     setEditingLesson(null)
   }
 
@@ -400,13 +400,13 @@ export const MasterclassPage: React.FC = () => {
       }
     }
     
-    setUploadData({
+    setData({
       title: lesson.title,
       description: lesson.description,
       youtube_url: youtubeUrl,
       duration: lesson.duration
     })
-    setShowUploadModal(true)
+    setShowModal(true)
   }
 
   const handleUpdateLesson = async () => {
@@ -421,7 +421,7 @@ export const MasterclassPage: React.FC = () => {
       return
     }
 
-    setUploading(true)
+    seting(true)
     try {
       // Generate YouTube embed URL and thumbnail
       const embedUrl = `https://www.youtube.com/embed/${videoId}`
@@ -443,13 +443,13 @@ export const MasterclassPage: React.FC = () => {
       if (dbError) throw dbError
 
       alert('Video erfolgreich aktualisiert!')
-      resetUploadForm()
+      resetForm()
       fetchLessons()
     } catch (error) {
       console.error('Error updating video:', error)
       alert('Fehler beim Aktualisieren des Videos: ' + (error as Error).message)
     } finally {
-      setUploading(false)
+      seting(false)
     }
   }
 
@@ -514,16 +514,16 @@ export const MasterclassPage: React.FC = () => {
                     {isSaving ? (
                       <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                     ) : (
-                      <CheckCircle className="w-4 h-4" />
+                      <className="w-4 h-4" />
                     )}
                     {isSaving ? 'Speichere...' : 'Änderungen speichern'}
                   </button>
                 )}
                 <button
-                  onClick={() => setShowUploadModal(true)}
+                  onClick={() => setShowModal(true)}
                   className="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 transition-colors"
                 >
-                  <Upload className="w-4 h-4" />
+                  <className="w-4 h-4" />
                   Video hochladen
                 </button>
               </div>
@@ -566,7 +566,7 @@ export const MasterclassPage: React.FC = () => {
                 <div className="flex items-center gap-2">
                   {isVideoWatched(lesson.id) && (
                     <span className="flex items-center gap-1 text-green-600 text-sm">
-                      <CheckCircle className="w-4 h-4" />
+                      <className="w-4 h-4" />
                       Gesehen
                     </span>
                   )}
@@ -689,18 +689,18 @@ export const MasterclassPage: React.FC = () => {
           </div>
         )}
 
-        {/* Upload Modal (for admins) */}
-        {showUploadModal && userProfile?.role === 'admin' && (
+        {/*Modal (for admins) */}
+        {showModal && userProfile?.role === 'admin' && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-2">
-                    <Upload className="w-6 h-6 text-primary" />
+                    <className="w-6 h-6 text-primary" />
                     {editingLesson ? 'Video bearbeiten' : 'YouTube-Video hinzufügen'}
                   </h2>
                   <button
-                    onClick={resetUploadForm}
+                    onClick={resetForm}
                     className="text-gray-400 hover:text-gray-600 transition-colors"
                   >
                     <X className="w-6 h-6" />
@@ -740,7 +740,7 @@ export const MasterclassPage: React.FC = () => {
                     <input
                       type="text"
                       value={uploadData.title}
-                      onChange={(e) => setUploadData({ ...uploadData, title: e.target.value })}
+                      onChange={(e) => setData({ ...uploadData, title: e.target.value })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                       placeholder="z.B. Grundlagen des Zivilrechts"
                     />
@@ -753,7 +753,7 @@ export const MasterclassPage: React.FC = () => {
                     </label>
                     <textarea
                       value={uploadData.description}
-                      onChange={(e) => setUploadData({ ...uploadData, description: e.target.value })}
+                      onChange={(e) => setData({ ...uploadData, description: e.target.value })}
                       rows={3}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                       placeholder="Kurze Beschreibung des Video-Inhalts..."
@@ -769,7 +769,7 @@ export const MasterclassPage: React.FC = () => {
                       type="number"
                       min="0"
                       value={uploadData.duration}
-                      onChange={(e) => setUploadData(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
+                      onChange={(e) => setData(prev => ({ ...prev, duration: parseInt(e.target.value) || 0 }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent"
                       placeholder="Dauer in Sekunden (z.B. 1800 für 30 Min)"
                     />
@@ -782,7 +782,7 @@ export const MasterclassPage: React.FC = () => {
                 {/* Modal Actions */}
                 <div className="flex justify-end gap-3 mt-8 pt-6 border-t border-gray-200">
                   <button
-                    onClick={resetUploadForm}
+                    onClick={resetForm}
                     disabled={uploading}
                     className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium disabled:opacity-50"
                   >
@@ -793,7 +793,7 @@ export const MasterclassPage: React.FC = () => {
                     disabled={uploading || !uploadData.youtube_url || !uploadData.title || !uploadData.description}
                     className="px-6 py-2 bg-primary text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed font-medium flex items-center gap-2"
                   >
-                    <Upload className="w-4 h-4" />
+                    <className="w-4 h-4" />
                     {uploading ? 'Wird gespeichert...' : editingLesson ? 'Video aktualisieren' : 'Video hinzufügen'}
                   </button>
                 </div>
