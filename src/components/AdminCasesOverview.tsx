@@ -11,7 +11,6 @@ import {
   Filter,
   Search,
   Eye,
-  Download,
   Trash2
 } from 'lucide-react'
 

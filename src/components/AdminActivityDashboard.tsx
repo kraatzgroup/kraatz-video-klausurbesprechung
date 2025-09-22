@@ -1,21 +1,21 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@supabase/supabase-js'
 import { 
-  Activity, 
+  Users, 
   Clock, 
   CheckCircle, 
-  FileText, 
-  Video, 
-  User,
+  AlertCircle, 
+  TrendingUp, 
+  Activity,
   Calendar,
+  User,
   RefreshCw,
-  TrendingUp,
-  Users,
   Zap,
   Upload,
   Download,
   MessageCircle,
-  Award
+  Award,
+  Video
 } from 'lucide-react'
 
 // Create admin client
@@ -63,16 +63,7 @@ const AdminActivityDashboard: React.FC = () => {
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [selectedTimeframe, setSelectedTimeframe] = useState<'today' | 'week' | 'month'>('today')
 
-  useEffect(() => {
-    fetchActivityData()
-    
-    if (autoRefresh) {
-      const interval = setInterval(fetchActivityData, 30000) // Refresh every 30 seconds
-      return () => clearInterval(interval)
-    }
-  }, [autoRefresh, selectedTimeframe])
-
-  const fetchActivityData = async () => {
+  const fetchActivityData = useCallback(async () => {
     try {
       setLoading(true)
       
@@ -138,7 +129,16 @@ const AdminActivityDashboard: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [selectedTimeframe])
+
+  useEffect(() => {
+    fetchActivityData()
+    
+    if (autoRefresh) {
+      const interval = setInterval(fetchActivityData, 30000) // Refresh every 30 seconds
+      return () => clearInterval(interval)
+    }
+  }, [autoRefresh, selectedTimeframe, fetchActivityData])
 
   const generateActivitiesFromCase = (case_: any, instructor: any, student: any): ActivityItem[] => {
     const activities: ActivityItem[] = []

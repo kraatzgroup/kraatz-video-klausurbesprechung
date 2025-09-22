@@ -10,19 +10,14 @@ import {
   Shield,
   TrendingUp,
   Award,
-  Clock,
   CheckCircle,
-  AlertCircle,
   Edit,
   Trash2,
-  Eye,
   DollarSign,
   MessageCircle,
   FileText
 } from 'lucide-react'
 import { createUserAsAdmin, CreateUserData } from '../utils/adminUtils'
-import { getUserLegalAreas, formatLegalAreasDisplay, getAllLegalAreas, type LegalArea } from '../utils/legalAreaUtils'
-import LegalAreaMultiSelect from '../components/LegalAreaMultiSelect'
 
 // Create admin client
 const supabaseAdmin = createClient(
@@ -84,7 +79,6 @@ const AdminDashboard: React.FC = () => {
   // Modal states
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [grantModalOpen, setGrantModalOpen] = useState(false)
-  const [editUserModalOpen, setEditUserModalOpen] = useState(false)
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false)
   const [roleChangeModalOpen, setRoleChangeModalOpen] = useState(false)
   const [selectedUserForRoleChange, setSelectedUserForRoleChange] = useState<User | null>(null)
@@ -92,7 +86,6 @@ const AdminDashboard: React.FC = () => {
   
   // Form states
   const [grantAmount, setGrantAmount] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
   const [newUserData, setNewUserData] = useState<CreateUserData>({
     email: '',
     password: '',
