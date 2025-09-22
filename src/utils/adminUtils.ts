@@ -12,11 +12,15 @@ export interface CreateUserData {
   password: string
   firstName: string
   lastName: string
-  role: 'student' | 'instructor' | 'admin'
+  role: 'student' | 'instructor' | 'admin' | 'springer'
+  instructorLegalArea?: 'Zivilrecht' | 'Strafrecht' | 'Öffentliches Recht' // Legacy - single area
+  legalAreas?: ('Zivilrecht' | 'Strafrecht' | 'Öffentliches Recht')[] // New - multiple areas
 }
 
 export async function createUserAsAdmin(userData: CreateUserData) {
   try {
+    console.log('Creating user with data:', userData)
+    
     // First, create the user in Supabase Auth using admin client
     const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email: userData.email,
@@ -28,6 +32,8 @@ export async function createUserAsAdmin(userData: CreateUserData) {
       email_confirm: true
     })
 
+    console.log('Auth creation result:', { authData, authError })
+
     if (authError) {
       throw new Error(`Auth creation failed: ${authError.message}`)
     }
@@ -36,26 +42,86 @@ export async function createUserAsAdmin(userData: CreateUserData) {
       throw new Error('User creation failed - no user data returned')
     }
 
-    // Wait a moment for the trigger to create the user record
-    await new Promise(resolve => setTimeout(resolve, 1000))
+    // Wait longer for the trigger to create the user record
+    await new Promise(resolve => setTimeout(resolve, 2000))
 
-    // Update the user role if it's not 'student' (default)
-    if (userData.role !== 'student') {
-      const { error: roleError } = await supabaseAdmin
+    // Check if user record was created by trigger
+    const { data: existingUser, error: checkError } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single()
+
+    console.log('Existing user check:', { existingUser, checkError })
+
+    // Always create user record manually since trigger is unreliable
+    if (!existingUser) {
+      console.log('Creating user record manually...')
+      const { error: insertError } = await supabaseAdmin
         .from('users')
-        .update({ role: userData.role })
-        .eq('id', authData.user.id)
+        .insert({
+          id: authData.user.id,
+          email: userData.email,
+          first_name: userData.firstName,
+          last_name: userData.lastName,
+          role: userData.role,
+          instructor_legal_area: (userData.role === 'instructor' || userData.role === 'springer') ? userData.instructorLegalArea : null,
+          legal_areas: (userData.role === 'instructor' || userData.role === 'springer') ? 
+            (userData.legalAreas || (userData.instructorLegalArea ? [userData.instructorLegalArea] : null)) : null,
+          account_credits: userData.role === 'student' ? 0 : null
+        })
 
-      if (roleError) {
-        console.warn('Role update failed:', roleError.message)
-        // Don't throw here as the user was created successfully
+      if (insertError) {
+        console.error('Manual user insert failed:', insertError)
+        throw new Error(`Failed to create user record: ${insertError.message}`)
+      }
+    } else {
+      // Update existing user record with role and legal area
+      const updateData: any = {}
+      
+      if (userData.role !== 'student') {
+        updateData.role = userData.role
+      }
+      
+      if ((userData.role === 'instructor' || userData.role === 'springer')) {
+        if (userData.legalAreas) {
+          updateData.legal_areas = userData.legalAreas
+          updateData.instructor_legal_area = userData.legalAreas[0] // Keep legacy field for compatibility
+        } else if (userData.instructorLegalArea) {
+          updateData.instructor_legal_area = userData.instructorLegalArea
+          updateData.legal_areas = [userData.instructorLegalArea]
+        }
+      }
+      
+      if (Object.keys(updateData).length > 0) {
+        const { error: updateError } = await supabaseAdmin
+          .from('users')
+          .update(updateData)
+          .eq('id', authData.user.id)
+
+        console.log('User update result:', updateError)
+
+        if (updateError) {
+          console.warn('User update failed:', updateError.message)
+          // Don't throw here as the user was created successfully
+        }
       }
     }
+
+    // Final verification that user was created
+    const { data: finalCheck } = await supabaseAdmin
+      .from('users')
+      .select('*')
+      .eq('id', authData.user.id)
+      .single()
+
+    console.log('Final user verification:', finalCheck)
 
     return {
       success: true,
       user: authData.user,
-      message: `User ${userData.email} created successfully with role ${userData.role}`
+      message: `User ${userData.email} created successfully with role ${userData.role}`,
+      createdUser: finalCheck
     }
 
   } catch (error) {
@@ -81,7 +147,7 @@ export async function getUserProfile(userId: string) {
   return data
 }
 
-export async function updateUserRole(userId: string, role: 'student' | 'instructor' | 'admin') {
+export async function updateUserRole(userId: string, role: 'student' | 'instructor' | 'admin' | 'springer') {
   const { error } = await supabaseAdmin
     .from('users')
     .update({ role })

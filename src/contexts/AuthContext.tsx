@@ -81,7 +81,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setSession(null)
       
       // Then attempt Supabase signout
-      const { error } = await supabase.auth.signOut()
+      await supabase.auth.signOut()
       
       // Even if there's an error (like session missing), we've cleared local state
       // so the user appears logged out in the UI

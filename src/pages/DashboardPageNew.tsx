@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { CreditCard, BookOpen, Plus, Download, Upload, FileText, Video, X, Clock, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react'
+import { CreditCard, BookOpen, Plus, Download, Upload, FileText, Video, X, Clock, CheckCircle, ChevronDown, ChevronUp, Star, MessageSquare, Table } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { NotificationService } from '../services/notificationService'
 
 interface UserProfile {
   account_credits: number
@@ -26,8 +27,12 @@ interface CaseStudyRequest {
   submission_downloaded_at?: string;
   video_correction_url?: string;
   written_correction_url?: string;
+  solution_pdf_url?: string;
+  scoring_sheet_url?: string;
+  scoring_schema_url?: string;
   video_viewed_at?: string;
   pdf_downloaded_at?: string;
+  correction_viewed_at?: string;
   created_at: string;
   updated_at: string;
   user?: {
@@ -35,6 +40,16 @@ interface CaseStudyRequest {
     last_name: string | null;
     email: string;
   } | null;
+}
+
+interface CaseStudyRating {
+  id: string;
+  case_study_id: string;
+  user_id: string;
+  rating: number;
+  feedback?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export const DashboardPageNew: React.FC = () => {
@@ -50,6 +65,12 @@ export const DashboardPageNew: React.FC = () => {
   const [currentVideoUrl, setCurrentVideoUrl] = useState<string | null>(null)
   const [highlightedCaseId, setHighlightedCaseId] = useState<string | null>(null)
   const [expandedCases, setExpandedCases] = useState<Set<string>>(new Set())
+  const [ratings, setRatings] = useState<Map<string, CaseStudyRating>>(new Map())
+  const [showRatingModal, setShowRatingModal] = useState(false)
+  const [currentRatingCaseId, setCurrentRatingCaseId] = useState<string | null>(null)
+  const [tempRating, setTempRating] = useState(0)
+  const [tempFeedback, setTempFeedback] = useState('')
+  const [submittingRating, setSubmittingRating] = useState(false)
 
   // Track video view
   const handleVideoView = async (caseStudyId: string) => {
@@ -101,14 +122,35 @@ export const DashboardPageNew: React.FC = () => {
     }
   }
 
+  // Mark correction as viewed
+  const markCorrectionAsViewed = async (caseStudyId: string) => {
+    try {
+      const { error } = await supabase
+        .from('case_study_requests')
+        .update({ correction_viewed_at: new Date().toISOString() })
+        .eq('id', caseStudyId)
+
+      if (error) {
+        console.error('Error marking correction as viewed:', error)
+      } else {
+        // Refresh case studies to update UI
+        fetchUserData()
+      }
+    } catch (error) {
+      console.error('Error marking correction as viewed:', error)
+    }
+  }
+
   // Open video modal
   const openVideoModal = (videoUrl: string, caseStudyId: string) => {
     // Convert Loom share URL to embed URL
     const embedUrl = videoUrl.replace('https://www.loom.com/share/', 'https://www.loom.com/embed/')
     setCurrentVideoUrl(embedUrl)
     setVideoModalOpen(true)
-    // Track video view when modal opens
+    
+    // Mark video as viewed and correction as viewed
     handleVideoView(caseStudyId)
+    markCorrectionAsViewed(caseStudyId)
   }
 
   // Close video modal
@@ -128,6 +170,89 @@ export const DashboardPageNew: React.FC = () => {
       }
       return newSet
     })
+  }
+
+  // Fetch ratings for completed case studies
+  const fetchRatings = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('case_study_ratings')
+        .select('*')
+        .eq('user_id', user?.id)
+
+      if (error) throw error
+
+      const ratingsMap = new Map<string, CaseStudyRating>()
+      data?.forEach(rating => {
+        ratingsMap.set(rating.case_study_id, rating)
+      })
+      setRatings(ratingsMap)
+    } catch (error) {
+      console.error('Error fetching ratings:', error)
+    }
+  }
+
+  // Open rating modal
+  const openRatingModal = (caseStudyId: string) => {
+    const existingRating = ratings.get(caseStudyId)
+    setCurrentRatingCaseId(caseStudyId)
+    setTempRating(existingRating?.rating || 0)
+    setTempFeedback(existingRating?.feedback || '')
+    setShowRatingModal(true)
+  }
+
+  // Close rating modal
+  const closeRatingModal = () => {
+    setShowRatingModal(false)
+    setCurrentRatingCaseId(null)
+    setTempRating(0)
+    setTempFeedback('')
+  }
+
+  // Submit rating
+  const submitRating = async () => {
+    if (!currentRatingCaseId || tempRating === 0) return
+
+    setSubmittingRating(true)
+    try {
+      const existingRating = ratings.get(currentRatingCaseId)
+      
+      if (existingRating) {
+        // Update existing rating
+        const { error } = await supabase
+          .from('case_study_ratings')
+          .update({
+            rating: tempRating,
+            feedback: tempFeedback || null
+          })
+          .eq('id', existingRating.id)
+
+        if (error) throw error
+      } else {
+        // Create new rating
+        const { error } = await supabase
+          .from('case_study_ratings')
+          .insert({
+            case_study_id: currentRatingCaseId,
+            user_id: user?.id,
+            rating: tempRating,
+            feedback: tempFeedback || null
+          })
+
+        if (error) throw error
+      }
+
+      // Refresh ratings
+      await fetchRatings()
+      closeRatingModal()
+      
+      alert('Bewertung erfolgreich gespeichert!')
+    } catch (error) {
+      console.error('Error submitting rating:', error)
+      alert('Fehler beim Speichern der Bewertung: ' + (error as Error).message)
+    } finally {
+      setSubmittingRating(false)
+    }
   }
 
   // Determine styling based on access status
@@ -173,6 +298,7 @@ export const DashboardPageNew: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchUserData()
+      fetchRatings()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
@@ -300,6 +426,61 @@ export const DashboardPageNew: React.FC = () => {
       }
 
       console.log('Case study status updated successfully')
+      
+      // Find the case study to get details for notifications
+      const caseStudy = caseStudies.find(cs => cs.id === caseStudyId)
+      if (caseStudy && user && profile) {
+        // Create student notification
+        await NotificationService.createCaseStudyStatusNotification(
+          user.id,
+          'submitted',
+          caseStudy.legal_area,
+          caseStudy.sub_area,
+          caseStudyId
+        )
+        
+        // Send instructor/springer notification using the new notification system
+        try {
+          const { sendInstructorNotification } = await import('../utils/notificationUtils')
+          
+          const notificationResult = await sendInstructorNotification({
+            id: caseStudyId,
+            user_id: user.id,
+            legal_area: caseStudy.legal_area,
+            sub_area: caseStudy.sub_area,
+            status: 'submitted',
+            created_at: new Date().toISOString()
+          })
+          
+          if (notificationResult.success) {
+            console.log('Instructor/Springer notification sent successfully')
+          } else {
+            console.error('Failed to send instructor notification:', notificationResult.error)
+          }
+        } catch (notificationError) {
+          console.error('Error sending instructor notification:', notificationError)
+          
+          // Fallback to old notification system
+          const { data: instructor } = await supabase
+            .from('users')
+            .select('id')
+            .eq('role', 'instructor')
+            .eq('instructor_legal_area', caseStudy.legal_area)
+            .single()
+          
+          if (instructor) {
+            await NotificationService.createInstructorNotification(
+              instructor.id,
+              'submission_received',
+              `${profile.first_name} ${profile.last_name}`,
+              caseStudy.legal_area,
+              caseStudy.sub_area,
+              caseStudyId
+            )
+          }
+        }
+      }
+      
       setUploadFile(null)
       fetchUserData()
     } catch (error: any) {
@@ -317,8 +498,8 @@ export const DashboardPageNew: React.FC = () => {
   const completedCases = caseStudies.filter(cs => cs.status === 'corrected' || cs.status === 'completed')
   
   // Separate new and viewed corrections
-  const newCorrections = completedCases.filter(cs => !cs.video_viewed_at)
-  const viewedCorrections = completedCases.filter(cs => cs.video_viewed_at)
+  const newCorrections = completedCases.filter(cs => !cs.correction_viewed_at)
+  const viewedCorrections = completedCases.filter(cs => cs.correction_viewed_at)
 
   // Add debug logging to see what data we have
   useEffect(() => {
@@ -683,12 +864,16 @@ export const DashboardPageNew: React.FC = () => {
                         <div 
                           key={caseStudy.id} 
                           id={`case-study-${caseStudy.id}`}
-                          className={`${style.containerClass} transition-all duration-1000 ${
+                          className={`${style.containerClass} transition-all duration-1000 relative ${
                             highlightedCaseId === caseStudy.id 
                               ? 'ring-4 ring-blue-300 shadow-xl' 
                               : ''
                           }`}
                         >
+                          {/* Red notification badge for new corrections */}
+                          <div className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center z-10">
+                            1
+                          </div>
                           {/* Case Study Header - Always Visible */}
                           <div 
                             className="cursor-pointer"
@@ -711,6 +896,39 @@ export const DashboardPageNew: React.FC = () => {
                               </span>
                             </div>
                             <p className="text-sm text-gray-600">Schwerpunkt: {caseStudy.focus_area}</p>
+                          </div>
+                          
+                          {/* Rating Button - Always Visible */}
+                          <div className="mt-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {ratings.has(caseStudy.id) && (
+                                <div className="flex items-center gap-1">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      className={`w-3 h-3 ${
+                                        star <= (ratings.get(caseStudy.id)?.rating || 0)
+                                          ? 'text-yellow-500 fill-current'
+                                          : 'text-gray-300'
+                                      }`}
+                                    />
+                                  ))}
+                                  <span className="text-xs text-gray-600 ml-1">
+                                    ({ratings.get(caseStudy.id)?.rating}/5)
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openRatingModal(caseStudy.id)
+                              }}
+                              className="flex items-center gap-1 px-3 py-1 bg-yellow-600 text-white text-xs rounded-lg hover:bg-yellow-700 transition-colors"
+                            >
+                              <Star className="w-3 h-3" />
+                              {ratings.has(caseStudy.id) ? 'Bewertung ändern' : 'Jetzt bewerten'}
+                            </button>
                           </div>
                           
                           {/* Expandable Details Section */}
@@ -854,6 +1072,39 @@ export const DashboardPageNew: React.FC = () => {
                             <p className="text-sm text-gray-600">Schwerpunkt: {caseStudy.focus_area}</p>
                           </div>
                           
+                          {/* Rating Button - Always Visible */}
+                          <div className="mt-3 flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {ratings.has(caseStudy.id) && (
+                                <div className="flex items-center gap-1">
+                                  {[1, 2, 3, 4, 5].map((star) => (
+                                    <Star
+                                      key={star}
+                                      className={`w-3 h-3 ${
+                                        star <= (ratings.get(caseStudy.id)?.rating || 0)
+                                          ? 'text-yellow-500 fill-current'
+                                          : 'text-gray-300'
+                                      }`}
+                                    />
+                                  ))}
+                                  <span className="text-xs text-gray-600 ml-1">
+                                    ({ratings.get(caseStudy.id)?.rating}/5)
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                openRatingModal(caseStudy.id)
+                              }}
+                              className="flex items-center gap-1 px-3 py-1 bg-yellow-600 text-white text-xs rounded-lg hover:bg-yellow-700 transition-colors"
+                            >
+                              <Star className="w-3 h-3" />
+                              {ratings.has(caseStudy.id) ? 'Bewertung ändern' : 'Jetzt bewerten'}
+                            </button>
+                          </div>
+                          
                           {/* Expandable Details Section */}
                           {expandedCases.has(caseStudy.id) && (
                             <div className="mt-4 space-y-3 animate-in slide-in-from-top-2 duration-300">
@@ -939,11 +1190,60 @@ export const DashboardPageNew: React.FC = () => {
                                       {caseStudy.pdf_downloaded_at && <span className="text-xs">✓</span>}
                                     </a>
                                   )}
+                                  {caseStudy.scoring_schema_url && (
+                                    <a
+                                      href={caseStudy.scoring_schema_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="px-3 py-2 rounded-lg text-sm bg-orange-600 text-white hover:bg-orange-700 transition-colors flex items-center space-x-2"
+                                    >
+                                      <Table className="w-4 h-4" />
+                                      <span>Punkteschema (Excel)</span>
+                                    </a>
+                                  )}
                                 </div>
                               </div>
                               
                               <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
                                 💡 Schaue Dir sowohl die Video-Korrektur, als auch die schriftliche Bewertung Deines Dozenten an, um einen maximalen Mehrwert in der Nachbereitung zu erhalten!
+                              </div>
+                              
+                              {/* Rating Section */}
+                              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                  <h4 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                                    <Star className="w-4 h-4 text-yellow-500" />
+                                    Bewerte Deine Klausurenkorrektur
+                                  </h4>
+                                  {ratings.has(caseStudy.id) && (
+                                    <div className="flex items-center gap-1">
+                                      {[1, 2, 3, 4, 5].map((star) => (
+                                        <Star
+                                          key={star}
+                                          className={`w-4 h-4 ${
+                                            star <= (ratings.get(caseStudy.id)?.rating || 0)
+                                              ? 'text-yellow-500 fill-current'
+                                              : 'text-gray-300'
+                                          }`}
+                                        />
+                                      ))}
+                                    </div>
+                                  )}
+                                </div>
+                                <p className="text-xs text-gray-600 mb-3">
+                                  Wie bewertest Du Deine Klausurenkorrektur? Gibt es Kritik/Verbesserungswünsche?
+                                </p>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    openRatingModal(caseStudy.id)
+                                  }}
+                                  className="w-full bg-yellow-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-yellow-700 transition-colors flex items-center justify-center gap-2"
+                                >
+                                  <MessageSquare className="w-4 h-4" />
+                                  {ratings.has(caseStudy.id) ? 'Bewertung bearbeiten' : 'Jetzt bewerten'}
+                                </button>
                               </div>
                             </div>
                           )}
@@ -985,6 +1285,97 @@ export const DashboardPageNew: React.FC = () => {
                     allowFullScreen
                     title="Loom Video Correction"
                   />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Rating Modal */}
+        {showRatingModal && currentRatingCaseId && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white rounded-lg max-w-md w-full">
+              <div className="flex items-center justify-between p-4 border-b">
+                <h3 className="text-lg font-semibold text-gray-900">Klausurenkorrektur bewerten</h3>
+                <button
+                  onClick={closeRatingModal}
+                  className="text-gray-400 hover:text-gray-600 transition-colors"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <div className="p-6">
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-3">
+                    Wie bewertest Du Deine Klausurenkorrektur?
+                  </label>
+                  <div className="flex items-center justify-center gap-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <button
+                        key={star}
+                        onClick={() => setTempRating(star)}
+                        className="p-1 hover:scale-110 transition-transform"
+                      >
+                        <Star
+                          className={`w-8 h-8 ${
+                            star <= tempRating
+                              ? 'text-yellow-500 fill-current'
+                              : 'text-gray-300 hover:text-yellow-400'
+                          }`}
+                        />
+                      </button>
+                    ))}
+                  </div>
+                  <div className="text-center mt-2">
+                    <span className="text-sm text-gray-600">
+                      {tempRating === 0 && 'Bitte wähle eine Bewertung'}
+                      {tempRating === 1 && 'Sehr schlecht'}
+                      {tempRating === 2 && 'Schlecht'}
+                      {tempRating === 3 && 'Okay'}
+                      {tempRating === 4 && 'Gut'}
+                      {tempRating === 5 && 'Sehr gut'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Gibt es Kritik/Verbesserungswünsche? (Optional)
+                  </label>
+                  <textarea
+                    value={tempFeedback}
+                    onChange={(e) => setTempFeedback(e.target.value)}
+                    placeholder="Dein Feedback zur Klausurenkorrektur..."
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kraatz-primary focus:border-transparent resize-none"
+                    rows={4}
+                  />
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={closeRatingModal}
+                    className="flex-1 px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors"
+                  >
+                    Abbrechen
+                  </button>
+                  <button
+                    onClick={submitRating}
+                    disabled={tempRating === 0 || submittingRating}
+                    className={`flex-1 px-4 py-2 rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                      tempRating === 0 || submittingRating
+                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        : 'bg-kraatz-primary text-white hover:bg-kraatz-primary/90'
+                    }`}
+                  >
+                    {submittingRating ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        Speichern...
+                      </>
+                    ) : (
+                      'Bewertung speichern'
+                    )}
+                  </button>
                 </div>
               </div>
             </div>

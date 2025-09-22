@@ -34,7 +34,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     } else if (userProfile?.role === 'instructor') {
       return <Navigate to="/instructor" replace />
     } else {
-      return <Navigate to="/admin" replace />
+      return <Navigate to="/admin/users" replace />
     }
   }
 

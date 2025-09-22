@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import { Bell, CheckCircle, Clock, AlertCircle, BookOpen, Video, FileText, User, ExternalLink, Check, X } from 'lucide-react'
+import { Bell, Clock, BookOpen, Video, FileText, ExternalLink, Check, X } from 'lucide-react'
 
 interface Notification {
   id: string
@@ -21,6 +21,7 @@ export const NotificationDropdown: React.FC = () => {
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [isOpen, setIsOpen] = useState(false)
   const [loading, setLoading] = useState(false)
+  const [hasUnreadNotifications, setHasUnreadNotifications] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -56,6 +57,7 @@ export const NotificationDropdown: React.FC = () => {
 
       if (error) throw error
       setNotifications(data || [])
+      setHasUnreadNotifications((data || []).some(n => !n.read))
     } catch (error) {
       console.error('Error fetching notifications:', error)
     } finally {
@@ -78,6 +80,7 @@ export const NotificationDropdown: React.FC = () => {
         },
         (payload) => {
           setNotifications(prev => [payload.new as Notification, ...prev])
+          setHasUnreadNotifications(true)
         }
       )
       .on(
@@ -89,11 +92,13 @@ export const NotificationDropdown: React.FC = () => {
           filter: `user_id=eq.${user.id}`
         },
         (payload) => {
-          setNotifications(prev => 
-            prev.map(notif => 
+          setNotifications(prev => {
+            const updatedNotifications = prev.map((notif: Notification) => 
               notif.id === payload.new.id ? payload.new as Notification : notif
             )
-          )
+            setHasUnreadNotifications(updatedNotifications.some((n: Notification) => !n.read))
+            return updatedNotifications
+          })
         }
       )
       .subscribe()
@@ -110,11 +115,13 @@ export const NotificationDropdown: React.FC = () => {
 
       if (error) throw error
 
-      setNotifications(prev =>
-        prev.map(notif =>
+      setNotifications(prev => {
+        const updatedNotifications = prev.map((notif: Notification) =>
           notif.id === notificationId ? { ...notif, read: true } : notif
         )
-      )
+        setHasUnreadNotifications(updatedNotifications.some((n: Notification) => !n.read))
+        return updatedNotifications
+      })
     } catch (error) {
       console.error('Error marking notification as read:', error)
     }
@@ -135,6 +142,7 @@ export const NotificationDropdown: React.FC = () => {
       setNotifications(prev =>
         prev.map(notif => ({ ...notif, read: true }))
       )
+      setHasUnreadNotifications(false)
     } catch (error) {
       console.error('Error marking all notifications as read:', error)
     }
@@ -217,7 +225,13 @@ export const NotificationDropdown: React.FC = () => {
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={async () => {
+          setIsOpen(!isOpen)
+          if (!isOpen && hasUnreadNotifications) {
+            // Mark all as read when opening the bell
+            await markAllAsRead()
+          }
+        }}
         className="relative p-2 text-text-secondary hover:text-primary transition-colors"
       >
         <Bell className="w-5 h-5" />

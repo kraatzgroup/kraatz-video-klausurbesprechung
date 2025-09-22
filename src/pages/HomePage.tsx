@@ -1,16 +1,38 @@
 import React, { useEffect } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, Navigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { useUserRole } from '../hooks/useUserRole'
 import { BookOpen, Users, Award, ArrowRight } from 'lucide-react'
 import { testSupabaseConnection } from '../utils/testSupabase'
 
 export const HomePage: React.FC = () => {
   const { user } = useAuth()
+  const { userProfile, loading } = useUserRole()
 
   useEffect(() => {
     // Test Supabase connection on app load
     testSupabaseConnection()
   }, [])
+
+  // Show loading while checking user role
+  if (user && loading) {
+    return (
+      <div className="flex justify-center items-center min-h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    )
+  }
+
+  // Redirect authenticated users to their appropriate dashboards
+  if (user && userProfile) {
+    if (userProfile.role === 'instructor') {
+      return <Navigate to="/instructor" replace />
+    } else if (userProfile.role === 'admin') {
+      return <Navigate to="/admin/users" replace />
+    } else {
+      return <Navigate to="/dashboard" replace />
+    }
+  }
 
   return (
     <div className="space-y-16">

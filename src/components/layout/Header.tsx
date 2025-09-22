@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { User, CreditCard, LogOut, Users } from 'lucide-react'
+import { User, CreditCard, LogOut, Users, Video, Star } from 'lucide-react'
 import { NotificationDropdown } from '../NotificationDropdown'
 
 export const Header: React.FC = () => {
@@ -53,13 +53,32 @@ export const Header: React.FC = () => {
             {user && (
               <>
                 {userRole === 'admin' ? (
-                  <Link
-                    to="/admin"
-                    className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
-                  >
-                    <Users className="w-4 h-4" />
-                    Admin Dashboard
-                  </Link>
+                  <>
+                    <Link
+                      to="/admin"
+                      className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      <Users className="w-4 h-4" />
+                      Admin Dashboard
+                    </Link>
+                    <Link
+                      to="/masterclass"
+                      className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      <Video className="w-4 h-4" />
+                      Masterclass verwalten
+                    </Link>
+                    <Link
+                      to="/admin?tab=ratings"
+                      onClick={() => {
+                        console.log('Bewertungen Dashboard Link clicked')
+                      }}
+                      className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      <Star className="w-4 h-4" />
+                      Bewertungen Dashboard
+                    </Link>
+                  </>
                 ) : userRole === 'instructor' ? (
                   <Link
                     to="/instructor"
@@ -87,6 +106,12 @@ export const Header: React.FC = () => {
                       className="text-text-secondary hover:text-primary transition-colors"
                     >
                       Ergebnisse
+                    </Link>
+                    <Link
+                      to="/masterclass"
+                      className="text-text-secondary hover:text-primary transition-colors"
+                    >
+                      Klausuren-Masterclass
                     </Link>
                   </>
                 )}

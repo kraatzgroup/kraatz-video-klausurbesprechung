@@ -53,12 +53,12 @@ BEGIN
                 -- No notification for other status changes
         END CASE;
 
-        -- Instructor notifications
-        SELECT ARRAY(SELECT id FROM users WHERE role = 'instructor') INTO instructor_ids;
+        -- Instructor notifications - only notify instructors with matching legal area
+        SELECT ARRAY(SELECT id FROM users WHERE role = 'instructor' AND instructor_legal_area = NEW.legal_area) INTO instructor_ids;
         
         CASE NEW.status
             WHEN 'requested' THEN
-                -- Notify all instructors of new request
+                -- Notify only instructors with matching legal area specialization
                 FOREACH instructor_id IN ARRAY instructor_ids
                 LOOP
                     INSERT INTO notifications (user_id, title, message, type, related_case_study_id, read)
@@ -73,7 +73,7 @@ BEGIN
                 END LOOP;
             
             WHEN 'submitted' THEN
-                -- Notify all instructors of new submission
+                -- Notify only instructors with matching legal area specialization
                 FOREACH instructor_id IN ARRAY instructor_ids
                 LOOP
                     INSERT INTO notifications (user_id, title, message, type, related_case_study_id, read)

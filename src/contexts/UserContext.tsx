@@ -8,6 +8,9 @@ interface UserProfile {
   first_name: string | null
   last_name: string | null
   role: string
+  instructor_legal_area?: string // Legacy field - will be deprecated
+  legal_areas?: string[] // New multi-area field
+  email_notifications_enabled?: boolean
   account_credits: number
   created_at: string
   updated_at: string

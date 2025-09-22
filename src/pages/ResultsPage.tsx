@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { TrendingUp, TrendingDown, Minus, Award, BookOpen, Calendar, BarChart3, Play, CheckCircle, Plus } from 'lucide-react'
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Legend } from 'recharts'
+import { FileText, Download, Eye, Search, Filter, ChevronDown, TrendingUp, Award, Target, BarChart3, BookOpen, CheckCircle, Play, TrendingDown } from 'lucide-react'
+import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts'
 
 interface SubmissionResult {
   id: string

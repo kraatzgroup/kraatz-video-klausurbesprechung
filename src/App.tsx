@@ -1,5 +1,5 @@
 import React from 'react'
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { Layout } from './components/layout/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
@@ -15,8 +15,10 @@ import { ResultsPage } from './pages/ResultsPage'
 import InstructorDashboard from './pages/InstructorDashboard'
 import SuperAdminDashboard from './pages/SuperAdminDashboard'
 import AdminUserManagement from './pages/AdminUserManagement'
+import AdminDashboard from './pages/AdminDashboard'
 import SettingsPage from './pages/SettingsPage'
 import { ProfilePage } from './pages/ProfilePage'
+import { MasterclassPage } from './pages/MasterclassPage'
 
 function App() {
   return (
@@ -24,19 +26,7 @@ function App() {
       <Router>
         <Layout>
           <Routes>
-            <Route 
-              path="/" 
-              element={
-                <ProtectedRoute>
-                  <RoleBasedRoute 
-                    allowedRoles={['student']} 
-                    redirectTo="/admin/users"
-                  >
-                    <HomePage />
-                  </RoleBasedRoute>
-                </ProtectedRoute>
-              } 
-            />
+            <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/packages" element={<PackagesPage />} />
@@ -81,6 +71,16 @@ function App() {
               }
             />
             <Route
+              path="/masterclass"
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={['student', 'admin']}>
+                    <MasterclassPage />
+                  </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/instructor"
               element={
                 <ProtectedRoute requiredRole="instructor">
@@ -92,7 +92,7 @@ function App() {
               path="/admin"
               element={
                 <ProtectedRoute requiredRole="admin">
-                  <SuperAdminDashboard />
+                  <AdminDashboard />
                 </ProtectedRoute>
               }
             />
@@ -101,6 +101,14 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminUserManagement />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <SuperAdminDashboard />
                 </ProtectedRoute>
               }
             />

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Users, Settings, Database, Shield, Activity, UserPlus, Crown, BarChart3, GraduationCap, Search, Plus, Trash2 } from 'lucide-react'
+import { Users, Settings, Shield, Activity, BarChart3, UserCheck, AlertTriangle, TrendingUp, Clock, CheckCircle, XCircle, Eye, Plus, Search, Filter, Download, Upload, RefreshCw, Trash2, Crown, Video, GraduationCap, UserPlus, Play } from 'lucide-react'
+import { Link } from 'react-router-dom'
 
 interface User {
   id: string
@@ -15,10 +16,22 @@ interface User {
   pendingCases?: number
 }
 
+interface VideoLesson {
+  id: string
+  title: string
+  description: string
+  video_url: string
+  duration: number
+  category: string
+  created_at: string
+  thumbnail_url?: string
+  is_active: boolean
+}
+
 const SuperAdminDashboard: React.FC = () => {
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'instructors' | 'create-user'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'instructors' | 'create-user' | 'videos'>('overview')
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'instructor' | 'admin'>('all')
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
@@ -27,9 +40,13 @@ const SuperAdminDashboard: React.FC = () => {
   const [newUser, setNewUser] = useState({
     email: '', first_name: '', last_name: '', role: 'student', password: ''
   })
+  const [videos, setVideos] = useState<VideoLesson[]>([])
+  const [videoSearchTerm, setVideoSearchTerm] = useState('')
+  const [videoCategoryFilter, setVideoCategoryFilter] = useState<string>('all')
 
   useEffect(() => {
     fetchUsersWithStats()
+    fetchVideos()
   }, [])
 
   const fetchUsersWithStats = async () => {
@@ -68,6 +85,20 @@ const SuperAdminDashboard: React.FC = () => {
       console.error('Error fetching users:', error)
     } finally {
       setLoading(false)
+    }
+  }
+
+  const fetchVideos = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('video_lessons')
+        .select('*')
+        .order('created_at', { ascending: false })
+
+      if (error) throw error
+      setVideos(data || [])
+    } catch (error) {
+      console.error('Error fetching videos:', error)
     }
   }
 
@@ -160,6 +191,50 @@ const SuperAdminDashboard: React.FC = () => {
     }
   }
 
+  const handleDeleteVideo = async (videoId: string) => {
+    if (!window.confirm('Sind Sie sicher, dass Sie diese Video-Lektion löschen möchten?')) {
+      return
+    }
+
+    try {
+      const { error } = await supabase
+        .from('video_lessons')
+        .delete()
+        .eq('id', videoId)
+
+      if (error) throw error
+
+      alert('Video-Lektion erfolgreich gelöscht!')
+      fetchVideos()
+    } catch (error) {
+      console.error('Error deleting video:', error)
+      alert('Fehler beim Löschen der Video-Lektion')
+    }
+  }
+
+  const toggleVideoStatus = async (videoId: string, currentStatus: boolean) => {
+    try {
+      const { error } = await supabase
+        .from('video_lessons')
+        .update({ is_active: !currentStatus })
+        .eq('id', videoId)
+
+      if (error) throw error
+
+      alert(`Video ${!currentStatus ? 'aktiviert' : 'deaktiviert'}!`)
+      fetchVideos()
+    } catch (error) {
+      console.error('Error updating video status:', error)
+      alert('Fehler beim Aktualisieren des Video-Status')
+    }
+  }
+
+  const formatDuration = (seconds: number) => {
+    const minutes = Math.floor(seconds / 60)
+    const remainingSeconds = seconds % 60
+    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+  }
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = searchTerm === '' || 
       user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -168,6 +243,15 @@ const SuperAdminDashboard: React.FC = () => {
     
     const matchesRole = roleFilter === 'all' || user.role === roleFilter
     return matchesSearch && matchesRole
+  })
+
+  const filteredVideos = videos.filter(video => {
+    const matchesSearch = videoSearchTerm === '' ||
+      video.title.toLowerCase().includes(videoSearchTerm.toLowerCase()) ||
+      video.description.toLowerCase().includes(videoSearchTerm.toLowerCase())
+    
+    const matchesCategory = videoCategoryFilter === 'all' || video.category === videoCategoryFilter
+    return matchesSearch && matchesCategory
   })
 
   if (loading) {
@@ -194,6 +278,13 @@ const SuperAdminDashboard: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-4">
+              <Link
+                to="/admin/users"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 font-medium transition-colors"
+              >
+                <Users className="w-4 h-4" />
+                Benutzerverwaltung
+              </Link>
               <div className="text-right">
                 <div className="text-sm text-yellow-300 font-medium">System Status</div>
                 <div className="text-xs text-purple-300">Alle Systeme aktiv</div>
@@ -213,6 +304,7 @@ const SuperAdminDashboard: React.FC = () => {
             {[
               { id: 'overview', label: 'System Übersicht', icon: BarChart3 },
               { id: 'users', label: 'Alle Benutzer', icon: Users },
+              { id: 'videos', label: 'Video Management', icon: Video },
               { id: 'instructors', label: 'Dozenten Management', icon: GraduationCap },
               { id: 'create-user', label: 'Benutzer Erstellen', icon: UserPlus }
             ].map((tab) => (
@@ -240,7 +332,7 @@ const SuperAdminDashboard: React.FC = () => {
         {activeTab === 'overview' && (
           <div className="space-y-8">
             {/* Statistics Cards with distinct admin styling */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
               <div className="bg-gradient-to-br from-purple-900/50 to-blue-900/50 backdrop-blur-sm border border-purple-500/30 rounded-xl p-6 hover:border-purple-400/50 transition-all">
                 <div className="flex items-center justify-between">
                   <div>
@@ -280,6 +372,16 @@ const SuperAdminDashboard: React.FC = () => {
                   <Crown className="w-10 h-10 text-yellow-400" />
                 </div>
               </div>
+
+              <div className="bg-gradient-to-br from-indigo-900/50 to-purple-900/50 backdrop-blur-sm border border-indigo-500/30 rounded-xl p-6 hover:border-indigo-400/50 transition-all">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-indigo-200 text-sm font-medium">Video-Lektionen</p>
+                    <p className="text-4xl font-bold text-white">{videos.length}</p>
+                  </div>
+                  <Video className="w-10 h-10 text-indigo-400" />
+                </div>
+              </div>
             </div>
 
             {/* Quick Actions */}
@@ -288,13 +390,20 @@ const SuperAdminDashboard: React.FC = () => {
                 <Settings className="w-6 h-6 text-yellow-400" />
                 Admin Schnellaktionen
               </h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                 <button
                   onClick={() => setActiveTab('create-user')}
                   className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl"
                 >
                   <UserPlus className="w-5 h-5" />
                   Neuen Benutzer erstellen
+                </button>
+                <button
+                  onClick={() => setActiveTab('videos')}
+                  className="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-6 py-4 rounded-xl font-medium transition-all duration-200 flex items-center gap-3 shadow-lg hover:shadow-xl"
+                >
+                  <Video className="w-5 h-5" />
+                  Videos verwalten
                 </button>
                 <button
                   onClick={() => setActiveTab('instructors')}
@@ -570,6 +679,166 @@ const SuperAdminDashboard: React.FC = () => {
                   </button>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* Video Management Tab */}
+        {activeTab === 'videos' && (
+          <div className="space-y-6">
+            <div className="bg-black/30 backdrop-blur-sm border border-purple-500/30 rounded-xl p-6">
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <h2 className="text-2xl font-bold text-white mb-4 flex items-center gap-3">
+                  <Video className="w-6 h-6 text-purple-400" />
+                  Video-Lektionen Management
+                </h2>
+                <div className="flex gap-4 ml-auto">
+                  <Link
+                    to="/masterclass"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <Play className="w-4 h-4" />
+                    Zur Masterclass
+                  </Link>
+                </div>
+              </div>
+
+              <div className="flex flex-col md:flex-row gap-4 mb-6">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-purple-400" />
+                  <input
+                    type="text"
+                    placeholder="Videos suchen..."
+                    value={videoSearchTerm}
+                    onChange={(e) => setVideoSearchTerm(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 bg-black/40 border border-purple-500/50 rounded-xl text-white placeholder-purple-300 focus:outline-none focus:ring-2 focus:ring-yellow-400 focus:border-transparent"
+                  />
+                </div>
+                <select
+                  value={videoCategoryFilter}
+                  onChange={(e) => setVideoCategoryFilter(e.target.value)}
+                  className="px-4 py-3 bg-black/40 border border-purple-500/50 rounded-xl text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+                >
+                  <option value="all">Alle Kategorien</option>
+                  <option value="zivilrecht">Zivilrecht</option>
+                  <option value="strafrecht">Strafrecht</option>
+                  <option value="oeffentliches-recht">Öffentliches Recht</option>
+                  <option value="klausurtechnik">Klausurtechnik</option>
+                  <option value="gutachtenstil">Gutachtenstil</option>
+                </select>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead className="bg-black/40">
+                    <tr>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-300 uppercase tracking-wider">Video</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-300 uppercase tracking-wider">Kategorie</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-300 uppercase tracking-wider">Dauer</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-300 uppercase tracking-wider">Status</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-300 uppercase tracking-wider">Erstellt</th>
+                      <th className="px-6 py-4 text-left text-sm font-semibold text-yellow-300 uppercase tracking-wider">Aktionen</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-purple-500/20">
+                    {filteredVideos.map((video) => (
+                      <tr key={video.id} className="hover:bg-black/20 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center space-x-3">
+                            <div className="flex-shrink-0 w-16 h-12 bg-gray-700 rounded overflow-hidden">
+                              {video.thumbnail_url ? (
+                                <img
+                                  src={video.thumbnail_url}
+                                  alt={video.title}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <div className="w-full h-full flex items-center justify-center">
+                                  <Play className="w-6 h-6 text-gray-400" />
+                                </div>
+                              )}
+                            </div>
+                            <div>
+                              <div className="text-sm font-medium text-white line-clamp-1">
+                                {video.title}
+                              </div>
+                              <div className="text-sm text-purple-300 line-clamp-2">
+                                {video.description}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 py-1 text-xs font-semibold bg-blue-900/50 text-blue-300 rounded-full border border-blue-500/50">
+                            {video.category}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-white flex items-center gap-1">
+                            <Clock className="w-3 h-3" />
+                            {formatDuration(video.duration)}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className={`px-2 py-1 text-xs font-semibold rounded-full border ${
+                            video.is_active
+                              ? 'bg-green-900/50 text-green-300 border-green-500/50'
+                              : 'bg-red-900/50 text-red-300 border-red-500/50'
+                          }`}>
+                            {video.is_active ? 'Aktiv' : 'Inaktiv'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-purple-300">
+                          {new Date(video.created_at).toLocaleDateString('de-DE')}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-right">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => toggleVideoStatus(video.id, video.is_active)}
+                              className={`text-xs px-2 py-1 rounded transition-colors ${
+                                video.is_active
+                                  ? 'bg-red-600 hover:bg-red-700 text-white'
+                                  : 'bg-green-600 hover:bg-green-700 text-white'
+                              }`}
+                              title={video.is_active ? 'Deaktivieren' : 'Aktivieren'}
+                            >
+                              {video.is_active ? 'Deaktivieren' : 'Aktivieren'}
+                            </button>
+                            <button
+                              onClick={() => handleDeleteVideo(video.id)}
+                              className="text-red-400 hover:text-red-300 transition-colors p-1"
+                              title="Video löschen"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {filteredVideos.length === 0 && (
+                <div className="text-center py-8">
+                  <Video className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+                  <h3 className="text-xl font-semibold text-white mb-2">
+                    Keine Videos gefunden
+                  </h3>
+                  <p className="text-purple-300 mb-4">
+                    {videoSearchTerm || videoCategoryFilter !== 'all' 
+                      ? 'Keine Videos entsprechen den Suchkriterien.'
+                      : 'Noch keine Video-Lektionen hochgeladen.'}
+                  </p>
+                  <Link
+                    to="/masterclass"
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Erstes Video hochladen
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Ratings Navigation</title>
+</head>
+<body>
+    <h1>Test Ratings Dashboard Navigation</h1>
+    
+    <p>Click the links below to test navigation:</p>
+    
+    <ul>
+        <li><a href="http://localhost:3000/admin" target="_blank">Admin Dashboard (Overview)</a></li>
+        <li><a href="http://localhost:3000/admin?tab=ratings" target="_blank">Admin Dashboard (Ratings Tab)</a></li>
+        <li><a href="http://localhost:3000/admin?tab=users" target="_blank">Admin Dashboard (Users Tab)</a></li>
+    </ul>
+    
+    <h2>Debug Steps:</h2>
+    <ol>
+        <li>Open browser console (F12)</li>
+        <li>Click "Bewertungen Dashboard" button in navigation</li>
+        <li>Check console for log messages:
+            <ul>
+                <li>"Bewertungen Dashboard Link clicked"</li>
+                <li>"URL tab parameter: ratings"</li>
+                <li>"Setting active tab to: ratings"</li>
+            </ul>
+        </li>
+        <li>Verify URL changes to /admin?tab=ratings</li>
+        <li>Check if ratings tab becomes active (highlighted)</li>
+    </ol>
+    
+    <h2>Expected Behavior:</h2>
+    <p>When clicking "Bewertungen Dashboard":</p>
+    <ul>
+        <li>Navigate to /admin?tab=ratings</li>
+        <li>Ratings tab should be highlighted</li>
+        <li>Ratings content should be displayed</li>
+        <li>Console should show debug messages</li>
+    </ul>
+</body>
+</html>

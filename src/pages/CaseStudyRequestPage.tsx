@@ -3,6 +3,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
 import { getLegalAreaOptions, getSubAreaOptions } from '../data/legalAreas'
+import { NotificationService } from '../services/notificationService'
 import { BookOpen, CreditCard, AlertCircle } from 'lucide-react'
 
 interface UserProfile {
@@ -97,7 +98,7 @@ export const CaseStudyRequestPage: React.FC = () => {
 
     try {
       // Create case study request
-      const { error: requestError } = await supabase
+      const { data: caseStudyData, error: requestError } = await supabase
         .from('case_study_requests')
         .insert({
           user_id: user!.id,
@@ -107,6 +108,8 @@ export const CaseStudyRequestPage: React.FC = () => {
           focus_area: formData.randomAssignment ? 'Beliebige Klausur gewünscht' : formData.focusArea,
           status: 'requested'
         })
+        .select()
+        .single()
 
       if (requestError) throw requestError
 
@@ -121,15 +124,33 @@ export const CaseStudyRequestPage: React.FC = () => {
 
       if (updateError) throw updateError
 
-      // Create notification
-      await supabase
-        .from('notifications')
-        .insert({
-          user_id: user!.id,
-          title: 'Sachverhalt angefordert',
-          message: `Ihr Sachverhalt für ${formData.legalArea} - ${formData.subArea} wurde erfolgreich angefordert.`,
-          type: 'success'
-        })
+      // Create student notification
+      await NotificationService.createNotification({
+        userId: user!.id,
+        title: 'Sachverhalt angefordert',
+        message: `Ihr Sachverhalt für ${formData.legalArea} - ${formData.subArea || 'beliebiges Teilgebiet'} wurde erfolgreich angefordert.`,
+        type: 'success',
+        relatedCaseStudyId: caseStudyData.id
+      })
+
+      // Find instructor for this legal area and create instructor notification
+      const { data: instructor } = await supabase
+        .from('users')
+        .select('id, first_name, last_name')
+        .eq('role', 'instructor')
+        .eq('instructor_legal_area', formData.legalArea)
+        .single()
+
+      if (instructor) {
+        await NotificationService.createInstructorNotification(
+          instructor.id,
+          'new_request',
+          `${profile.first_name} ${profile.last_name}`,
+          formData.legalArea,
+          formData.subArea || 'beliebiges Teilgebiet',
+          caseStudyData.id
+        )
+      }
 
       navigate('/dashboard')
     } catch (error) {

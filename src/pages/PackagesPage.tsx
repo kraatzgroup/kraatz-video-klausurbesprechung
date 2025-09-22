@@ -22,14 +22,14 @@ export const PackagesPage: React.FC = () => {
       name: '5er Paket',
       description: 'Perfekt für den Einstieg',
       case_study_count: 5,
-      price_euros: 650
+      price_euros: 675
     },
     {
       id: '10er',
       name: '10er Paket',
       description: 'Ideal für regelmäßiges Üben',
       case_study_count: 10,
-      price_euros: 1285,
+      price_euros: 1250,
       popular: true
     },
     {
@@ -37,28 +37,28 @@ export const PackagesPage: React.FC = () => {
       name: '15er Paket',
       description: 'Für intensive Vorbereitung',
       case_study_count: 15,
-      price_euros: 1875
+      price_euros: 1800
     },
     {
       id: '20er',
       name: '20er Paket',
       description: 'Umfassende Klausurvorbereitung',
       case_study_count: 20,
-      price_euros: 2450
+      price_euros: 2360
     },
     {
       id: '25er',
       name: '25er Paket',
       description: 'Maximale Flexibilität',
       case_study_count: 25,
-      price_euros: 2975
+      price_euros: 2875
     },
     {
       id: '30er',
       name: '30er Paket',
       description: 'Das Komplettpaket für Profis',
       case_study_count: 30,
-      price_euros: 3525
+      price_euros: 3375
     }
   ]
 

@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { createUserAsAdmin, CreateUserData } from '../utils/adminUtils'
 import { 
   Settings, Users, UserPlus, Search, Trash2, Plus, Crown, 
-  GraduationCap, CreditCard
+  GraduationCap, CreditCard, User, Mail, Lock, Bell, Shield, Globe, Palette, MailX, Calendar
 } from 'lucide-react'
 
 // Admin client with service role key to bypass RLS
@@ -26,6 +26,8 @@ interface User {
   first_name: string
   last_name: string
   role: string
+  instructor_legal_area?: string
+  email_notifications_enabled?: boolean
   account_credits: number
   created_at: string
   totalRequests?: number
@@ -51,6 +53,11 @@ const SettingsPage: React.FC = () => {
     password: ''
   })
   const [currentUserRole, setCurrentUserRole] = useState('')
+  const [currentUserProfile, setCurrentUserProfile] = useState<User | null>(null)
+  const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(true)
+  const [vacationStartDate, setVacationStartDate] = useState('')
+  const [vacationEndDate, setVacationEndDate] = useState('')
+  const [vacationModalOpen, setVacationModalOpen] = useState(false)
 
   useEffect(() => {
     if (currentUser) {
@@ -83,15 +90,17 @@ const SettingsPage: React.FC = () => {
       try {
         const { data, error } = await supabaseAdmin
           .from('users')
-          .select('role')
+          .select('*')
           .eq('id', currentUser.id)
           .single()
         
         if (data && !error) {
           setCurrentUserRole(data.role || 'student')
+          setCurrentUserProfile(data)
+          setEmailNotificationsEnabled(data.email_notifications_enabled ?? true)
         }
       } catch (error) {
-        console.error('Error fetching user role:', error)
+        console.error('Error fetching user profile:', error)
       }
     }
     setLoading(false)
@@ -267,6 +276,123 @@ const SettingsPage: React.FC = () => {
     }
   }
 
+  const updateEmailNotifications = async (enabled: boolean) => {
+    if (!currentUser) return
+
+    try {
+      const { error } = await supabaseAdmin
+        .from('users')
+        .update({ email_notifications_enabled: enabled })
+        .eq('id', currentUser.id)
+
+      if (error) throw error
+
+      setEmailNotificationsEnabled(enabled)
+
+      // Transfer cases when going on vacation or returning
+      if (!enabled && currentUser?.id) {
+        // Going on vacation - transfer cases to springer
+        console.log('🏖️ Transferring cases to springer...')
+        await transferCasesToSpringer(currentUser.id, 'vacation_start')
+        alert('E-Mail-Benachrichtigungen wurden deaktiviert.\n\n🔄 Alle offenen Aufträge wurden an Springer übertragen.\nSpringer werden nun benachrichtigt.')
+      } else if (enabled && currentUser?.id) {
+        // Returning from vacation - transfer cases back
+        console.log('🎯 Transferring cases back from springer...')
+        await transferCasesToSpringer(currentUser.id, 'vacation_end')
+        alert('E-Mail-Benachrichtigungen wurden aktiviert.\n\n🔄 Alle Aufträge wurden von Springern zurück übertragen.')
+      }
+      
+      // Refresh profile
+      fetchCurrentUserRole()
+    } catch (error) {
+      console.error('Error updating email notifications:', error)
+      alert('Fehler beim Aktualisieren der E-Mail-Einstellungen')
+    }
+  }
+
+  const openVacationModal = () => {
+    const today = new Date().toISOString().split('T')[0]
+    setVacationStartDate(today)
+    setVacationEndDate(today)
+    setVacationModalOpen(true)
+  }
+
+  const closeVacationModal = () => {
+    setVacationModalOpen(false)
+    setVacationStartDate('')
+    setVacationEndDate('')
+  }
+
+  const transferCasesToSpringer = async (instructorId: string, reason: 'vacation_start' | 'vacation_end') => {
+    try {
+      console.log(`🔄 Calling transfer-cases function with reason: ${reason}`)
+      
+      const { data, error } = await supabaseAdmin.functions.invoke('transfer-cases', {
+        body: {
+          instructor_id: instructorId,
+          reason: reason
+        }
+      })
+
+      if (error) {
+        console.error('Error calling transfer-cases function:', error)
+        throw error
+      }
+
+      console.log('Transfer result:', data)
+      return data
+    } catch (error) {
+      console.error('Error transferring cases:', error)
+      throw error
+    }
+  }
+
+  const setVacationPeriod = async () => {
+    if (!vacationStartDate || !vacationEndDate) {
+      alert('Bitte wählen Sie Start- und Enddatum aus.')
+      return
+    }
+
+    if (new Date(vacationStartDate) > new Date(vacationEndDate)) {
+      alert('Das Startdatum muss vor dem Enddatum liegen.')
+      return
+    }
+
+    try {
+      // Store vacation dates in database and deactivate notifications
+      const { error } = await supabaseAdmin
+        .from('users')
+        .update({ 
+          email_notifications_enabled: false,
+          vacation_start_date: vacationStartDate,
+          vacation_end_date: vacationEndDate,
+          vacation_reason: 'Geplanter Urlaub'
+        })
+        .eq('id', currentUser?.id)
+
+      if (error) throw error
+
+      setEmailNotificationsEnabled(false)
+      
+      // Transfer cases to springer
+      console.log('🏖️ Transferring cases to springer for planned vacation...')
+      if (currentUser?.id) {
+        await transferCasesToSpringer(currentUser.id, 'vacation_start')
+      }
+      
+      const startFormatted = new Date(vacationStartDate).toLocaleDateString('de-DE')
+      const endFormatted = new Date(vacationEndDate).toLocaleDateString('de-DE')
+      
+      alert(`🏖️ Urlaubsmodus aktiviert!\n\nVom ${startFormatted} bis ${endFormatted}:\n🔄 Alle offenen Aufträge wurden an Springer übertragen\n📧 Springer werden über neue Klausuren benachrichtigt\n⏰ Automatische Rückkehr am ${endFormatted}\n\nViel Spaß im Urlaub! 🌴`)
+      
+      closeVacationModal()
+      fetchCurrentUserRole() // Refresh profile
+    } catch (error) {
+      console.error('Error setting vacation period:', error)
+      alert('Fehler beim Aktivieren des Urlaubsmodus')
+    }
+  }
+
   const filteredUsers = users.filter(user => {
     const matchesSearch = searchTerm === '' || 
       (user.first_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -351,7 +477,7 @@ const SettingsPage: React.FC = () => {
 
         {/* Profile Tab */}
         {activeTab === 'profile' && (
-          <div className="max-w-2xl">
+          <div className="max-w-2xl space-y-6">
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-6">Profil Informationen</h2>
               <div className="space-y-4">
@@ -365,15 +491,149 @@ const SettingsPage: React.FC = () => {
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                       currentUserRole === 'admin' ? 'bg-yellow-100 text-yellow-800' :
                       currentUserRole === 'instructor' ? 'bg-purple-100 text-purple-800' :
+                      currentUserRole === 'springer' ? 'bg-indigo-100 text-indigo-800' :
                       'bg-blue-100 text-blue-800'
                     }`}>
-                      {currentUserRole === 'admin' ? 'Administrator' : 
-                       currentUserRole === 'instructor' ? 'Dozent' : 'Student'}
+                      {(() => {
+                        if (currentUserRole === 'admin') return 'Administrator';
+                        if (currentUserRole === 'instructor') {
+                          return currentUserProfile?.instructor_legal_area 
+                            ? `Dozent ${currentUserProfile.instructor_legal_area}`
+                            : 'Dozent';
+                        }
+                        if (currentUserRole === 'springer') {
+                          return currentUserProfile?.instructor_legal_area 
+                            ? `Springer ${currentUserProfile.instructor_legal_area}`
+                            : 'Springer';
+                        }
+                        return 'Student';
+                      })()}
                     </span>
                   </div>
                 </div>
               </div>
             </div>
+
+            {/* Email Notifications Settings - Only for Instructors and Springer */}
+            {(currentUserRole === 'instructor' || currentUserRole === 'springer') && (
+              <div className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-6 flex items-center gap-3">
+                  <Bell className="w-6 h-6 text-blue-600" />
+                  E-Mail-Benachrichtigungen
+                </h2>
+                
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                    <div className="flex items-center gap-3">
+                      {emailNotificationsEnabled ? (
+                        <Mail className="w-5 h-5 text-green-600" />
+                      ) : (
+                        <MailX className="w-5 h-5 text-red-600" />
+                      )}
+                      <div>
+                        <h3 className="text-sm font-medium text-gray-900">
+                          Benachrichtigungen bei neuen Klausuren
+                        </h3>
+                        <p className="text-sm text-gray-500">
+                          {emailNotificationsEnabled 
+                            ? 'Sie erhalten E-Mails bei neuen Klausur-Einreichungen'
+                            : 'E-Mail-Benachrichtigungen sind deaktiviert - Springer werden benachrichtigt'
+                          }
+                        </p>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => updateEmailNotifications(!emailNotificationsEnabled)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                        emailNotificationsEnabled ? 'bg-blue-600' : 'bg-gray-200'
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          emailNotificationsEnabled ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                      />
+                    </button>
+                  </div>
+                  
+                  {/* Vacation Mode Section */}
+                  <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                    <div className="space-y-4">
+                      {/* Manual Vacation Toggle */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <div className="text-2xl">🏖️</div>
+                          <div>
+                            <h4 className="text-sm font-medium text-blue-800">
+                              Schneller Urlaubsmodus
+                            </h4>
+                            <p className="text-sm text-blue-700">
+                              Sofort aktivieren/deaktivieren ohne Kalenderdaten
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => updateEmailNotifications(emailNotificationsEnabled)}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${
+                            !emailNotificationsEnabled ? 'bg-blue-600' : 'bg-gray-200'
+                          }`}
+                          title={!emailNotificationsEnabled ? 'Urlaubsmodus deaktivieren' : 'Urlaubsmodus aktivieren'}
+                        >
+                          <span
+                            className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                              !emailNotificationsEnabled ? 'translate-x-6' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                      </div>
+                      
+                      {/* Calendar Planning */}
+                      <div className="flex items-center justify-between pt-2 border-t border-blue-200">
+                        <div className="flex items-center gap-3">
+                          <div className="text-2xl">🌴</div>
+                          <div>
+                            <h4 className="text-sm font-medium text-blue-800">
+                              Geplanter Urlaub
+                            </h4>
+                            <p className="text-sm text-blue-700">
+                              Urlaubsmodus mit Kalenderdaten planen
+                            </p>
+                          </div>
+                        </div>
+                        <button
+                          onClick={openVacationModal}
+                          className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                          <Calendar className="w-4 h-4" />
+                          Urlaub planen
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {!emailNotificationsEnabled && (
+                    <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <div className="text-2xl">🌴</div>
+                        <div>
+                          <h4 className="text-sm font-medium text-amber-800">
+                            Urlaubsvertretung aktiv
+                          </h4>
+                          <p className="mt-1 text-sm text-amber-700">
+                            Während Ihre E-Mail-Benachrichtigungen deaktiviert sind, werden automatisch 
+                            die Springer für {currentUserProfile?.instructor_legal_area || 'Ihr Rechtsgebiet'} benachrichtigt.
+                          </p>
+                          <p className="mt-2 text-xs text-amber-600">
+                            Genießen Sie Ihren wohlverdienten Urlaub! 🏖️
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -676,6 +936,83 @@ const SettingsPage: React.FC = () => {
                 >
                   <Plus className="w-4 h-4" />
                   Hinzufügen
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Vacation Planning Modal */}
+        {vacationModalOpen && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
+              <h3 className="text-lg font-medium text-gray-900 mb-4 flex items-center gap-3">
+                <div className="text-2xl">🏖️</div>
+                <span>Urlaubsplanung</span>
+              </h3>
+              
+              <div className="space-y-4 mb-6">
+                <div className="text-center p-4 bg-blue-50 rounded-lg">
+                  <div className="text-4xl mb-2">🌴</div>
+                  <p className="text-sm text-blue-700 font-medium">
+                    Planen Sie Ihren wohlverdienten Urlaub!
+                  </p>
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Calendar className="w-4 h-4 inline mr-2" />
+                    Urlaubsbeginn
+                  </label>
+                  <input
+                    type="date"
+                    value={vacationStartDate}
+                    onChange={(e) => setVacationStartDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    <Calendar className="w-4 h-4 inline mr-2" />
+                    Urlaubsende
+                  </label>
+                  <input
+                    type="date"
+                    value={vacationEndDate}
+                    onChange={(e) => setVacationEndDate(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg">
+                  <div className="flex items-start gap-2">
+                    <div className="text-lg">⚠️</div>
+                    <div>
+                      <p className="text-sm font-medium text-amber-800">Wichtiger Hinweis</p>
+                      <p className="text-xs text-amber-700 mt-1">
+                        Während Ihres Urlaubs werden automatisch die Springer für Ihr Rechtsgebiet 
+                        ({currentUserProfile?.instructor_legal_area}) über neue Klausuren benachrichtigt.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex gap-3">
+                <button
+                  onClick={setVacationPeriod}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 font-medium flex items-center justify-center gap-2"
+                >
+                  <div className="text-lg">🏖️</div>
+                  Urlaub aktivieren
+                  <div className="text-lg">🌴</div>
+                </button>
+                <button
+                  onClick={closeVacationModal}
+                  className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-400 font-medium"
+                >
+                  Abbrechen
                 </button>
               </div>
             </div>
