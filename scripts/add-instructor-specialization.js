@@ -3,7 +3,9 @@ require('dotenv').config();
 
 // Supabase PostgreSQL direct connection
 const client = new Client({
-  connectionString: 'postgresql://postgres.rpgbyockvpannrupicno:datenbankpasswort@aws-1-eu-central-1.pooler.supabase.com:6543/postgres',
+  connectionString: connectionString: process.env.DATABASE_URL || (() => {
+    throw new Error('DATABASE_URL environment variable is not set. Please check your .env file.');
+  })(),
   ssl: {
     rejectUnauthorized: false
   }

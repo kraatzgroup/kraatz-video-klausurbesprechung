@@ -55,7 +55,9 @@ async function setupDatabase() {
       console.log('\nTrying alternative connection method...');
       
       const altClient = new Client({
-        connectionString: 'postgresql://postgres.rpgbyockvpannrupicno:Groupjkl2023%21%2105hosting@aws-1-eu-central-1.pooler.supabase.com:5432/postgres',
+        connectionString: process.env.DATABASE_URL || (() => {
+          throw new Error('DATABASE_URL environment variable is not set. Please check your .env file.');
+        })(),
         ssl: { rejectUnauthorized: false }
       });
       

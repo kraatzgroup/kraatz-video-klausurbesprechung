@@ -1,3 +1,4 @@
+require('dotenv').config();
 const fetch = require('node-fetch');
 
 async function testEmailNotificationsDirect() {
@@ -104,7 +105,9 @@ async function testEmailNotificationsDirect() {
   // First, we need to create a test user in the database and get their actual user ID
   const { Client } = require('pg');
   const client = new Client({
-    connectionString: 'postgresql://postgres.rpgbyockvpannrupicno:datenbankpasswort@aws-1-eu-central-1.pooler.supabase.com:6543/postgres'
+    connectionString: connectionString: process.env.DATABASE_URL || (() => {
+    throw new Error('DATABASE_URL environment variable is not set. Please check your .env file.');
+  })()
   });
 
   try {

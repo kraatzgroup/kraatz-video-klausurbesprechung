@@ -1,8 +1,6 @@
-const { Client } = require('pg');
+const { createDatabaseClient } = require('./db-config');
 
-const client = new Client({
-  connectionString: 'postgresql://postgres.rpgbyockvpannrupicno:datenbankpasswort@aws-1-eu-central-1.pooler.supabase.com:6543/postgres'
-});
+const client = createDatabaseClient();
 
 async function setupEmailNotifications() {
   try {
