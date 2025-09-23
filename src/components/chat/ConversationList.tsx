@@ -21,17 +21,12 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 }) => {
   const [searchTerm, setSearchTerm] = useState('');
   const [showUserSelector, setShowUserSelector] = useState(false);
-  const [filterType, setFilterType] = useState<'all' | 'support' | 'group'>('all');
 
-  // Filter conversations based on search and type
+  // Filter conversations based on search only
   const filteredConversations = conversations.filter(conversation => {
-    const matchesSearch = !searchTerm || 
+    return !searchTerm || 
       conversation.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       conversation.last_message?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesType = filterType === 'all' || conversation.type === filterType;
-    
-    return matchesSearch && matchesType;
   });
 
   const handleStartConversation = async (userIds: string[]) => {
@@ -64,40 +59,6 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kraatz-primary focus:border-transparent text-sm"
           />
-        </div>
-
-        {/* Filter */}
-        <div className="flex gap-1">
-          <button
-            onClick={() => setFilterType('all')}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
-              filterType === 'all'
-                ? 'bg-kraatz-primary text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            Alle
-          </button>
-          <button
-            onClick={() => setFilterType('support')}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
-              filterType === 'support'
-                ? 'bg-kraatz-primary text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            Support
-          </button>
-          <button
-            onClick={() => setFilterType('group')}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
-              filterType === 'group'
-                ? 'bg-kraatz-primary text-white'
-                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-            }`}
-          >
-            Gruppe
-          </button>
         </div>
       </div>
 
