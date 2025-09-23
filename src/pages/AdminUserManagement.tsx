@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createClient } from '@supabase/supabase-js';
-import { Users, Plus,Award, UserPlus, BarChart3, Crown, Trash2} from 'lucide-react';
+import { Users, Plus, Award, UserPlus, BarChart3, Crown, Trash2, FileText } from 'lucide-react';
 import { createUserAsAdmin, CreateUserData } from '../utils/adminUtils';
 import { getUserLegalAreas, formatLegalAreasDisplay, type LegalArea } from '../utils/legalAreaUtils';
 import LegalAreaMultiSelect from '../components/LegalAreaMultiSelect';
@@ -44,7 +44,7 @@ const AdminUserManagement: React.FC = () => {
   const [grantModalOpen, setGrantModalOpen] = useState(false);
   const [grantAmount, setGrantAmount] = useState('');
   const [searchTerm, setTerm] = useState('');
-  const [rolesetRole] = useState<'all' | 'student' | 'instructor' | 'admin' | 'springer'>('all');
+  const [role, setRole] = useState<'all' | 'student' | 'instructor' | 'admin' | 'springer'>('all');
   const [createUserModalOpen, setCreateUserModalOpen] = useState(false);
   const [newUserData, setNewUserData] = useState({
     email: '',
@@ -299,8 +299,8 @@ const AdminUserManagement: React.FC = () => {
       (userStat.user.last_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       userStat.user.email.toLowerCase().includes(searchTerm.toLowerCase());
     
-    const matchesRole = role=== 'all' || userStat.user.role === role;
-    return matches&& matchesRole;
+    const matchesRole = role === 'all' || userStat.user.role === role;
+    return matches && matchesRole;
   });
 
   // Debug filtering

@@ -3,8 +3,8 @@ import { createClient } from '@supabase/supabase-js'
 import { useAuth } from '../contexts/AuthContext'
 import { createUserAsAdmin, CreateUserData } from '../utils/adminUtils'
 import { 
-  Settings, Users, UserPlus,Trash2, Plus, Crown, 
-  GraduationCap,User, Mail,Bell,MailX, Calendar
+  Settings, Users, UserPlus, Search, Trash2, Plus, Crown, 
+  GraduationCap, CreditCard, User, Mail, Lock, Bell, Shield, Globe, Palette, MailX, Calendar
 } from 'lucide-react'
 
 // Admin client with service role key to bypass RLS
@@ -20,13 +20,28 @@ const supabaseAdmin = createClient(
   }
 );
 
+interface User {
+  id: string
+  email: string
+  first_name: string
+  last_name: string
+  role: string
+  instructor_legal_area?: string
+  email_notifications_enabled?: boolean
+  account_credits: number
+  created_at: string
+  totalRequests?: number
+  completedCases?: number
+  pendingCases?: number
+}
+
 const SettingsPage: React.FC = () => {
   const { user: currentUser } = useAuth()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'profile' | 'user-management' | 'create-user'>('profile')
-  const [searchTerm, setTerm] = useState('')
-  const [rolesetRole] = useState<'all' | 'student' | 'instructor' | 'admin'>('all')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'instructor' | 'admin'>('all')
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
   const [grantModalOpen, setGrantModalOpen] = useState(false)
   const [grantAmount, setGrantAmount] = useState('')
@@ -73,7 +88,7 @@ const SettingsPage: React.FC = () => {
   const fetchCurrentUserRole = async () => {
     if (currentUser) {
       try {
-        const {error } = await supabaseAdmin
+        const { data, error } = await supabaseAdmin
           .from('users')
           .select('*')
           .eq('id', currentUser.id)
@@ -312,7 +327,7 @@ const SettingsPage: React.FC = () => {
     try {
       console.log(`🔄 Calling transfer-cases function with reason: ${reason}`)
       
-      const {error } = await supabaseAdmin.functions.invoke('transfer-cases', {
+      const { data, error } = await supabaseAdmin.functions.invoke('transfer-cases', {
         body: {
           instructor_id: instructorId,
           reason: reason
@@ -324,7 +339,7 @@ const SettingsPage: React.FC = () => {
         throw error
       }
 
-      console.log('Transfer result:')
+      console.log('Transfer result:', data)
       return data
     } catch (error) {
       console.error('Error transferring cases:', error)
@@ -379,20 +394,21 @@ const SettingsPage: React.FC = () => {
   }
 
   const filteredUsers = users.filter(user => {
-    const matches= searchTerm === '' || 
+    const matchesSearch = searchTerm === '' || 
       (user.first_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       (user.last_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase())
     
-    const matchesRole = role=== 'all' || user.role === rolereturn matches&& matchesRole
+    const matchesRole = roleFilter === 'all' || user.role === roleFilter
+    return matchesSearch && matchesRole
   })
 
   // Debug filtering in SettingsPage
-  console.log('🔍 SettingsPageing Debug:')
+  console.log('🔍 SettingsPage Filtering Debug:')
   console.log('  - users array length:', users.length)
   console.log('  - users array:', users)
   console.log('  - searchTerm:', searchTerm)
-  console.log('  - role:', role)
+  console.log('  - roleFilter:', roleFilter)
   console.log('  - filteredUsers length:', filteredUsers.length)
   console.log('  - filteredUsers:', filteredUsers)
 
@@ -664,22 +680,22 @@ const SettingsPage: React.FC = () => {
               </div>
             </div>
 
-            {/*and*/}
+            {/* Search and Filter */}
             <div className="bg-white shadow rounded-lg p-6">
               <div className="flex flex-col md:flex-row gap-4 mb-6">
                 <div className="flex-1 relative">
-                  <className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
                   <input
                     type="text"
                     placeholder="Benutzer suchen..."
                     value={searchTerm}
-                    onChange={(e) => setTerm(e.target.value)}
+                    onChange={(e) => setSearchTerm(e.target.value)}
                     className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
                   />
                 </div>
                 <select
-                  value={role}
-                  onChange={(e) => setRole(e.target.value as any)}
+                  value={roleFilter}
+                  onChange={(e) => setRoleFilter(e.target.value as any)}
                   className="px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
                 >
                   <option value="all">Alle Rollen</option>
