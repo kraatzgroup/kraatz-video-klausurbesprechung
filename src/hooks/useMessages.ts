@@ -70,10 +70,10 @@ export const useMessages = (conversationId: string | null) => {
       }
 
       if (reset) {
-        setMessages(newMessages);
+        setMessages(newMessages.reverse()); // Reverse to show oldest first
         setPage(1);
       } else {
-        setMessages(prev => [...newMessages, ...prev]);
+        setMessages(prev => [...newMessages.reverse(), ...prev]); // Add older messages at the beginning
         setPage(prev => prev + 1);
       }
 
@@ -224,18 +224,27 @@ export const useMessages = (conversationId: string | null) => {
           filter: `conversation_id=eq.${conversationId}`
         },
         async (payload) => {
-          // Neue Nachricht mit Sender-Informationen laden
-          const { data } = await supabase
+          // Neue Nachricht laden
+          const { data: messageData } = await supabase
             .from('messages')
-            .select(`
-              *,
-              sender:users(id, email, first_name, last_name, role)
-            `)
+            .select('*')
             .eq('id', payload.new.id)
             .single();
 
-          if (data) {
-            setMessages(prev => [...prev, data]);
+          if (messageData) {
+            // Sender-Informationen separat laden
+            const { data: senderData } = await supabase
+              .from('users')
+              .select('id, email, first_name, last_name, role')
+              .eq('id', messageData.sender_id)
+              .single();
+
+            const messageWithSender = {
+              ...messageData,
+              sender: senderData
+            };
+
+            setMessages(prev => [...prev, messageWithSender]);
           }
         }
       )
@@ -248,19 +257,28 @@ export const useMessages = (conversationId: string | null) => {
           filter: `conversation_id=eq.${conversationId}`
         },
         async (payload) => {
-          // Bearbeitete Nachricht aktualisieren
-          const { data } = await supabase
+          // Bearbeitete Nachricht laden
+          const { data: messageData } = await supabase
             .from('messages')
-            .select(`
-              *,
-              sender:users(id, email, first_name, last_name, role)
-            `)
+            .select('*')
             .eq('id', payload.new.id)
             .single();
 
-          if (data) {
+          if (messageData) {
+            // Sender-Informationen separat laden
+            const { data: senderData } = await supabase
+              .from('users')
+              .select('id, email, first_name, last_name, role')
+              .eq('id', messageData.sender_id)
+              .single();
+
+            const messageWithSender = {
+              ...messageData,
+              sender: senderData
+            };
+
             setMessages(prev => 
-              prev.map(msg => msg.id === data.id ? data : msg)
+              prev.map(msg => msg.id === messageWithSender.id ? messageWithSender : msg)
             );
           }
         }

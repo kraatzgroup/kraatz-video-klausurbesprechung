@@ -11,15 +11,38 @@ export interface ChatUser {
 }
 
 /**
- * Prüft, ob ein Benutzer mit einem anderen chatten kann
+ * Prüft, ob ein Benutzer mit einem anderen chatten kann (Legacy-Funktion)
+ * Verwendet jetzt canParticipateInChatWith für bestehende Konversationen
  */
 export const canChatWith = (currentUserRole: UserRole, targetUserRole: UserRole): boolean => {
-  // Studenten können nur mit Admins chatten (Support)
+  return canParticipateInChatWith(currentUserRole, targetUserRole);
+};
+
+/**
+ * Filtert verfügbare Chat-Partner basierend auf der Benutzerrolle
+ * Für neue Konversationen - Studenten können nur mit Admins neue Chats starten
+ */
+export const getAvailableChatPartners = (currentUser: ChatUser, allUsers: ChatUser[]): ChatUser[] => {
+  return allUsers.filter(user => {
+    // Nicht mit sich selbst chatten
+    if (user.id === currentUser.id) return false;
+    
+    // Berechtigungsprüfung für neue Konversationen
+    return canStartChatWith(currentUser.role, user.role);
+  });
+};
+
+/**
+ * Prüft, ob ein Benutzer eine neue Konversation mit einem anderen starten kann
+ * Studenten können nur neue Chats mit Admins starten
+ */
+export const canStartChatWith = (currentUserRole: UserRole, targetUserRole: UserRole): boolean => {
+  // Studenten können nur neue Chats mit Admins starten
   if (currentUserRole === 'student') {
     return targetUserRole === 'admin';
   }
   
-  // Admin, Dozent und Springer können mit ALLEN Rollen chatten
+  // Admin, Dozent und Springer können neue Chats mit ALLEN Rollen starten
   if (['admin', 'instructor', 'springer'].includes(currentUserRole)) {
     return ['admin', 'instructor', 'springer', 'student'].includes(targetUserRole);
   }
@@ -28,16 +51,21 @@ export const canChatWith = (currentUserRole: UserRole, targetUserRole: UserRole)
 };
 
 /**
- * Filtert verfügbare Chat-Partner basierend auf der Benutzerrolle
+ * Prüft, ob ein Benutzer in einer bestehenden Konversation mit einem anderen chatten kann
+ * (weniger restriktiv als canStartChatWith)
  */
-export const getAvailableChatPartners = (currentUser: ChatUser, allUsers: ChatUser[]): ChatUser[] => {
-  return allUsers.filter(user => {
-    // Nicht mit sich selbst chatten
-    if (user.id === currentUser.id) return false;
-    
-    // Berechtigungsprüfung
-    return canChatWith(currentUser.role, user.role);
-  });
+export const canParticipateInChatWith = (currentUserRole: UserRole, targetUserRole: UserRole): boolean => {
+  // Studenten können mit Admins und Dozenten chatten (wenn Konversation bereits existiert)
+  if (currentUserRole === 'student') {
+    return ['admin', 'instructor', 'springer'].includes(targetUserRole);
+  }
+  
+  // Admin, Dozent und Springer können mit ALLEN Rollen chatten
+  if (['admin', 'instructor', 'springer'].includes(currentUserRole)) {
+    return ['admin', 'instructor', 'springer', 'student'].includes(targetUserRole);
+  }
+  
+  return false;
 };
 
 /**

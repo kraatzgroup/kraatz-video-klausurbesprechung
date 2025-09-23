@@ -80,6 +80,21 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
     loadUsers();
   }, [user]);
 
+  // Check if current user is a student
+  const [currentUserRole, setCurrentUserRole] = useState<string>('');
+  useEffect(() => {
+    const getCurrentUserRole = async () => {
+      if (!user) return;
+      const { data: userData } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+      setCurrentUserRole(userData?.role || 'student');
+    };
+    getCurrentUserRole();
+  }, [user]);
+
   // Filter and search users
   useEffect(() => {
     let filtered = availableUsers;
@@ -133,7 +148,9 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
       <div className="bg-white rounded-lg max-w-md w-full max-h-[80vh] flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Neue Unterhaltung</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            {currentUserRole === 'student' ? 'Support-Fall öffnen' : 'Neue Unterhaltung'}
+          </h3>
           <button
             onClick={onClose}
             className="p-1 text-gray-400 hover:text-gray-600 rounded"
@@ -142,63 +159,80 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
           </button>
         </div>
 
-        {/* Search */}
-        <div className="p-4 border-b border-gray-200">
-          <div className="relative mb-3">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-            <input
-              type="text"
-              placeholder="Benutzer suchen..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kraatz-primary focus:border-transparent text-sm"
-            />
+        {/* Search and Filters - Hidden for students */}
+        {currentUserRole !== 'student' && (
+          <div className="p-4 border-b border-gray-200">
+            <div className="relative mb-3">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+              <input
+                type="text"
+                placeholder="Benutzer suchen..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kraatz-primary focus:border-transparent text-sm"
+              />
+            </div>
+            
+            {/* Role Filter */}
+            <div className="flex gap-1">
+              <button
+                onClick={() => setRoleFilter('all')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  roleFilter === 'all' 
+                    ? 'bg-kraatz-primary text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Alle
+              </button>
+              <button
+                onClick={() => setRoleFilter('instructor')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  roleFilter === 'instructor' 
+                    ? 'bg-kraatz-primary text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Dozenten
+              </button>
+              <button
+                onClick={() => setRoleFilter('student')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  roleFilter === 'student' 
+                    ? 'bg-kraatz-primary text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Studenten
+              </button>
+              <button
+                onClick={() => setRoleFilter('admin')}
+                className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                  roleFilter === 'admin' 
+                    ? 'bg-kraatz-primary text-white' 
+                    : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                }`}
+              >
+                Admin
+              </button>
+            </div>
           </div>
-          
-          {/* Role Filter */}
-          <div className="flex gap-1">
-            <button
-              onClick={() => setRoleFilter('all')}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                roleFilter === 'all' 
-                  ? 'bg-kraatz-primary text-white' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Alle
-            </button>
-            <button
-              onClick={() => setRoleFilter('instructor')}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                roleFilter === 'instructor' 
-                  ? 'bg-kraatz-primary text-white' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Dozenten
-            </button>
-            <button
-              onClick={() => setRoleFilter('student')}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                roleFilter === 'student' 
-                  ? 'bg-kraatz-primary text-white' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Studenten
-            </button>
-            <button
-              onClick={() => setRoleFilter('admin')}
-              className={`px-3 py-1 text-xs rounded-full transition-colors ${
-                roleFilter === 'admin' 
-                  ? 'bg-kraatz-primary text-white' 
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Admin
-            </button>
+        )}
+
+        {/* Student-specific info section */}
+        {currentUserRole === 'student' && (
+          <div className="p-4 border-b border-gray-200 bg-blue-50">
+            <div className="flex items-center gap-2 text-blue-800">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <div>
+                <p className="text-sm font-medium">Support kontaktieren</p>
+                <p className="text-xs text-blue-600">Wählen Sie einen Administrator für Ihren Support-Fall aus.</p>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Selected Users */}
         {selectedUsers.length > 0 && (
@@ -270,7 +304,7 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
                             {chatUser.first_name} {chatUser.last_name}
                           </p>
                           <span className={`text-xs px-2 py-0.5 rounded-full ${getRoleColor(chatUser.role)}`}>
-                            {formatUserRole(chatUser.role)}
+                            {currentUserRole === 'student' && chatUser.role === 'admin' ? 'Support' : formatUserRole(chatUser.role)}
                           </span>
                         </div>
                         <p className="text-xs text-gray-500 truncate">
@@ -315,10 +349,12 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
               {creating ? (
                 <>
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  Erstelle...
+                  {currentUserRole === 'student' ? 'Support-Fall wird erstellt...' : 'Erstelle...'}
                 </>
               ) : (
-                `Unterhaltung starten${selectedUsers.length > 0 ? ` (${selectedUsers.length})` : ''}`
+                currentUserRole === 'student' 
+                  ? `Support-Fall öffnen${selectedUsers.length > 0 ? ` (${selectedUsers.length})` : ''}` 
+                  : `Unterhaltung starten${selectedUsers.length > 0 ? ` (${selectedUsers.length})` : ''}`
               )}
             </button>
           </div>

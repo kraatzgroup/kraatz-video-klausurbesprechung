@@ -5,6 +5,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { 
   canChatWith, 
+  canStartChatWith,
   getAvailableChatPartners, 
   generateConversationTitle,
   getConversationType,
@@ -73,7 +74,7 @@ export const useChat = () => {
       };
 
       const unauthorizedUsers = targetUsers.filter(
-        targetUser => !canChatWith(currentUserData.role, targetUser.role)
+        targetUser => !canStartChatWith(currentUserData.role, targetUser.role)
       );
 
       if (unauthorizedUsers.length > 0) {

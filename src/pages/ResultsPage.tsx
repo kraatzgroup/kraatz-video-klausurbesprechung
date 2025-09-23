@@ -214,6 +214,8 @@ export const ResultsPage: React.FC = () => {
     )
   }
 
+  // Show "no results" message only when there are truly no results
+  // As soon as there is 1+ result, show the full professional layout
   if (results.length === 0) {
     return (
       <div className="max-w-4xl mx-auto">
@@ -297,7 +299,7 @@ export const ResultsPage: React.FC = () => {
       </div>
 
       {/* Progress Chart */}
-      {chartData.length > 1 && (
+      {chartData.length > 0 && (
         <div className="bg-box-bg rounded-lg p-6">
           <h2 className="text-xl font-semibold text-text-primary mb-6">
             Verlauf Deiner Leistung

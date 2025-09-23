@@ -42,26 +42,38 @@ serve(async (req) => {
 
     const { record } = payload
 
-    // Get conversation participants (excluding sender)
-    const { data: participants, error: participantsError } = await supabaseClient
+    // Get conversation participants (excluding sender) - using separate queries to avoid foreign key issues
+    const { data: participantIds, error: participantsError } = await supabaseClient
       .from('conversation_participants')
-      .select(`
-        user_id,
-        users!inner (
-          id,
-          email,
-          first_name,
-          last_name,
-          role,
-          email_notifications_enabled
-        )
-      `)
+      .select('user_id')
       .eq('conversation_id', record.conversation_id)
       .neq('user_id', record.sender_id)
 
     if (participantsError) {
       console.error('Error fetching participants:', participantsError)
       return new Response('Error fetching participants', { 
+        status: 500, 
+        headers: corsHeaders 
+      })
+    }
+
+    if (!participantIds || participantIds.length === 0) {
+      console.log('No other participants found')
+      return new Response('No participants to notify', { 
+        status: 200, 
+        headers: corsHeaders 
+      })
+    }
+
+    // Get user details for participants
+    const { data: participants, error: usersError } = await supabaseClient
+      .from('users')
+      .select('id, email, first_name, last_name, role, email_notifications_enabled')
+      .in('id', participantIds.map(p => p.user_id))
+
+    if (usersError) {
+      console.error('Error fetching user details:', usersError)
+      return new Response('Error fetching user details', { 
         status: 500, 
         headers: corsHeaders 
       })
@@ -84,7 +96,7 @@ serve(async (req) => {
 
     // Filter participants who have email notifications enabled
     const notifiableParticipants = participants?.filter(p => 
-      p.users?.email_notifications_enabled === true
+      p.email_notifications_enabled === true
     ) || []
 
     console.log(`Found ${notifiableParticipants.length} participants with notifications enabled`)
@@ -106,55 +118,54 @@ serve(async (req) => {
 
     // Send email notifications to each participant using Mailgun
     const emailPromises = notifiableParticipants.map(async (participant) => {
-      const user = participant.users
+      const user = participant
       if (!user) return null
 
       const emailSubject = `Neue Chat-Nachricht von ${sender.first_name} ${sender.last_name}`
       const emailContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-            <h1 style="color: white; margin: 0; font-size: 28px;">💬 Neue Chat-Nachricht</h1>
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+            <h2 style="color: #333; margin: 0;">Neue Chat-Nachricht</h2>
           </div>
           
-          <div style="padding: 30px; background-color: #f8f9fa;">
-            <h2 style="color: #333; margin-top: 0;">Hallo ${user.first_name},</h2>
-            
-            <p style="color: #666; font-size: 16px; line-height: 1.6;">
-              Sie haben eine neue Nachricht von <strong>${sender.first_name} ${sender.last_name}</strong> erhalten:
+          <div style="padding: 20px; background-color: white; border-radius: 8px; border: 1px solid #e9ecef;">
+            <p style="color: #555; font-size: 16px; line-height: 1.5;">
+              Liebe/r ${user.first_name} ${user.last_name},
             </p>
             
-            <div style="background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0; border-radius: 4px;">
-              <p style="margin: 0; color: #333; font-size: 16px; line-height: 1.6;">
-                "${record.content}"
-              </p>
+            <p style="color: #555; font-size: 16px; line-height: 1.5;">
+              Sie haben eine neue Chat-Nachricht von <strong>${sender.first_name} ${sender.last_name}</strong> erhalten.
+            </p>
+            
+            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0;">
+              <h4 style="margin: 0 0 10px 0; color: #333;">Nachricht:</h4>
+              <p style="margin: 5px 0; color: #555; font-style: italic;">"${record.content}"</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Von:</strong> ${sender.first_name} ${sender.last_name}</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Gesendet am:</strong> ${new Date(record.created_at).toLocaleString('de-DE')}</p>
             </div>
             
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="https://kraatz-club.de/chat" 
-                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                        color: white; 
-                        padding: 15px 30px; 
-                        text-decoration: none; 
-                        border-radius: 25px; 
-                        font-weight: bold;
-                        display: inline-block;">
-                💬 Chat öffnen
+            <p style="color: #555; font-size: 16px; line-height: 1.5;">
+              Loggen Sie sich ein, um zu antworten und die Unterhaltung fortzusetzen.
+            </p>
+            
+            <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+              <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/chat" 
+                 style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
+                Zum Chat
               </a>
             </div>
-            
-            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-            
-            <p style="color: #999; font-size: 14px; text-align: center;">
-              Sie erhalten diese E-Mail, weil Sie Chat-Benachrichtigungen aktiviert haben.<br>
-              Sie können diese in Ihren <a href="https://kraatz-club.de/settings" style="color: #667eea;">Einstellungen</a> deaktivieren.
-            </p>
+          </div>
+          
+          <div style="text-align: center; margin-top: 30px; padding: 20px; color: #666; font-size: 12px;">
+            <p>Diese E-Mail wurde automatisch vom Kraatz-Club System gesendet.</p>
+            <p>Bei Fragen wenden Sie sich bitte an Ihren Dozenten oder das Support-Team.</p>
           </div>
         </div>
       `
 
       // Prepare form data for Mailgun
       const formData = new FormData()
-      formData.append('from', 'Kraatz Club <noreply@kraatz-group.de>')
+      formData.append('from', 'Kraatz-Club <postmaster@kraatz-group.de>')
       formData.append('to', user.email)
       formData.append('subject', `[Kraatz-Club] ${emailSubject}`)
       formData.append('html', emailContent)
@@ -189,8 +200,8 @@ serve(async (req) => {
       success: true, 
       message: `Chat notification emails sent to ${notifiableParticipants.length} recipients`,
       recipients: notifiableParticipants.map(p => ({ 
-        email: p.users?.email, 
-        name: `${p.users?.first_name} ${p.users?.last_name}` 
+        email: p.email, 
+        name: `${p.first_name} ${p.last_name}` 
       })),
       mailgunIds: emailResults.map(r => r.id)
     }), { 

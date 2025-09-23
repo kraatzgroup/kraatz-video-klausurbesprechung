@@ -975,9 +975,9 @@ const InstructorDashboard: React.FC = () => {
                                 <input
                                   type="number"
                                   min="0"
-                                  max="15"
+                                  max="18"
                                   step="0.5"
-                                  placeholder="Note (0-15)"
+                                  placeholder="Note (0-18)"
                                   value={grades[request.id]?.grade || ''}
                                   onChange={(e) => {
                                     const value = e.target.value;
@@ -991,7 +991,7 @@ const InstructorDashboard: React.FC = () => {
                                   }}
                                   onBlur={(e) => {
                                     const grade = parseFloat(e.target.value);
-                                    if (grade >= 0 && grade <= 15) {
+                                    if (grade >= 0 && grade <= 18) {
                                       updateGrade(request.id, grade, grades[request.id]?.gradeText);
                                     }
                                   }}
@@ -1128,9 +1128,9 @@ const InstructorDashboard: React.FC = () => {
                                 <input
                                   type="number"
                                   min="0"
-                                  max="15"
+                                  max="18"
                                   step="0.5"
-                                  placeholder="Note (0-15)"
+                                  placeholder="Note (0-18)"
                                   value={grades[request.id]?.grade || ''}
                                   onChange={(e) => {
                                     const value = e.target.value;
@@ -1144,7 +1144,7 @@ const InstructorDashboard: React.FC = () => {
                                   }}
                                   onBlur={(e) => {
                                     const grade = parseFloat(e.target.value);
-                                    if (grade >= 0 && grade <= 15) {
+                                    if (grade >= 0 && grade <= 18) {
                                       updateGrade(request.id, grade, grades[request.id]?.gradeText);
                                     }
                                   }}
@@ -1235,9 +1235,9 @@ const InstructorDashboard: React.FC = () => {
                               <input
                                 type="number"
                                 min="0"
-                                max="15"
+                                max="18"
                                 step="0.5"
-                                placeholder="Note (0-15)"
+                                placeholder="Note (0-18)"
                                 value={grades[caseStudy.id]?.grade || ''}
                                 onChange={(e) => {
                                   const value = e.target.value;
@@ -1251,7 +1251,7 @@ const InstructorDashboard: React.FC = () => {
                                 }}
                                 onBlur={(e) => {
                                   const grade = parseFloat(e.target.value);
-                                  if (grade >= 0 && grade <= 15) {
+                                  if (grade >= 0 && grade <= 18) {
                                     updateGrade(caseStudy.id, grade, grades[caseStudy.id]?.gradeText);
                                   }
                                 }}
@@ -1354,9 +1354,9 @@ const InstructorDashboard: React.FC = () => {
                               <input
                                 type="number"
                                 min="0"
-                                max="15"
+                                max="18"
                                 step="0.5"
-                                placeholder="Note (0-15)"
+                                placeholder="Note (0-18)"
                                 value={grades[caseStudy.id]?.grade || ''}
                                 onChange={(e) => {
                                   const value = e.target.value;
@@ -1370,7 +1370,7 @@ const InstructorDashboard: React.FC = () => {
                                 }}
                                 onBlur={(e) => {
                                   const grade = parseFloat(e.target.value);
-                                  if (grade >= 0 && grade <= 15) {
+                                  if (grade >= 0 && grade <= 18) {
                                     updateGrade(caseStudy.id, grade, grades[caseStudy.id]?.gradeText);
                                   }
                                 }}
@@ -1635,13 +1635,13 @@ const InstructorDashboard: React.FC = () => {
                               <label className="text-sm font-medium text-gray-700">Note vergeben</label>
                               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <div className="space-y-2">
-                                  <label className="text-xs text-gray-600">Punkte (0-15)</label>
+                                  <label className="text-xs text-gray-600">Punkte (0-18)</label>
                                   <input
                                     type="number"
                                     min="0"
-                                    max="15"
+                                    max="18"
                                     step="0.5"
-                                    placeholder="Note (0-15)"
+                                    placeholder="Note (0-18)"
                                     value={grades[request.id]?.grade || ''}
                                     onChange={(e) => {
                                       const value = e.target.value;
@@ -1655,7 +1655,7 @@ const InstructorDashboard: React.FC = () => {
                                     }}
                                     onBlur={(e) => {
                                       const grade = parseFloat(e.target.value);
-                                      if (grade >= 0 && grade <= 15) {
+                                      if (grade >= 0 && grade <= 18) {
                                         updateGrade(request.id, grade, grades[request.id]?.gradeText);
                                       }
                                     }}
