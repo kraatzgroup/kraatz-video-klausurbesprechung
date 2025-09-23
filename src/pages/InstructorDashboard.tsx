@@ -2,7 +2,14 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { 
-  BookOpen,X,
+  BookOpen, 
+  FileText, 
+  CheckCircle, 
+  AlertCircle,
+  Download,
+  Upload,
+  Eye,
+  X,
   Settings
 } from 'lucide-react';
 
@@ -58,7 +65,7 @@ const InstructorDashboard: React.FC = () => {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<'requests' | 'materials_sent' | 'submissions' | 'pending_videos' | 'completed'>('requests');
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [uploadData, setData] = useState({
+  const [uploadData, setUploadData] = useState({
     videoUrl: '',
     grade: '',
     gradeText: ''
@@ -73,16 +80,27 @@ const InstructorDashboard: React.FC = () => {
   const [correctionPdfFile, setCorrectionPdfFile] = useState<File | null>(null);
   const [videoLoomUrl, setVideoLoomUrl] = useState('');
   const [requests, setRequests] = useState<CaseStudyRequest[]>([]);
-  const [setSubmissions] = useState<Submission[]>([]);
+  const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [grades, setGrades] = useState<{[key: string]: {grade: number, gradeText?: string}}>({});
-  const [setMaterialUrl] = useState('');
-  const [setAdditionalMaterialUrl] = useState('');
-  const [setModalOpen] = useState(false);
+  const [materialUrl, setMaterialUrl] = useState('');
+  const [additionalMaterialUrl, setAdditionalMaterialUrl] = useState('');
+  const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   useEffect(() => {
     fetchData();
-  }, []);let userId = existingUser?.id;
+  }, []);
+
+  const createTestData = async () => {
+    try {
+      // First, ensure we have a test user
+      const { data: existingUser } = await supabase
+        .from('users')
+        .select('id')
+        .eq('email', 'test@student.de')
+        .single();
+
+      let userId = existingUser?.id;
 
       if (!userId) {
         // Create a test user
@@ -294,7 +312,7 @@ const InstructorDashboard: React.FC = () => {
     }
   };
 
-  const handleSubmission = async (caseStudyId: string, submissionUrl: string) => {
+  const handleDownloadSubmission = async (caseStudyId: string, submissionUrl: string) => {
     try {
       // Mark submission as downloaded and move to under_review status
       const { error } = await supabase
@@ -330,9 +348,9 @@ const InstructorDashboard: React.FC = () => {
     setCorrectionPdfFile(null);
   };
 
-  const handleCorrection= async () => {
+  const handleCorrectionUpload = async () => {
     if (!selectedCaseForCorrection || (!videoLoomUrl && !correctionPdfFile)) {
-      alert('Bitte geben Sie mindestens einen Loom-Video-oder eine PDF-Datei an.');
+      alert('Bitte geben Sie mindestens einen Loom-Video-Link oder eine PDF-Datei an.');
       return;
     }
 
@@ -348,7 +366,7 @@ const InstructorDashboard: React.FC = () => {
         }
       }
 
-      //PDF file if provided
+      // Upload PDF file if provided
       if (correctionPdfFile) {
         // Validate PDF file type
         if (correctionPdfFile.type !== 'application/pdf') {
@@ -364,7 +382,7 @@ const InstructorDashboard: React.FC = () => {
         }
 
         const pdfFileName = `${selectedCaseForCorrection.id}_written_correction_${Date.now()}.pdf`;
-        const { data:error: pdfError } = await supabase.storage
+        const { data: pdfData, error: pdfError } = await supabase.storage
           .from('case-studies')
           .upload(pdfFileName, correctionPdfFile);
 
@@ -456,7 +474,7 @@ const InstructorDashboard: React.FC = () => {
     }
   };
 
-  const handleMaterial= async () => {
+  const handleMaterialUpload = async () => {
     if (!selectedRequest || !materialFile) {
       alert('Bitte wählen Sie eine PDF-Datei aus.');
       return;
@@ -500,21 +518,21 @@ const InstructorDashboard: React.FC = () => {
         return;
       }
 
-      //file to Supabase Storage
+      // Upload file to Supabase Storage
       const fileName = `${selectedRequest.id}_sachverhalt_${Date.now()}.pdf`;
-      console.log('ing file with name:', fileName);
+      console.log('Uploading file with name:', fileName);
       
-      const {error } = await supabase.storage
+      const { data, error } = await supabase.storage
         .from('case-studies')
         .upload(fileName, materialFile);
 
       if (error) {
-        console.error('error:', error);
+        console.error('Upload error:', error);
         alert(`Fehler beim Hochladen der Datei: ${error.message}`);
         return;
       }
 
-      console.log('successful:');
+      console.log('Upload successful:', data);
 
       // Get public URL
       const { data: urlData } = supabase.storage
@@ -555,7 +573,7 @@ const InstructorDashboard: React.FC = () => {
     }
   };
 
-  const handleAdditionalMaterial= async () => {
+  const handleAdditionalMaterialUpload = async () => {
     if (!selectedRequest || !additionalMaterialFile) {
       alert('Bitte wählen Sie eine PDF-Datei aus.');
       return;
@@ -575,7 +593,7 @@ const InstructorDashboard: React.FC = () => {
       }
       
       const fileName = `zusatzmaterial_${selectedRequest.id}_${Date.now()}.pdf`;
-      const {error: uploadError } = await supabase.storage
+      const { data, error: uploadError } = await supabase.storage
         .from('case-studies')
         .upload(fileName, additionalMaterialFile);
       
@@ -606,23 +624,23 @@ const InstructorDashboard: React.FC = () => {
 
 
 
-  const openModal = (submission: Submission) => {
+  const openUploadModal = (submission: Submission) => {
     setSelectedSubmission(submission);
-    setData({
+    setUploadData({
       videoUrl: submission.correction_video_url || '',
       grade: submission.grade?.toString() || '',
       gradeText: submission.grade_text || ''
     });
-    setModalOpen(true);
+    setUploadModalOpen(true);
   };
 
-  const closeModal = () => {
-    setModalOpen(false);
+  const closeUploadModal = () => {
+    setUploadModalOpen(false);
     setSelectedSubmission(null);
-    setData({ videoUrl: '', grade: '', gradeText: '' });
+    setUploadData({ videoUrl: '', grade: '', gradeText: '' });
   };
 
-  const handleVideo= async () => {
+  const handleVideoUpload = async () => {
     if (!selectedSubmission || !uploadData.videoUrl || !uploadData.grade) {
       alert('Bitte füllen Sie alle Pflichtfelder aus.');
       return;
@@ -648,7 +666,7 @@ const InstructorDashboard: React.FC = () => {
         .eq('id', selectedSubmission.case_study_request_id);
 
       fetchData();
-      closeModal();
+      closeUploadModal();
       alert('Video erfolgreich hochgeladen und Note eingetragen!');
     } catch (error) {
       console.error('Error uploading video:', error);
@@ -676,7 +694,7 @@ const InstructorDashboard: React.FC = () => {
     );
   };
 
-  //data for different tabs
+  // Filter data for different tabs
   const pendingRequests = requests.filter(r => r.status === 'requested');
   const materialsSentCases = requests.filter(r => r.status === 'materials_ready');
   const submittedCases = requests.filter(r => r.status === 'submitted');
@@ -729,7 +747,7 @@ const InstructorDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-2 bg-indigo-100 rounded-lg">
-                <className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600" />
+                <Upload className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600" />
               </div>
               <div className="ml-3 sm:ml-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">Sachverhalt hochgeladen</p>
@@ -741,7 +759,7 @@ const InstructorDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-2 bg-purple-100 rounded-lg">
-                <className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600" />
+                <FileText className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600" />
               </div>
               <div className="ml-3 sm:ml-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">Eingereichte Klausuren</p>
@@ -753,7 +771,7 @@ const InstructorDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-2 bg-orange-100 rounded-lg">
-                <className="w-4 h-4 sm:w-6 sm:h-6 text-orange-600" />
+                <Upload className="w-4 h-4 sm:w-6 sm:h-6 text-orange-600" />
               </div>
               <div className="ml-3 sm:ml-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">Videokorrektur ausstehend</p>
@@ -765,7 +783,7 @@ const InstructorDashboard: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-4 sm:p-6">
             <div className="flex items-center">
               <div className="p-2 bg-green-100 rounded-lg">
-                <className="w-4 h-4 sm:w-6 sm:h-6 text-green-600" />
+                <CheckCircle className="w-4 h-4 sm:w-6 sm:h-6 text-green-600" />
               </div>
               <div className="ml-3 sm:ml-4">
                 <p className="text-xs sm:text-sm font-medium text-gray-600">Abgeschlossene Klausuren</p>
@@ -912,7 +930,7 @@ const InstructorDashboard: React.FC = () => {
                                 }`}
                               >
                                 <div className="flex items-center gap-1">
-                                  <className="w-3 h-3" />
+                                  <Upload className="w-3 h-3" />
                                   <span className="hidden sm:inline">
                                     {request.case_study_material_url ? 'Sachverhalt aktualisieren' : 'Sachverhalt hochladen'}
                                   </span>
@@ -935,7 +953,7 @@ const InstructorDashboard: React.FC = () => {
                                 }`}
                               >
                                 <div className="flex items-center gap-1">
-                                  <className="w-3 h-3" />
+                                  <Upload className="w-3 h-3" />
                                   <span className="hidden sm:inline">
                                     {request.additional_materials_url ? 'Zusatzmaterialien aktualisieren' : 'Zusatzmaterialien hochladen'}
                                   </span>
@@ -1065,7 +1083,7 @@ const InstructorDashboard: React.FC = () => {
                                 }`}
                               >
                                 <div className="flex items-center gap-1">
-                                  <className="w-3 h-3" />
+                                  <Upload className="w-3 h-3" />
                                   <span className="hidden sm:inline">
                                     {request.case_study_material_url ? 'Sachverhalt aktualisieren' : 'Sachverhalt hochladen'}
                                   </span>
@@ -1088,7 +1106,7 @@ const InstructorDashboard: React.FC = () => {
                                 }`}
                               >
                                 <div className="flex items-center gap-1">
-                                  <className="w-3 h-3" />
+                                  <Upload className="w-3 h-3" />
                                   <span className="hidden sm:inline">
                                     {request.additional_materials_url ? 'Zusatzmaterialien aktualisieren' : 'Zusatzmaterialien hochladen'}
                                   </span>
@@ -1203,10 +1221,10 @@ const InstructorDashboard: React.FC = () => {
                             </select>
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handleSubmission(caseStudy.id, caseStudy.submission_url!)}
+                              onClick={() => handleDownloadSubmission(caseStudy.id, caseStudy.submission_url!)}
                               className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200 w-full sm:w-auto justify-center"
                             >
-                              <className="w-3 h-3" />
+                              <Download className="w-3 h-3" />
                               Bearbeitung herunterladen
                             </button>
                           </div>
@@ -1318,14 +1336,14 @@ const InstructorDashboard: React.FC = () => {
                               rel="noopener noreferrer"
                               className="flex items-center gap-1 px-3 py-1 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
                             >
-                              <className="w-3 h-3" />
+                              <Download className="w-3 h-3" />
                               Bearbeitung ansehen
                             </a>
                             <button
                               onClick={() => openCorrectionModal(caseStudy)}
                               className="flex items-center gap-1 px-3 py-1 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200"
                             >
-                              <className="w-3 h-3" />
+                              <Upload className="w-3 h-3" />
                               Korrektur hochladen
                             </button>
                           </div>
@@ -1455,12 +1473,12 @@ const InstructorDashboard: React.FC = () => {
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-1 px-3 py-2 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 flex-1 justify-center"
                                   >
-                                    <className="w-3 h-3" />
+                                    <Eye className="w-3 h-3" />
                                     Ansehen
                                   </a>
                                 ) : (
                                   <span className="flex items-center gap-1 px-3 py-2 text-xs bg-gray-100 text-gray-500 rounded flex-1 justify-center">
-                                    <className="w-3 h-3" />
+                                    <AlertCircle className="w-3 h-3" />
                                     Nicht verfügbar
                                   </span>
                                 )}
@@ -1498,12 +1516,12 @@ const InstructorDashboard: React.FC = () => {
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-1 px-3 py-2 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 flex-1 justify-center"
                                   >
-                                    <className="w-3 h-3" />
+                                    <Eye className="w-3 h-3" />
                                     Ansehen
                                   </a>
                                 ) : (
                                   <span className="flex items-center gap-1 px-3 py-2 text-xs bg-gray-100 text-gray-500 rounded flex-1 justify-center">
-                                    <className="w-3 h-3" />
+                                    <AlertCircle className="w-3 h-3" />
                                     Nicht verfügbar
                                   </span>
                                 )}
@@ -1538,12 +1556,12 @@ const InstructorDashboard: React.FC = () => {
                                   rel="noopener noreferrer"
                                   className="flex items-center gap-1 px-3 py-2 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 flex-1 justify-center"
                                 >
-                                  <className="w-3 h-3" />
+                                  <Download className="w-3 h-3" />
                                   Herunterladen
                                 </a>
                               ) : (
                                 <span className="flex items-center gap-1 px-3 py-2 text-xs bg-gray-100 text-gray-500 rounded flex-1 justify-center">
-                                  <className="w-3 h-3" />
+                                  <AlertCircle className="w-3 h-3" />
                                   Nicht eingereicht
                                 </span>
                               )}
@@ -1562,12 +1580,12 @@ const InstructorDashboard: React.FC = () => {
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-1 px-3 py-2 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 flex-1 justify-center"
                                   >
-                                    <className="w-3 h-3" />
+                                    <Eye className="w-3 h-3" />
                                     Ansehen
                                   </a>
                                 ) : (
                                   <span className="flex items-center gap-1 px-3 py-2 text-xs bg-gray-100 text-gray-500 rounded flex-1 justify-center">
-                                    <className="w-3 h-3" />
+                                    <AlertCircle className="w-3 h-3" />
                                     Nicht verfügbar
                                   </span>
                                 )}
@@ -1591,12 +1609,12 @@ const InstructorDashboard: React.FC = () => {
                                     rel="noopener noreferrer"
                                     className="flex items-center gap-1 px-3 py-2 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 flex-1 justify-center"
                                   >
-                                    <className="w-3 h-3" />
+                                    <Download className="w-3 h-3" />
                                     Herunterladen
                                   </a>
                                 ) : (
                                   <span className="flex items-center gap-1 px-3 py-2 text-xs bg-gray-100 text-gray-500 rounded flex-1 justify-center">
-                                    <className="w-3 h-3" />
+                                    <AlertCircle className="w-3 h-3" />
                                     Nicht verfügbar
                                   </span>
                                 )}
@@ -1685,7 +1703,7 @@ const InstructorDashboard: React.FC = () => {
           </div>
         </div>
 
-        {/* MaterialModal */}
+        {/* Material Upload Modal */}
         {materialModalOpen && selectedRequest && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -1783,7 +1801,7 @@ const InstructorDashboard: React.FC = () => {
                     Abbrechen
                   </button>
                   <button
-                    onClick={handleMaterial}
+                    onClick={handleMaterialUpload}
                     className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                   >
                     Abschicken
@@ -1794,7 +1812,7 @@ const InstructorDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Additional MaterialModal */}
+        {/* Additional Material Upload Modal */}
         {additionalMaterialModalOpen && selectedRequest && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-lg p-6 w-full max-w-md max-h-[90vh] overflow-y-auto">
@@ -1892,7 +1910,7 @@ const InstructorDashboard: React.FC = () => {
                     Abbrechen
                   </button>
                   <button
-                    onClick={handleAdditionalMaterial}
+                    onClick={handleAdditionalMaterialUpload}
                     className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
                   >
                     Abschicken
@@ -1903,7 +1921,7 @@ const InstructorDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* CorrectionModal */}
+        {/* Correction Upload Modal */}
         {correctionModalOpen && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
             <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -1944,15 +1962,15 @@ const InstructorDashboard: React.FC = () => {
                     placeholder="https://www.loom.com/share/..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
-                  <p className="text-xs text-gray-500 mt-1">Fügen Sie den Loom-Video-hier ein</p>
+                  <p className="text-xs text-gray-500 mt-1">Fügen Sie den Loom-Video-Link hier ein</p>
                   {videoLoomUrl && (
                     <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
-                      <p className="text-sm text-green-800">✓ Loom-Video-eingegeben</p>
+                      <p className="text-sm text-green-800">✓ Loom-Video-Link eingegeben</p>
                     </div>
                   )}
                 </div>
 
-                {/* PDFSection */}
+                {/* PDF Upload Section */}
                 <div className="mb-6">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Schriftliche Korrektur (optional)
@@ -1970,13 +1988,13 @@ const InstructorDashboard: React.FC = () => {
                   >
                     {correctionPdfFile ? (
                       <div className="text-green-600">
-                        <className="w-8 h-8 mx-auto mb-2" />
+                        <FileText className="w-8 h-8 mx-auto mb-2" />
                         <p className="font-medium">{correctionPdfFile.name}</p>
                         <p className="text-sm text-gray-500">{(correctionPdfFile.size / 1024 / 1024).toFixed(2)} MB</p>
                       </div>
                     ) : (
                       <div className="text-gray-500">
-                        <className="w-8 h-8 mx-auto mb-2" />
+                        <FileText className="w-8 h-8 mx-auto mb-2" />
                         <p className="mb-1">PDF hier ablegen oder</p>
                         <span className="text-blue-600 hover:underline">Datei auswählen</span>
                       </div>
@@ -1993,7 +2011,7 @@ const InstructorDashboard: React.FC = () => {
                     Abbrechen
                   </button>
                   <button
-                    onClick={handleCorrection}
+                    onClick={handleCorrectionUpload}
                     disabled={!videoLoomUrl && !correctionPdfFile}
                     className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
