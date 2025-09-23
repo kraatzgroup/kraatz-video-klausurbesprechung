@@ -16,6 +16,15 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
   onClick
 }) => {
   const hasUnread = conversation.unread_count > 0;
+  
+  // Debug logging
+  console.log('🗣️ ConversationItem:', {
+    id: conversation.id,
+    title: conversation.title,
+    participantCount: conversation.participant_count,
+    lastMessage: conversation.last_message,
+    hasUnread
+  });
 
   return (
     <div

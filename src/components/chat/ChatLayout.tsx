@@ -125,10 +125,8 @@ export const ChatLayout: React.FC = () => {
         onLeaveConversation={handleLeaveConversation}
       />
 
-      {/* Mobile Overlay (for responsive design) */}
-      {activeConversationId && (
-        <div className="lg:hidden fixed inset-0 bg-black bg-opacity-50 z-40" />
-      )}
+      {/* Mobile Overlay (for responsive design) - only show on mobile when sidebar should be hidden */}
+      {/* Removed problematic overlay that was blocking desktop interaction */}
     </div>
   );
 };

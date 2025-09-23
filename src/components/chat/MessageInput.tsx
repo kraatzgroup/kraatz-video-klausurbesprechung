@@ -28,12 +28,16 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const handleSend = async () => {
     if (!message.trim() || isSending || disabled) return;
 
+    console.log('📤 Sending message:', { message: message.trim(), disabled, isSending });
     setIsSending(true);
     try {
       const success = await onSendMessage(message.trim());
+      console.log('📤 Message send result:', success);
       if (success) {
         setMessage('');
       }
+    } catch (error) {
+      console.error('❌ Error sending message:', error);
     } finally {
       setIsSending(false);
     }
