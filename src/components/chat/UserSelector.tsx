@@ -18,8 +18,10 @@ interface UserSelectorProps {
 export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClose }) => {
   const { user } = useAuth();
   const [availableUsers, setAvailableUsers] = useState<ChatUser[]>([]);
+  const [displayedUsers, setDisplayedUsers] = useState<ChatUser[]>([]);
   const [selectedUsers, setSelectedUsers] = useState<ChatUser[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [roleFilter, setRoleFilter] = useState<'all' | 'instructor' | 'student' | 'admin'>('all');
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
 
@@ -78,18 +80,27 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
     loadUsers();
   }, [user]);
 
-  // Filter users based on search
-  const filteredUsers = availableUsers.filter(user => {
-    if (!searchTerm) return true;
-    
-    const searchLower = searchTerm.toLowerCase();
-    return (
-      user.first_name.toLowerCase().includes(searchLower) ||
-      user.last_name.toLowerCase().includes(searchLower) ||
-      user.email.toLowerCase().includes(searchLower) ||
-      formatUserRole(user.role).toLowerCase().includes(searchLower)
-    );
-  });
+  // Filter and search users
+  useEffect(() => {
+    let filtered = availableUsers;
+
+    // Apply role filter
+    if (roleFilter !== 'all') {
+      filtered = filtered.filter(user => user.role === roleFilter);
+    }
+
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const searchLower = searchTerm.toLowerCase();
+      filtered = filtered.filter(user => 
+        `${user.first_name} ${user.last_name}`.toLowerCase().includes(searchLower) ||
+        user.email.toLowerCase().includes(searchLower)
+      );
+    }
+
+    setDisplayedUsers(filtered);
+  }, [availableUsers, roleFilter, searchTerm]);
+
 
   // Toggle user selection
   const toggleUser = (user: ChatUser) => {
@@ -133,7 +144,7 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
 
         {/* Search */}
         <div className="p-4 border-b border-gray-200">
-          <div className="relative">
+          <div className="relative mb-3">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
               type="text"
@@ -142,6 +153,50 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-kraatz-primary focus:border-transparent text-sm"
             />
+          </div>
+          
+          {/* Role Filter */}
+          <div className="flex gap-1">
+            <button
+              onClick={() => setRoleFilter('all')}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                roleFilter === 'all' 
+                  ? 'bg-kraatz-primary text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Alle
+            </button>
+            <button
+              onClick={() => setRoleFilter('instructor')}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                roleFilter === 'instructor' 
+                  ? 'bg-kraatz-primary text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Dozenten
+            </button>
+            <button
+              onClick={() => setRoleFilter('student')}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                roleFilter === 'student' 
+                  ? 'bg-kraatz-primary text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Studenten
+            </button>
+            <button
+              onClick={() => setRoleFilter('admin')}
+              className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                roleFilter === 'admin' 
+                  ? 'bg-kraatz-primary text-white' 
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Admin
+            </button>
           </div>
         </div>
 
@@ -179,7 +234,7 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
             <div className="flex items-center justify-center p-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-kraatz-primary"></div>
             </div>
-          ) : filteredUsers.length === 0 ? (
+          ) : displayedUsers.length === 0 ? (
             <div className="p-8 text-center text-gray-500">
               <Search className="w-12 h-12 mx-auto mb-4 text-gray-300" />
               <p className="text-sm">
@@ -191,7 +246,7 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
             </div>
           ) : (
             <div className="divide-y divide-gray-100">
-              {filteredUsers.map(chatUser => {
+              {displayedUsers.map((chatUser: ChatUser) => {
                 const isSelected = selectedUsers.some(u => u.id === chatUser.id);
                 
                 return (
