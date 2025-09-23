@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Users, MessageCircle } from 'lucide-react';
-import { Conversation } from '../../hooks/useConversations';
+import { Conversation, ConversationParticipant } from '../../hooks/useConversations';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 interface ConversationItemProps {
   conversation: Conversation;
@@ -17,15 +18,56 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
   onClick
 }) => {
   const { user } = useAuth();
+  const [chatPartnerName, setChatPartnerName] = useState<string>('Laden...');
   const hasUnread = conversation.unread_count > 0;
 
-  // Generate chat partner name - show who the user is chatting with
-  const getChatPartnerName = () => {
-    // For instructor chatting with admin, show "Admin"
-    // For student chatting with admin, show "Admin" 
-    // This is a simplified version - in a real app you'd get this from participants data
-    return 'Admin';
-  };
+  // Load conversation participants and determine chat partner name
+  useEffect(() => {
+    const loadChatPartner = async () => {
+      if (!user?.id) return;
+
+      try {
+        // Get participants for this conversation
+        const { data: participantsData, error } = await supabase
+          .from('conversation_participants')
+          .select(`
+            user_id,
+            users!inner (
+              id,
+              email,
+              first_name,
+              last_name,
+              role
+            )
+          `)
+          .eq('conversation_id', conversation.id);
+
+        if (error) {
+          console.error('Error loading participants:', error);
+          setChatPartnerName('Unbekannt');
+          return;
+        }
+
+        // Find the other participant (not the current user)
+        const otherParticipant = participantsData?.find(p => p.user_id !== user.id);
+        
+        if (otherParticipant?.users && Array.isArray(otherParticipant.users) && otherParticipant.users.length > 0) {
+          const partner = otherParticipant.users[0];
+          setChatPartnerName(`${partner.first_name} ${partner.last_name}`);
+        } else if (otherParticipant?.users && !Array.isArray(otherParticipant.users)) {
+          const partner = otherParticipant.users as any;
+          setChatPartnerName(`${partner.first_name} ${partner.last_name}`);
+        } else {
+          setChatPartnerName('Unbekannte Person');
+        }
+      } catch (error) {
+        console.error('Error loading chat partner:', error);
+        setChatPartnerName('Fehler beim Laden');
+      }
+    };
+
+    loadChatPartner();
+  }, [conversation.id, user?.id]);
   
 
   return (
@@ -54,7 +96,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
           <h3 className={`text-sm font-medium ${
             hasUnread ? 'text-gray-900' : 'text-gray-700'
           }`}>
-            {getChatPartnerName()}
+            {chatPartnerName}
           </h3>
         </div>
       </div>
