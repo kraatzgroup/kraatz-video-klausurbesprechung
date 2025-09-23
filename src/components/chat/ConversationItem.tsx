@@ -32,7 +32,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
           .from('conversation_participants')
           .select(`
             user_id,
-            users!inner (
+            users (
               id,
               email,
               first_name,
@@ -42,23 +42,35 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
           `)
           .eq('conversation_id', conversation.id);
 
+        console.log('🔍 Participants data:', participantsData);
+        console.log('🔍 Current user ID:', user.id);
+
         if (error) {
           console.error('Error loading participants:', error);
-          setChatPartnerName('Unbekannt');
+          setChatPartnerName('Fehler: ' + error.message);
           return;
         }
 
         // Find the other participant (not the current user)
         const otherParticipant = participantsData?.find(p => p.user_id !== user.id);
         
-        if (otherParticipant?.users && Array.isArray(otherParticipant.users) && otherParticipant.users.length > 0) {
-          const partner = otherParticipant.users[0];
-          setChatPartnerName(`${partner.first_name} ${partner.last_name}`);
-        } else if (otherParticipant?.users && !Array.isArray(otherParticipant.users)) {
+        console.log('🔍 Other participant:', otherParticipant);
+        console.log('🔍 All participants:', participantsData?.map(p => ({ user_id: p.user_id, users: p.users })));
+        
+        if (otherParticipant?.users) {
           const partner = otherParticipant.users as any;
-          setChatPartnerName(`${partner.first_name} ${partner.last_name}`);
+          console.log('🔍 Partner data:', partner);
+          
+          if (Array.isArray(partner) && partner.length > 0) {
+            setChatPartnerName(`${partner[0].first_name} ${partner[0].last_name}`);
+          } else if (partner.first_name && partner.last_name) {
+            setChatPartnerName(`${partner.first_name} ${partner.last_name}`);
+          } else {
+            setChatPartnerName('Unvollständige Daten');
+          }
         } else {
-          setChatPartnerName('Unbekannte Person');
+          console.log('🔍 No other participant found or no user data');
+          setChatPartnerName('Keine Teilnehmer gefunden');
         }
       } catch (error) {
         console.error('Error loading chat partner:', error);
