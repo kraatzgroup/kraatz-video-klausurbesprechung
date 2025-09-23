@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip } from 'lucide-react';
+import { Send, Paperclip, Smile } from 'lucide-react';
+import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
 
 interface MessageInputProps {
   onSendMessage: (content: string) => Promise<boolean>;
@@ -14,7 +15,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 }) => {
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const emojiPickerRef = useRef<HTMLDivElement>(null);
 
   // Auto-resize textarea
   useEffect(() => {
@@ -24,6 +27,37 @@ export const MessageInput: React.FC<MessageInputProps> = ({
       textarea.style.height = `${Math.min(textarea.scrollHeight, 120)}px`;
     }
   }, [message]);
+
+  // Close emoji picker when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (emojiPickerRef.current && !emojiPickerRef.current.contains(event.target as Node)) {
+        setShowEmojiPicker(false);
+      }
+    };
+
+    if (showEmojiPicker) {
+      document.addEventListener('mousedown', handleClickOutside);
+      return () => document.removeEventListener('mousedown', handleClickOutside);
+    }
+  }, [showEmojiPicker]);
+
+  const handleEmojiClick = (emojiData: EmojiClickData) => {
+    const textarea = textareaRef.current;
+    if (textarea) {
+      const start = textarea.selectionStart;
+      const end = textarea.selectionEnd;
+      const newMessage = message.slice(0, start) + emojiData.emoji + message.slice(end);
+      setMessage(newMessage);
+      
+      // Set cursor position after emoji
+      setTimeout(() => {
+        textarea.focus();
+        textarea.setSelectionRange(start + emojiData.emoji.length, start + emojiData.emoji.length);
+      }, 0);
+    }
+    setShowEmojiPicker(false);
+  };
 
   const handleSend = async () => {
     if (!message.trim() || isSending || disabled) return;
@@ -65,6 +99,35 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         >
           <Paperclip className="w-5 h-5" />
         </button>
+
+        {/* Emoji Button */}
+        <div className="relative" ref={emojiPickerRef}>
+          <button
+            type="button"
+            onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+            disabled={disabled}
+            className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Emoji hinzufügen"
+          >
+            <Smile className="w-5 h-5" />
+          </button>
+
+          {/* Emoji Picker */}
+          {showEmojiPicker && (
+            <div className="absolute bottom-full mb-2 left-0 z-50">
+              <EmojiPicker
+                onEmojiClick={handleEmojiClick}
+                width={320}
+                height={400}
+                searchDisabled={false}
+                skinTonesDisabled={true}
+                previewConfig={{
+                  showPreview: false
+                }}
+              />
+            </div>
+          )}
+        </div>
 
         {/* Message Input */}
         <div className="flex-1 relative">

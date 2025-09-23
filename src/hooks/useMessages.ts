@@ -10,6 +10,7 @@ export interface Message {
   content: string;
   created_at: string;
   edited_at: string | null;
+  is_deleted?: boolean;
   message_type: 'text' | 'system';
   sender?: ChatUser;
 }
@@ -125,39 +126,55 @@ export const useMessages = (conversationId: string | null) => {
     try {
       const { error } = await supabase
         .from('messages')
-        .update({
+        .update({ 
           content: newContent.trim(),
           edited_at: new Date().toISOString()
         })
         .eq('id', messageId)
-        .eq('sender_id', user.id); // Nur eigene Nachrichten bearbeiten
+        .eq('sender_id', user.id);
 
       if (error) throw error;
 
+      // Update local state
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, content: newContent.trim(), edited_at: new Date().toISOString() }
+          : msg
+      ));
+
       return true;
-    } catch (err) {
-      console.error('Error editing message:', err);
-      setError(err instanceof Error ? err.message : 'Failed to edit message');
+    } catch (error) {
+      console.error('Error editing message:', error);
       return false;
     }
   }, [user]);
 
-  // Nachricht löschen
+  // Nachricht löschen (Soft Delete)
   const deleteMessage = useCallback(async (messageId: string): Promise<boolean> => {
     if (!user) return false;
 
     try {
       const { error } = await supabase
         .from('messages')
-        .delete()
-        .eq('id', messageId);
+        .update({ 
+          is_deleted: true,
+          content: '[Nachricht gelöscht]'
+        })
+        .eq('id', messageId)
+        .eq('sender_id', user.id);
 
       if (error) throw error;
 
+      // Update local state
+      setMessages(prev => prev.map(msg => 
+        msg.id === messageId 
+          ? { ...msg, content: '[Nachricht gelöscht]', is_deleted: true }
+          : msg
+      ));
+
       return true;
-    } catch (err) {
-      console.error('Error deleting message:', err);
-      setError(err instanceof Error ? err.message : 'Failed to delete message');
+    } catch (error) {
+      console.error('Error deleting message:', error);
       return false;
     }
   }, [user]);
