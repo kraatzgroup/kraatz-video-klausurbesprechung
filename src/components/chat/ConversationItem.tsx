@@ -19,19 +19,12 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
   const { user } = useAuth();
   const hasUnread = conversation.unread_count > 0;
 
-  // Generate dynamic title if conversation.title is empty or just whitespace
-  const getDisplayTitle = () => {
-    if (conversation.title && conversation.title.trim() && conversation.title.trim() !== '') {
-      return conversation.title;
-    }
-    
-    // Fallback: Generate title based on conversation type or participants
-    if (conversation.type === 'support') {
-      return 'Support Chat';
-    }
-    
-    // For now, return a generic title - this will be improved when we have participant data
-    return 'Chat-Unterhaltung';
+  // Generate chat partner name - show who the user is chatting with
+  const getChatPartnerName = () => {
+    // For instructor chatting with admin, show "Admin"
+    // For student chatting with admin, show "Admin" 
+    // This is a simplified version - in a real app you'd get this from participants data
+    return 'Admin';
   };
   
 
@@ -56,52 +49,13 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
           )}
         </div>
 
-        {/* Content */}
-        <div className="flex-1 min-w-0">
-          {/* Title and Timestamp */}
-          <div className="flex items-center justify-between mb-1">
-            <h3 className={`text-sm font-medium truncate ${
-              hasUnread ? 'text-gray-900' : 'text-gray-700'
-            }`}>
-              {getDisplayTitle()}
-            </h3>
-            {conversation.last_message_at && (
-              <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                {formatDistanceToNow(new Date(conversation.last_message_at), {
-                  addSuffix: true,
-                  locale: de
-                })}
-              </span>
-            )}
-          </div>
-
-          {/* Last Message */}
-          <div className="flex items-center justify-between">
-            <p className={`text-sm truncate ${
-              hasUnread ? 'text-gray-900 font-medium' : 'text-gray-600'
-            }`}>
-              {conversation.last_message || 'Keine Nachrichten'}
-            </p>
-
-            {/* Unread Badge */}
-            {hasUnread && (
-              <span className="flex-shrink-0 ml-2 bg-kraatz-primary text-white text-xs rounded-full px-2 py-1 min-w-[20px] text-center">
-                {conversation.unread_count > 99 ? '99+' : conversation.unread_count}
-              </span>
-            )}
-          </div>
-
-          {/* Conversation Type Badge */}
-          <div className="flex items-center gap-2 mt-2">
-            {conversation.type === 'support' && (
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs bg-blue-100 text-blue-800">
-                Support
-              </span>
-            )}
-            <span className="text-xs text-gray-500">
-              {conversation.participant_count} Teilnehmer
-            </span>
-          </div>
+        {/* Content - Only chat partner name */}
+        <div className="flex-1 min-w-0 flex items-center">
+          <h3 className={`text-sm font-medium ${
+            hasUnread ? 'text-gray-900' : 'text-gray-700'
+          }`}>
+            {getChatPartnerName()}
+          </h3>
         </div>
       </div>
     </div>
