@@ -19,9 +19,9 @@ export const canChatWith = (currentUserRole: UserRole, targetUserRole: UserRole)
     return targetUserRole === 'admin';
   }
   
-  // Admin, Dozent und Springer können untereinander chatten
+  // Admin, Dozent und Springer können mit ALLEN Rollen chatten
   if (['admin', 'instructor', 'springer'].includes(currentUserRole)) {
-    return ['admin', 'instructor', 'springer'].includes(targetUserRole);
+    return ['admin', 'instructor', 'springer', 'student'].includes(targetUserRole);
   }
   
   return false;
