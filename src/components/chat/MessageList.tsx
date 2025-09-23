@@ -75,6 +75,7 @@ export const MessageList: React.FC<MessageListProps> = ({
 
   // Show loading state
   if (loading && messages.length === 0) {
+    console.log('📱 MessageList: Showing loading state', { loading, messagesCount: messages.length });
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center text-gray-500">
