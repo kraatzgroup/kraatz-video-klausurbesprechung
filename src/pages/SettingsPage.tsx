@@ -532,12 +532,12 @@ const SettingsPage: React.FC = () => {
                       )}
                       <div>
                         <h3 className="text-sm font-medium text-gray-900">
-                          Benachrichtigungen bei neuen Klausuren
+                          E-Mail-Benachrichtigungen
                         </h3>
                         <p className="text-sm text-gray-500">
                           {emailNotificationsEnabled 
-                            ? 'Sie erhalten E-Mails bei neuen Klausur-Einreichungen'
-                            : 'E-Mail-Benachrichtigungen sind deaktiviert - Springer werden benachrichtigt'
+                            ? 'Sie erhalten E-Mails bei neuen Klausuren und Chat-Nachrichten'
+                            : 'E-Mail-Benachrichtigungen sind deaktiviert - Springer werden bei Klausuren benachrichtigt'
                           }
                         </p>
                       </div>
