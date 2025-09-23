@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
-import { User, CreditCard, LogOut, Users, Video, Star } from 'lucide-react'
+import { User, CreditCard, LogOut, Users, Video, Star, MessageCircle } from 'lucide-react'
 import { NotificationDropdown } from '../NotificationDropdown'
 
 export const Header: React.FC = () => {
@@ -78,15 +78,31 @@ export const Header: React.FC = () => {
                       <Star className="w-4 h-4" />
                       Bewertungen Dashboard
                     </Link>
+                    <Link
+                      to="/chat"
+                      className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Chat
+                    </Link>
                   </>
-                ) : userRole === 'instructor' ? (
-                  <Link
-                    to="/instructor"
-                    className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
-                  >
-                    <Users className="w-4 h-4" />
-                    Instructor Dashboard
-                  </Link>
+                ) : userRole === 'instructor' || userRole === 'springer' ? (
+                  <>
+                    <Link
+                      to="/instructor"
+                      className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      <Users className="w-4 h-4" />
+                      {userRole === 'springer' ? 'Springer Dashboard' : 'Instructor Dashboard'}
+                    </Link>
+                    <Link
+                      to="/chat"
+                      className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Chat
+                    </Link>
+                  </>
                 ) : (
                   <>
                     <Link
@@ -94,6 +110,19 @@ export const Header: React.FC = () => {
                       className="text-text-secondary hover:text-primary transition-colors"
                     >
                       Dashboard
+                    </Link>
+                    <Link
+                      to="/case-studies"
+                      className="text-text-secondary hover:text-primary transition-colors"
+                    >
+                      Klausuren
+                    </Link>
+                    <Link
+                      to="/chat"
+                      className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
+                    >
+                      <MessageCircle className="w-4 h-4" />
+                      Support Chat
                     </Link>
                     <Link
                       to="/case-studies"

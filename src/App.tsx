@@ -19,6 +19,7 @@ import AdminDashboard from './pages/AdminDashboard'
 import SettingsPage from './pages/SettingsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { MasterclassPage } from './pages/MasterclassPage'
+import { ChatPage } from './pages/ChatPage'
 
 function App() {
   return (
@@ -125,6 +126,16 @@ function App() {
               element={
                 <ProtectedRoute>
                   <ProfilePage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/chat"
+              element={
+                <ProtectedRoute>
+                  <RoleBasedRoute allowedRoles={['student', 'instructor', 'springer', 'admin']}>
+                    <ChatPage />
+                  </RoleBasedRoute>
                 </ProtectedRoute>
               }
             />
