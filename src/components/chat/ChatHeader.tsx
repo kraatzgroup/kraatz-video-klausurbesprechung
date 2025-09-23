@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, MoreVertical, Phone, Video, Info } from 'lucide-react';
+import { Users, MoreVertical, Phone, Info } from 'lucide-react';
 import { Conversation, ConversationParticipant } from '../../hooks/useConversations';
 import { formatUserRole, getRoleColor } from '../../utils/chatPermissions';
 
@@ -86,13 +86,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           disabled
         >
           <Phone className="w-4 h-4" />
-        </button>
-        <button
-          className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-          title="Videoanruf (bald verfügbar)"
-          disabled
-        >
-          <Video className="w-4 h-4" />
         </button>
 
         {/* Info Button */}
