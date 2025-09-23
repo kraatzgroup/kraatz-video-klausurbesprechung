@@ -22,11 +22,12 @@ import { MasterclassPage } from './pages/MasterclassPage'
 import { ChatPage } from './pages/ChatPage'
 
 function App() {
-  return (
-    <AuthProvider>
-      <Router>
-        <Layout>
-          <Routes>
+  try {
+    return (
+      <AuthProvider>
+        <Router>
+          <Layout>
+            <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
@@ -144,6 +145,23 @@ function App() {
       </Router>
     </AuthProvider>
   )
+  } catch (error) {
+    console.error('App Error:', error);
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-red-600 mb-4">Anwendungsfehler</h1>
+          <p className="text-gray-600 mb-4">Es ist ein Fehler aufgetreten. Bitte laden Sie die Seite neu.</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+          >
+            Seite neu laden
+          </button>
+        </div>
+      </div>
+    );
+  }
 }
 
 export default App
