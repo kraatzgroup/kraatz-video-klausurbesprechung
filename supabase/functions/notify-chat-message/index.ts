@@ -96,82 +96,106 @@ serve(async (req) => {
       })
     }
 
-    // Send email notifications to each participant
-    for (const participant of notifiableParticipants) {
-      const user = participant.users
-      if (!user) continue
-
-      const emailData = {
-        to: user.email,
-        subject: `Neue Chat-Nachricht von ${sender.first_name} ${sender.last_name}`,
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-              <h1 style="color: white; margin: 0; font-size: 28px;">💬 Neue Chat-Nachricht</h1>
-            </div>
-            
-            <div style="padding: 30px; background-color: #f8f9fa;">
-              <h2 style="color: #333; margin-top: 0;">Hallo ${user.first_name},</h2>
-              
-              <p style="color: #666; font-size: 16px; line-height: 1.6;">
-                Sie haben eine neue Nachricht von <strong>${sender.first_name} ${sender.last_name}</strong> erhalten:
-              </p>
-              
-              <div style="background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0; border-radius: 4px;">
-                <p style="margin: 0; color: #333; font-size: 16px; line-height: 1.6;">
-                  "${record.content}"
-                </p>
-              </div>
-              
-              <div style="text-align: center; margin: 30px 0;">
-                <a href="https://kraatz-club.de/chat" 
-                   style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
-                          color: white; 
-                          padding: 15px 30px; 
-                          text-decoration: none; 
-                          border-radius: 25px; 
-                          font-weight: bold;
-                          display: inline-block;">
-                  💬 Chat öffnen
-                </a>
-              </div>
-              
-              <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
-              
-              <p style="color: #999; font-size: 14px; text-align: center;">
-                Sie erhalten diese E-Mail, weil Sie Chat-Benachrichtigungen aktiviert haben.<br>
-                Sie können diese in Ihren <a href="https://kraatz-club.de/settings" style="color: #667eea;">Einstellungen</a> deaktivieren.
-              </p>
-            </div>
-          </div>
-        `
-      }
-
-      // Send email via Resend
-      const emailResponse = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          from: 'Kraatz Club <noreply@kraatz-club.de>',
-          to: [emailData.to],
-          subject: emailData.subject,
-          html: emailData.html,
-        }),
-      })
-
-      if (!emailResponse.ok) {
-        console.error(`Failed to send email to ${user.email}:`, await emailResponse.text())
-      } else {
-        console.log(`✅ Chat notification email sent to ${user.email}`)
-      }
+    // Get Mailgun configuration
+    const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY')
+    const mailgunDomain = 'kraatz-group.de'
+    
+    if (!mailgunApiKey) {
+      throw new Error('MAILGUN_API_KEY not configured')
     }
 
-    return new Response('Chat notifications sent successfully', { 
+    // Send email notifications to each participant using Mailgun
+    const emailPromises = notifiableParticipants.map(async (participant) => {
+      const user = participant.users
+      if (!user) return null
+
+      const emailSubject = `Neue Chat-Nachricht von ${sender.first_name} ${sender.last_name}`
+      const emailContent = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">💬 Neue Chat-Nachricht</h1>
+          </div>
+          
+          <div style="padding: 30px; background-color: #f8f9fa;">
+            <h2 style="color: #333; margin-top: 0;">Hallo ${user.first_name},</h2>
+            
+            <p style="color: #666; font-size: 16px; line-height: 1.6;">
+              Sie haben eine neue Nachricht von <strong>${sender.first_name} ${sender.last_name}</strong> erhalten:
+            </p>
+            
+            <div style="background: white; padding: 20px; border-left: 4px solid #667eea; margin: 20px 0; border-radius: 4px;">
+              <p style="margin: 0; color: #333; font-size: 16px; line-height: 1.6;">
+                "${record.content}"
+              </p>
+            </div>
+            
+            <div style="text-align: center; margin: 30px 0;">
+              <a href="https://kraatz-club.de/chat" 
+                 style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+                        color: white; 
+                        padding: 15px 30px; 
+                        text-decoration: none; 
+                        border-radius: 25px; 
+                        font-weight: bold;
+                        display: inline-block;">
+                💬 Chat öffnen
+              </a>
+            </div>
+            
+            <hr style="border: none; border-top: 1px solid #eee; margin: 30px 0;">
+            
+            <p style="color: #999; font-size: 14px; text-align: center;">
+              Sie erhalten diese E-Mail, weil Sie Chat-Benachrichtigungen aktiviert haben.<br>
+              Sie können diese in Ihren <a href="https://kraatz-club.de/settings" style="color: #667eea;">Einstellungen</a> deaktivieren.
+            </p>
+          </div>
+        </div>
+      `
+
+      // Prepare form data for Mailgun
+      const formData = new FormData()
+      formData.append('from', 'Kraatz Club <noreply@kraatz-group.de>')
+      formData.append('to', user.email)
+      formData.append('subject', `[Kraatz-Club] ${emailSubject}`)
+      formData.append('html', emailContent)
+
+      // Send email via Mailgun
+      const mailgunResponse = await fetch(
+        `https://api.eu.mailgun.net/v3/${mailgunDomain}/messages`,
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Basic ${btoa(`api:${mailgunApiKey}`)}`
+          },
+          body: formData
+        }
+      )
+
+      if (!mailgunResponse.ok) {
+        const errorText = await mailgunResponse.text()
+        console.error(`Mailgun error for ${user.email}:`, errorText)
+        throw new Error(`Mailgun API error: ${mailgunResponse.status}`)
+      }
+
+      const result = await mailgunResponse.json()
+      console.log(`✅ Chat notification email sent to ${user.email}:`, result)
+      return result
+    })
+
+    // Wait for all emails to be sent
+    const emailResults = await Promise.all(emailPromises.filter(p => p !== null))
+
+    return new Response(JSON.stringify({
+      success: true, 
+      message: `Chat notification emails sent to ${notifiableParticipants.length} recipients`,
+      recipients: notifiableParticipants.map(p => ({ 
+        email: p.users?.email, 
+        name: `${p.users?.first_name} ${p.users?.last_name}` 
+      })),
+      mailgunIds: emailResults.map(r => r.id)
+    }), { 
       status: 200, 
-      headers: corsHeaders 
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' }
     })
 
   } catch (error) {
