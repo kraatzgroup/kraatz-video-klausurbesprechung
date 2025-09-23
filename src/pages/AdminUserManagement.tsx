@@ -522,7 +522,7 @@ const AdminUserManagement: React.FC = () => {
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <className="w-4 h-4" />
+                  <FileText className="w-4 h-4" />
                   Alle Aufträge
                 </div>
               </button>
@@ -610,7 +610,7 @@ const AdminUserManagement: React.FC = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
-                <className="h-8 w-8 text-purple-600" />
+                <BarChart3 className="h-8 w-8 text-purple-600" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-500">Gesamt Klausuren</p>
