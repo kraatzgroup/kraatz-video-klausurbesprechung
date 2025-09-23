@@ -77,13 +77,19 @@ export const useMessages = (conversationId: string | null) => {
       }
 
       setHasMore(newMessages.length === MESSAGES_PER_PAGE);
+      
+      console.log('📨 Messages loaded:', {
+        conversationId,
+        newMessagesCount: newMessages.length,
+        reset,
+        totalMessages: reset ? newMessages.length : messages.length + newMessages.length
+      });
     } catch (err) {
       console.error('❌ Error fetching messages:', err);
       setError(err instanceof Error ? err.message : 'Failed to load messages');
       setMessages([]); // Clear messages on error
       setHasMore(false);
     } finally {
-      console.log('✅ Finished loading messages, setting loading to false');
       setLoading(false);
     }
   }, [conversationId, user, page]);
@@ -266,7 +272,6 @@ export const useMessages = (conversationId: string | null) => {
   // Nachrichten laden wenn Konversation wechselt
   useEffect(() => {
     if (conversationId) {
-      console.log('🔄 Loading messages for conversation:', conversationId);
       setMessages([]);
       setPage(0);
       setHasMore(true);
