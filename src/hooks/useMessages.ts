@@ -279,7 +279,7 @@ export const useMessages = (conversationId: string | null) => {
       setError(null);
       setHasMore(false);
     }
-  }, [conversationId, fetchMessages]);
+  }, [conversationId]); // REMOVED fetchMessages dependency to prevent loop
 
   return {
     messages,
