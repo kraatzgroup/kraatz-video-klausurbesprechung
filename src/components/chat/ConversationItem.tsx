@@ -3,6 +3,7 @@ import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
 import { Users, MessageCircle } from 'lucide-react';
 import { Conversation } from '../../hooks/useConversations';
+import { useAuth } from '../../contexts/AuthContext';
 
 interface ConversationItemProps {
   conversation: Conversation;
@@ -15,7 +16,23 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
   isActive = false,
   onClick
 }) => {
+  const { user } = useAuth();
   const hasUnread = conversation.unread_count > 0;
+
+  // Generate dynamic title if conversation.title is empty or just whitespace
+  const getDisplayTitle = () => {
+    if (conversation.title && conversation.title.trim() && conversation.title.trim() !== '') {
+      return conversation.title;
+    }
+    
+    // Fallback: Generate title based on conversation type or participants
+    if (conversation.type === 'support') {
+      return 'Support Chat';
+    }
+    
+    // For now, return a generic title - this will be improved when we have participant data
+    return 'Chat-Unterhaltung';
+  };
   
 
   return (
@@ -46,7 +63,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
             <h3 className={`text-sm font-medium truncate ${
               hasUnread ? 'text-gray-900' : 'text-gray-700'
             }`}>
-              {conversation.title || 'Unbenannte Unterhaltung'}
+              {getDisplayTitle()}
             </h3>
             {conversation.last_message_at && (
               <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
