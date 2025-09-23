@@ -94,19 +94,6 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
           {showMenu && (
             <div className="absolute right-0 top-full mt-1 w-48 bg-white border border-gray-200 rounded-lg shadow-lg z-10">
               <div className="py-1">
-                <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
-                  disabled
-                >
-                  Stumm schalten (bald verfügbar)
-                </button>
-                <button
-                  className="w-full text-left px-4 py-2 text-sm text-gray-400 cursor-not-allowed"
-                  disabled
-                >
-                  Benachrichtigungen (bald verfügbar)
-                </button>
-                <hr className="my-1" />
                 {onLeaveConversation && (
                   <button
                     onClick={() => {
