@@ -128,17 +128,38 @@ export const useConversations = () => {
   // Teilnehmer einer Konversation laden
   const getConversationParticipants = useCallback(async (conversationId: string): Promise<ConversationParticipant[]> => {
     try {
-      const { data, error } = await supabase
+      // First get participants
+      const { data: participantsData, error } = await supabase
         .from('conversation_participants')
-        .select(`
-          *,
-          user:users(id, email, first_name, last_name, role)
-        `)
+        .select('*')
         .eq('conversation_id', conversationId);
 
       if (error) throw error;
 
-      return data || [];
+      // Then get user info for each participant
+      const participants: ConversationParticipant[] = [];
+      if (participantsData) {
+        for (const participant of participantsData) {
+          const { data: userData } = await supabase
+            .from('users')
+            .select('id, email, first_name, last_name, role')
+            .eq('id', participant.user_id)
+            .single();
+
+          participants.push({
+            ...participant,
+            user: userData || {
+              id: participant.user_id,
+              email: 'Unknown',
+              first_name: 'Unknown',
+              last_name: 'User',
+              role: 'student'
+            }
+          });
+        }
+      }
+
+      return participants;
     } catch (err) {
       console.error('Error fetching participants:', err);
       return [];

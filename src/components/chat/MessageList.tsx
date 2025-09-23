@@ -73,6 +73,22 @@ export const MessageList: React.FC<MessageListProps> = ({
     }
   };
 
+  // Show loading state
+  if (loading && messages.length === 0) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="text-center text-gray-500">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gray-100 rounded-full flex items-center justify-center">
+            <Loader2 className="w-8 h-8 text-gray-400 animate-spin" />
+          </div>
+          <p className="text-lg font-medium mb-2">Nachrichten werden geladen...</p>
+          <p className="text-sm">Einen Moment bitte</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show empty state
   if (messages.length === 0 && !loading) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">

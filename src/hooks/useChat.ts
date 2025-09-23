@@ -72,19 +72,9 @@ export const useChat = () => {
         role: userData?.role || 'student'
       };
 
-      console.log('🔍 Chat Permission Debug:');
-      console.log('Current User:', currentUserData);
-      console.log('Target Users:', targetUsers);
-
       const unauthorizedUsers = targetUsers.filter(
-        targetUser => {
-          const canChat = canChatWith(currentUserData.role, targetUser.role);
-          console.log(`Can ${currentUserData.role} chat with ${targetUser.role}?`, canChat);
-          return !canChat;
-        }
+        targetUser => !canChatWith(currentUserData.role, targetUser.role)
       );
-
-      console.log('Unauthorized Users:', unauthorizedUsers);
 
       if (unauthorizedUsers.length > 0) {
         throw new Error('Nicht berechtigt, mit diesen Benutzern zu chatten');

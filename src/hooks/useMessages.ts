@@ -32,23 +32,41 @@ export const useMessages = (conversationId: string | null) => {
       setLoading(true);
       setError(null);
 
-      const currentPage = reset ? 0 : page;
-      const from = currentPage * MESSAGES_PER_PAGE;
-      const to = from + MESSAGES_PER_PAGE - 1;
+      const startIndex = reset ? 0 : page * MESSAGES_PER_PAGE;
+      const endIndex = startIndex + MESSAGES_PER_PAGE - 1;
 
-      const { data, error: fetchError } = await supabase
+      // First get messages
+      const { data: messagesData, error: fetchError } = await supabase
         .from('messages')
-        .select(`
-          *,
-          sender:users(id, email, first_name, last_name, role)
-        `)
+        .select('*')
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: false })
-        .range(from, to);
+        .range(startIndex, endIndex);
 
       if (fetchError) throw fetchError;
 
-      const newMessages = (data || []).reverse(); // Neueste zuerst, dann umkehren für chronologische Reihenfolge
+      // Then get sender info for each message
+      const newMessages: Message[] = [];
+      if (messagesData) {
+        for (const message of messagesData) {
+          const { data: senderData } = await supabase
+            .from('users')
+            .select('id, email, first_name, last_name, role')
+            .eq('id', message.sender_id)
+            .single();
+
+          newMessages.push({
+            ...message,
+            sender: senderData || {
+              id: message.sender_id,
+              email: 'Unknown',
+              first_name: 'Unknown',
+              last_name: 'User',
+              role: 'student'
+            }
+          });
+        }
+      }
 
       if (reset) {
         setMessages(newMessages);
