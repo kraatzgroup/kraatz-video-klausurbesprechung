@@ -31,7 +31,16 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
       try {
         setLoading(true);
 
-        // Fetch all users
+        // Fetch current user's role from database
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('role, first_name, last_name')
+          .eq('id', user.id)
+          .single();
+
+        if (userError) throw userError;
+
+        // Fetch all other users
         const { data: allUsers, error } = await supabase
           .from('users')
           .select('id, email, first_name, last_name, role')
@@ -39,18 +48,24 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
 
         if (error) throw error;
 
-        // Current user data
+        // Current user data with correct role from database
         const currentUserData: ChatUser = {
           id: user.id,
           email: user.email || '',
-          first_name: user.user_metadata?.first_name || '',
-          last_name: user.user_metadata?.last_name || '',
-          role: user.user_metadata?.role || 'student'
+          first_name: userData?.first_name || user.user_metadata?.first_name || '',
+          last_name: userData?.last_name || user.user_metadata?.last_name || '',
+          role: userData?.role || 'student'
         };
+
+        console.log('👤 UserSelector - Current user:', currentUserData);
+        console.log('👥 UserSelector - All users found:', allUsers?.length || 0);
 
         // Filter based on permissions
         const filteredUsers = getAvailableChatPartners(currentUserData, allUsers || []);
         const sortedUsers = sortChatPartners(filteredUsers);
+
+        console.log('🔍 UserSelector - Filtered users:', filteredUsers.length);
+        console.log('📋 UserSelector - Available users:', filteredUsers.map(u => `${u.first_name} ${u.last_name} (${u.role})`));
 
         setAvailableUsers(sortedUsers);
       } catch (error) {
