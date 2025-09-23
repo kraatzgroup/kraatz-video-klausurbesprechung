@@ -2,6 +2,7 @@ import { useState, useCallback } from 'react';
 import { useConversations } from './useConversations';
 import { useMessages } from './useMessages';
 import { useAuth } from '../contexts/AuthContext';
+import { supabase } from '../lib/supabase';
 import { 
   canChatWith, 
   getAvailableChatPartners, 
@@ -51,18 +52,39 @@ export const useChat = () => {
     setIsCreatingConversation(true);
 
     try {
-      // Prüfen ob alle Benutzer berechtigt sind
+      // Aktuelle Benutzerrolle aus der Datenbank holen
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role, first_name, last_name')
+        .eq('id', user.id)
+        .single();
+
+      if (userError) {
+        console.error('Error fetching user role:', userError);
+        throw new Error('Fehler beim Laden der Benutzerrolle');
+      }
+
       const currentUserData: ChatUser = {
         id: user.id,
         email: user.email || '',
-        first_name: user.user_metadata?.first_name || '',
-        last_name: user.user_metadata?.last_name || '',
-        role: user.user_metadata?.role || 'student'
+        first_name: userData?.first_name || user.user_metadata?.first_name || '',
+        last_name: userData?.last_name || user.user_metadata?.last_name || '',
+        role: userData?.role || 'student'
       };
 
+      console.log('🔍 Chat Permission Debug:');
+      console.log('Current User:', currentUserData);
+      console.log('Target Users:', targetUsers);
+
       const unauthorizedUsers = targetUsers.filter(
-        targetUser => !canChatWith(currentUserData.role, targetUser.role)
+        targetUser => {
+          const canChat = canChatWith(currentUserData.role, targetUser.role);
+          console.log(`Can ${currentUserData.role} chat with ${targetUser.role}?`, canChat);
+          return !canChat;
+        }
       );
+
+      console.log('Unauthorized Users:', unauthorizedUsers);
 
       if (unauthorizedUsers.length > 0) {
         throw new Error('Nicht berechtigt, mit diesen Benutzern zu chatten');
@@ -101,12 +123,24 @@ export const useChat = () => {
     try {
       const allUsers = await fetchChatPartners();
       
+      // Aktuelle Benutzerrolle aus der Datenbank holen
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role, first_name, last_name')
+        .eq('id', user.id)
+        .single();
+
+      if (userError) {
+        console.error('Error fetching user role:', userError);
+        return [];
+      }
+
       const currentUserData: ChatUser = {
         id: user.id,
         email: user.email || '',
-        first_name: user.user_metadata?.first_name || '',
-        last_name: user.user_metadata?.last_name || '',
-        role: user.user_metadata?.role || 'student'
+        first_name: userData?.first_name || user.user_metadata?.first_name || '',
+        last_name: userData?.last_name || user.user_metadata?.last_name || '',
+        role: userData?.role || 'student'
       };
 
       return getAvailableChatPartners(currentUserData, allUsers);

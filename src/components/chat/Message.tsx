@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
-// import { formatDistanceToNow } from 'date-fns';
-// import { de } from 'date-fns/locale';
+import { formatDistanceToNow } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { Edit2, Trash2, MoreVertical } from 'lucide-react';
 import { Message as MessageType } from '../../hooks/useMessages';
 import { useAuth } from '../../contexts/AuthContext';
@@ -159,7 +159,10 @@ export const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) =
 
         {/* Timestamp */}
         <div className={`text-xs text-gray-500 mt-1 ${isOwnMessage ? 'text-right' : 'text-left'}`}>
-          {new Date(message.created_at).toLocaleString('de-DE')}
+          {formatDistanceToNow(new Date(message.created_at), { 
+            addSuffix: true, 
+            locale: de 
+          })}
         </div>
       </div>
     </div>

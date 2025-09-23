@@ -1,6 +1,6 @@
 import React from 'react';
-// import { formatDistanceToNow } from 'date-fns';
-// import { de } from 'date-fns/locale';
+import { formatDistanceToNow } from 'date-fns';
+import { de } from 'date-fns/locale';
 import { Users, MessageCircle } from 'lucide-react';
 import { Conversation } from '../../hooks/useConversations';
 
@@ -49,7 +49,10 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
             </h3>
             {conversation.last_message_at && (
               <span className="text-xs text-gray-500 flex-shrink-0 ml-2">
-                {new Date(conversation.last_message_at).toLocaleString('de-DE')}
+                {formatDistanceToNow(new Date(conversation.last_message_at), {
+                  addSuffix: true,
+                  locale: de
+                })}
               </span>
             )}
           </div>
