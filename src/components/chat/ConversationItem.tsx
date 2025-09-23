@@ -27,50 +27,51 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
       if (!user?.id) return;
 
       try {
-        // Get participants for this conversation
-        const { data: participantsData, error } = await supabase
+        // First get participants for this conversation
+        const { data: participantsData, error: participantsError } = await supabase
           .from('conversation_participants')
-          .select(`
-            user_id,
-            users (
-              id,
-              email,
-              first_name,
-              last_name,
-              role
-            )
-          `)
+          .select('user_id')
           .eq('conversation_id', conversation.id);
 
         console.log('🔍 Participants data:', participantsData);
         console.log('🔍 Current user ID:', user.id);
 
-        if (error) {
-          console.error('Error loading participants:', error);
-          setChatPartnerName('Fehler: ' + error.message);
+        if (participantsError) {
+          console.error('Error loading participants:', participantsError);
+          setChatPartnerName('Fehler: ' + participantsError.message);
           return;
         }
 
         // Find the other participant (not the current user)
-        const otherParticipant = participantsData?.find(p => p.user_id !== user.id);
+        const otherParticipantId = participantsData?.find(p => p.user_id !== user.id)?.user_id;
         
-        console.log('🔍 Other participant:', otherParticipant);
-        console.log('🔍 All participants:', participantsData?.map(p => ({ user_id: p.user_id, users: p.users })));
+        console.log('🔍 Other participant ID:', otherParticipantId);
         
-        if (otherParticipant?.users) {
-          const partner = otherParticipant.users as any;
-          console.log('🔍 Partner data:', partner);
-          
-          if (Array.isArray(partner) && partner.length > 0) {
-            setChatPartnerName(`${partner[0].first_name} ${partner[0].last_name}`);
-          } else if (partner.first_name && partner.last_name) {
-            setChatPartnerName(`${partner.first_name} ${partner.last_name}`);
-          } else {
-            setChatPartnerName('Unvollständige Daten');
-          }
+        if (!otherParticipantId) {
+          console.log('🔍 No other participant found');
+          setChatPartnerName('Keine anderen Teilnehmer');
+          return;
+        }
+
+        // Now get the user data for the other participant
+        const { data: userData, error: userError } = await supabase
+          .from('users')
+          .select('id, email, first_name, last_name, role')
+          .eq('id', otherParticipantId)
+          .single();
+
+        console.log('🔍 User data:', userData);
+
+        if (userError) {
+          console.error('Error loading user data:', userError);
+          setChatPartnerName('Fehler beim Laden der Benutzerdaten');
+          return;
+        }
+
+        if (userData) {
+          setChatPartnerName(`${userData.first_name} ${userData.last_name}`);
         } else {
-          console.log('🔍 No other participant found or no user data');
-          setChatPartnerName('Keine Teilnehmer gefunden');
+          setChatPartnerName('Benutzerdaten nicht gefunden');
         }
       } catch (error) {
         console.error('Error loading chat partner:', error);
