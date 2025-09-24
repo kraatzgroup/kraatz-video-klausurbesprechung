@@ -21,14 +21,13 @@ export const getGradeDescription = (points: number | null | undefined): string =
   if (points === null || points === undefined || isNaN(points)) return '';
   if (points < 0 || points > 18) return '';
   
-  if (points === 0) return 'ungenügend (0 Punkte)';
-  if (points > 0 && points <= 1.49) return 'ungenügend';
-  if (points >= 1.5 && points <= 3.99) return 'mangelhaft';
-  if (points >= 4 && points <= 6.49) return 'ausreichend';
-  if (points >= 6.5 && points <= 8.99) return 'befriedigend';
-  if (points >= 9 && points <= 11.49) return 'vollbefriedigend';
-  if (points >= 11.5 && points <= 13.99) return 'gut';
-  if (points >= 14 && points <= 18) return 'sehr gut';
+  if (points >= 16 && points <= 18) return 'sehr gut';
+  if (points >= 13 && points <= 15) return 'gut';
+  if (points >= 10 && points <= 12) return 'vollbefriedigend';
+  if (points >= 7 && points <= 9) return 'befriedigend';
+  if (points >= 4 && points <= 6) return 'ausreichend';
+  if (points >= 1 && points <= 3) return 'mangelhaft';
+  if (points === 0) return 'ungenügend';
   return '';
 };
 

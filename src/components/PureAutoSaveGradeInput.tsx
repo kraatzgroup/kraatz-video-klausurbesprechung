@@ -178,12 +178,14 @@ export const PureAutoSaveGradeInput: React.FC<PureAutoSaveGradeInputProps> = ({
     const numGrade = parseFloat(gradeValue)
     if (isNaN(numGrade)) return ''
     
-    if (numGrade >= 16) return 'sehr gut'
-    if (numGrade >= 13) return 'gut'
-    if (numGrade >= 10) return 'befriedigend'
-    if (numGrade >= 7) return 'ausreichend'
-    if (numGrade >= 4) return 'mangelhaft'
-    return 'ungenügend'
+    if (numGrade >= 16 && numGrade <= 18) return 'sehr gut'
+    if (numGrade >= 13 && numGrade <= 15) return 'gut'
+    if (numGrade >= 10 && numGrade <= 12) return 'vollbefriedigend'
+    if (numGrade >= 7 && numGrade <= 9) return 'befriedigend'
+    if (numGrade >= 4 && numGrade <= 6) return 'ausreichend'
+    if (numGrade >= 1 && numGrade <= 3) return 'mangelhaft'
+    if (numGrade === 0) return 'ungenügend'
+    return ''
   }
 
   // Cleanup on unmount
