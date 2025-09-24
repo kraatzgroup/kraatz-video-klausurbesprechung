@@ -43,7 +43,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
         }
 
         // Find the other participant (not the current user)
-        const otherParticipantId = participantsData?.find(p => p.user_id !== user.id)?.user_id;
+        const otherParticipantId = participantsData?.find((p: any) => p.user_id !== user.id)?.user_id;
         
         console.log('🔍 Other participant ID:', otherParticipantId);
         

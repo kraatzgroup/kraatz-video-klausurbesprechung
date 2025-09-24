@@ -60,7 +60,7 @@ const SuperAdminDashboard: React.FC = () => {
       if (error) throw error
 
       const usersWithStats = await Promise.all(
-        usersData.map(async (user) => {
+        usersData.map(async (user: any) => {
           const { data: requests } = await supabase
             .from('case_study_requests')
             .select('*')
@@ -74,8 +74,8 @@ const SuperAdminDashboard: React.FC = () => {
           return {
             ...user,
             totalRequests: requests?.length || 0,
-            completedCases: submissions?.filter(s => s.status === 'corrected').length || 0,
-            pendingCases: requests?.filter(r => r.status !== 'corrected').length || 0
+            completedCases: submissions?.filter((s: any) => s.status === 'corrected').length || 0,
+            pendingCases: requests?.filter((r: any) => r.status !== 'corrected').length || 0
           }
         })
       )

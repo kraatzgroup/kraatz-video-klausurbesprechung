@@ -228,7 +228,7 @@ export const UserSelector: React.FC<UserSelectorProps> = ({ onSelectUsers, onClo
               </svg>
               <div>
                 <p className="text-sm font-medium">Support kontaktieren</p>
-                <p className="text-xs text-blue-600">Wählen Sie einen Administrator für Ihren Support-Fall aus.</p>
+                <p className="text-xs text-blue-600">Wähle einen Administrator für deinen Support-Fall aus.</p>
               </div>
             </div>
           </div>

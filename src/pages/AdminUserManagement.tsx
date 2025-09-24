@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabaseAdmin } from '../lib/supabase-admin';
 import { Users, Plus, Award, UserPlus, BarChart3, Crown, Trash2, FileText } from 'lucide-react';
 import { createUserAsAdmin, CreateUserData } from '../utils/adminUtils';
 import { getUserLegalAreas, formatLegalAreasDisplay, type LegalArea } from '../utils/legalAreaUtils';
@@ -8,12 +8,6 @@ import AdminCasesOverview from '../components/AdminCasesOverview';
 import AdminActivityDashboard from '../components/AdminActivityDashboard';
 import { useNavigate } from 'react-router-dom';
 
-// Create admin client for user management operations
-// In production, this should be moved to a secure server-side environment
-const supabaseAdmin = createClient(
-  process.env.REACT_APP_SUPABASE_URL || 'https://rpgbyockvpannrupicno.supabase.co',
-  process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk'
-);
 
 interface User {
   id: string;
@@ -116,7 +110,7 @@ const AdminUserManagement: React.FC = () => {
       }
 
       // Log each user individually
-      usersData.forEach((user, index) => {
+      usersData.forEach((user: any, index: any) => {
         console.log(`👤 User ${index + 1}:`, {
           id: user.id,
           email: user.email,
@@ -142,10 +136,10 @@ const AdminUserManagement: React.FC = () => {
 
       // Calculate stats for each user
       console.log('🧮 Calculating user stats...');
-      const userStats: UserStats[] = (usersData || []).map((user, index) => {
-        const userRequests = requestsData?.filter(req => req.user_id === user.id) || [];
-        const completedCases = userRequests.filter(req => req.status === 'corrected').length;
-        const pendingCases = userRequests.filter(req => req.status !== 'corrected').length;
+      const userStats: UserStats[] = (usersData || []).map((user: any, index: any) => {
+        const userRequests = requestsData?.filter((req: any) => req.user_id === user.id) || [];
+        const completedCases = userRequests.filter((req: any) => req.status === 'corrected').length;
+        const pendingCases = userRequests.filter((req: any) => req.status !== 'corrected').length;
 
         const stats = {
           user,

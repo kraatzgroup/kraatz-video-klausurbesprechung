@@ -215,9 +215,11 @@ export const useConversations = () => {
   useEffect(() => {
     if (!user) return;
 
+    console.log('🔔 Setting up conversation subscriptions for user:', user.id);
+
     // Konversationen bei Änderungen neu laden
     const conversationSubscription = supabase
-      .channel('conversations_changes')
+      .channel(`conversations_${user.id}`) // Unique channel per user
       .on(
         'postgres_changes',
         {
@@ -225,7 +227,8 @@ export const useConversations = () => {
           schema: 'public',
           table: 'conversations'
         },
-        () => {
+        (payload: any) => {
+          console.log('📝 Conversation change detected:', payload);
           fetchConversations();
         }
       )
@@ -236,13 +239,35 @@ export const useConversations = () => {
           schema: 'public',
           table: 'conversation_participants'
         },
-        () => {
+        (payload: any) => {
+          console.log('👥 Participant change detected:', payload);
           fetchConversations();
         }
       )
-      .subscribe();
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages'
+        },
+        (payload: any) => {
+          console.log('💬 New message detected, updating conversations:', payload);
+          // Refresh conversations to update last_message and unread counts
+          fetchConversations();
+        }
+      )
+      .subscribe((status: any) => {
+        console.log('📡 Conversation subscription status:', status);
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to conversation changes');
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error subscribing to conversation changes');
+        }
+      });
 
     return () => {
+      console.log('🔌 Unsubscribing from conversation changes');
       conversationSubscription.unsubscribe();
     };
   }, [user, fetchConversations]);

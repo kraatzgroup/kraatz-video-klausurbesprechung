@@ -1,11 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
-
-// Create admin client with service role key for admin operations
-// In production, this should be moved to a secure server-side environment
-const supabaseAdmin = createClient(
-  process.env.REACT_APP_SUPABASE_URL || 'https://rpgbyockvpannrupicno.supabase.co',
-  process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk'
-)
+import { supabaseAdmin } from '../lib/supabase-admin'
 
 export interface CreateUserData {
   email: string

@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import { 
   Activity, 
   Clock, 
@@ -15,12 +14,7 @@ import {
   FileText,
   Zap
 } from 'lucide-react'
-
-// Create admin client
-const supabaseAdmin = createClient(
-  process.env.REACT_APP_SUPABASE_URL || 'https://rpgbyockvpannrupicno.supabase.co',
-  process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk'
-)
+import { supabaseAdmin } from '../lib/supabase-admin'
 
 interface LiveCaseData {
   id: string
@@ -182,8 +176,8 @@ const AdminLiveDashboard: React.FC = () => {
 
       if (usersError) throw usersError
 
-      const instructorsActive = activeUsers?.filter(u => u.role === 'instructor').length || 0
-      const springersActive = activeUsers?.filter(u => u.role === 'springer').length || 0
+      const instructorsActive = activeUsers?.filter((u: any) => u.role === 'instructor').length || 0
+      const springersActive = activeUsers?.filter((u: any) => u.role === 'springer').length || 0
 
       // Calculate average processing time (simplified)
       const { data: recentCompleted, error: avgError } = await supabaseAdmin
@@ -195,7 +189,7 @@ const AdminLiveDashboard: React.FC = () => {
 
       let avgProcessingTime = '0h'
       if (recentCompleted && recentCompleted.length > 0) {
-        const totalHours = recentCompleted.reduce((sum, case_) => {
+        const totalHours = recentCompleted.reduce((sum: number, case_: any) => {
           const created = new Date(case_.created_at)
           const completed = new Date(case_.updated_at)
           return sum + (completed.getTime() - created.getTime()) / (1000 * 60 * 60)

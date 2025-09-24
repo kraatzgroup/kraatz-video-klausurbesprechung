@@ -63,7 +63,7 @@ export const RegisterForm: React.FC<RegisterFormProps> = ({ onSuccess }) => {
       <div className="max-w-md mx-auto bg-box-bg p-8 rounded-lg shadow-lg">
         <div className="text-center">
           <div className="bg-green-50 border border-green-200 text-green-600 px-4 py-3 rounded-md mb-4">
-            Registrierung erfolgreich! Bitte überprüfen Sie Ihre E-Mail für den Bestätigungslink.
+            Registrierung erfolgreich! Bitte überprüfe deine E-Mail für den Bestätigungslink.
           </div>
           <Link
             to="/login"

@@ -112,23 +112,11 @@ export const Header: React.FC = () => {
                       Dashboard
                     </Link>
                     <Link
-                      to="/case-studies"
-                      className="text-text-secondary hover:text-primary transition-colors"
-                    >
-                      Klausuren
-                    </Link>
-                    <Link
                       to="/chat"
                       className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
                     >
                       <MessageCircle className="w-4 h-4" />
                       Support Chat
-                    </Link>
-                    <Link
-                      to="/case-studies"
-                      className="text-text-secondary hover:text-primary transition-colors"
-                    >
-                      Sachverhalte
                     </Link>
                     <Link
                       to="/results"

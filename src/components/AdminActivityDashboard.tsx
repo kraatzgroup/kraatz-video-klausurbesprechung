@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { createClient } from '@supabase/supabase-js'
 import { 
   Users, 
   Clock, 
@@ -17,12 +16,7 @@ import {
   Video,
   FileText
 } from 'lucide-react'
-
-// Create admin client
-const supabaseAdmin = createClient(
-  process.env.REACT_APP_SUPABASE_URL || 'https://rpgbyockvpannrupicno.supabase.co',
-  process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk'
-)
+import { supabaseAdmin } from '../lib/supabase-admin'
 
 interface ActivityItem {
   id: string
@@ -106,7 +100,7 @@ const AdminActivityDashboard: React.FC = () => {
       // Generate activity items from case data
       const activityItems: ActivityItem[] = []
 
-      cases?.forEach(case_ => {
+      cases?.forEach((case_: any) => {
         const instructor = case_.assigned_instructor
         const student = case_.student
 

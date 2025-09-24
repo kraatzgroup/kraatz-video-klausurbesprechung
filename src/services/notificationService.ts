@@ -123,6 +123,24 @@ export class NotificationService {
     })
   }
 
+  static async createChatNotification(
+    recipientId: string,
+    senderName: string,
+    messageContent: string,
+    conversationId?: string
+  ) {
+    const title = '💬 Neue Chat-Nachricht'
+    const message = `${senderName}: ${messageContent.length > 50 ? messageContent.substring(0, 50) + '...' : messageContent}`
+    
+    return this.createNotification({
+      userId: recipientId,
+      title,
+      message,
+      type: 'info',
+      relatedCaseStudyId: conversationId // We'll use this field to store conversation ID for chat notifications
+    })
+  }
+
   static async createAdminNotification(
     adminId: string,
     action: string,

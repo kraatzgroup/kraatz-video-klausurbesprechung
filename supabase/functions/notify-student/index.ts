@@ -95,7 +95,7 @@ serve(async (req) => {
         .single()
 
       caseStudyDetails = caseStudy
-      instructorName = caseStudy?.users?.full_name || 'Ihr Dozent'
+      instructorName = caseStudy?.users?.full_name || 'Dein Dozent'
     }
 
     // Prepare email content based on notification type
@@ -105,7 +105,7 @@ serve(async (req) => {
 
     // Determine the appropriate action based on the notification
     if (notification.message.includes('verfügbar') && !notification.message.includes('Korrektur')) {
-      actionText = 'Sie können jetzt mit der Bearbeitung beginnen.'
+      actionText = 'Du kannst jetzt mit der Bearbeitung beginnen.'
       actionButton = `
         <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/dashboard" 
            style="display: inline-block; background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
@@ -113,7 +113,7 @@ serve(async (req) => {
         </a>
       `
     } else if (notification.message.includes('Korrektur') && notification.message.includes('verfügbar')) {
-      actionText = 'Ihre Korrektur ist jetzt verfügbar. Schauen Sie sich das Video und die schriftliche Bewertung an.'
+      actionText = 'Deine Korrektur ist jetzt verfügbar. Schaue dir das Video und die schriftliche Bewertung an.'
       actionButton = `
         <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/dashboard" 
            style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
@@ -121,7 +121,7 @@ serve(async (req) => {
         </a>
       `
     } else if (notification.message.includes('eingereicht')) {
-      actionText = 'Ihre Bearbeitung wurde erfolgreich eingereicht. Die Korrektur erfolgt innerhalb von 48 Stunden.'
+      actionText = 'Deine Bearbeitung wurde erfolgreich eingereicht. Die Korrektur erfolgt innerhalb von 48 Stunden.'
       actionButton = `
         <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/dashboard" 
            style="display: inline-block; background-color: #6c757d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
@@ -129,7 +129,7 @@ serve(async (req) => {
         </a>
       `
     } else {
-      actionText = 'Loggen Sie sich ein, um weitere Details zu sehen.'
+      actionText = 'Logge dich ein, um weitere Details zu sehen.'
       actionButton = `
         <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/dashboard" 
            style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
@@ -173,7 +173,7 @@ serve(async (req) => {
         
         <div style="text-align: center; margin-top: 30px; padding: 20px; color: #666; font-size: 12px;">
           <p>Diese E-Mail wurde automatisch vom Kraatz-Club System gesendet.</p>
-          <p>Bei Fragen wenden Sie sich bitte an Ihren Dozenten oder das Support-Team.</p>
+          <p>Bei Fragen wende dich bitte an deinen Dozenten oder das Support-Team.</p>
         </div>
       </div>
     `

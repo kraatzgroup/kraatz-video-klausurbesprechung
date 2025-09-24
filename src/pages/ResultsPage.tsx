@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { FileText, Download, Eye, Search, Filter, ChevronDown, TrendingUp, Award, Target, BarChart3, BookOpen, CheckCircle, Play, TrendingDown } from 'lucide-react'
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts'
 
 interface SubmissionResult {
   id: string
+  case_study_request_id: string
   grade: number
   grade_text: string
   legal_area: string
@@ -28,6 +30,7 @@ interface LegalAreaStats {
 
 export const ResultsPage: React.FC = () => {
   const { user } = useAuth()
+  const navigate = useNavigate()
   const [results, setResults] = useState<SubmissionResult[]>([])
   const [legalAreaStats, setLegalAreaStats] = useState<LegalAreaStats[]>([])
   const [loading, setLoading] = useState(true)
@@ -52,6 +55,7 @@ export const ResultsPage: React.FC = () => {
           corrected_at,
           submitted_at,
           correction_video_url,
+          case_study_request_id,
           case_study_requests!inner (
             legal_area,
             sub_area,
@@ -67,8 +71,9 @@ export const ResultsPage: React.FC = () => {
 
       if (error) throw error
 
-      const formattedResults: SubmissionResult[] = data.map(item => ({
+      const formattedResults: SubmissionResult[] = data.map((item: any) => ({
         id: item.id,
+        case_study_request_id: item.case_study_request_id,
         grade: item.grade,
         grade_text: item.grade_text,
         legal_area: (item as any).case_study_requests.legal_area,
@@ -204,6 +209,11 @@ export const ResultsPage: React.FC = () => {
       month: '2-digit',
       year: 'numeric'
     })
+  }
+
+  const navigateToVideoInDashboard = (caseStudyRequestId: string) => {
+    // Navigate to dashboard with the case study ID as a hash parameter
+    navigate(`/dashboard#case-study-${caseStudyRequestId}`)
   }
 
   if (loading) {
@@ -392,7 +402,7 @@ export const ResultsPage: React.FC = () => {
                     <span>Videobesprechung verfügbar</span>
                   </div>
                   <button 
-                    onClick={() => window.open(result.correction_video_url, '_blank')}
+                    onClick={() => navigateToVideoInDashboard(result.case_study_request_id)}
                     className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
                   >
                     <Play className="w-4 h-4" />

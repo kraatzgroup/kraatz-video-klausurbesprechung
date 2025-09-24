@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { useNavigate } from 'react-router-dom'
-import { Bell, Clock, BookOpen, Video, FileText, ExternalLink, Check, X } from 'lucide-react'
+import { Bell, Clock, BookOpen, Video, FileText, ExternalLink, Check, X, MessageCircle } from 'lucide-react'
 
 interface Notification {
   id: string
@@ -27,7 +27,18 @@ export const NotificationDropdown: React.FC = () => {
   useEffect(() => {
     if (user) {
       fetchNotifications()
-      setupRealtimeSubscription()
+      const cleanup = setupRealtimeSubscription()
+      
+      // Setup polling as fallback (every 10 seconds)
+      const pollingInterval = setInterval(() => {
+        console.log('🔄 Polling for new notifications...')
+        fetchNotifications()
+      }, 10000)
+      
+      return () => {
+        cleanup?.()
+        clearInterval(pollingInterval)
+      }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
@@ -48,6 +59,7 @@ export const NotificationDropdown: React.FC = () => {
 
     setLoading(true)
     try {
+      console.log('📥 Fetching notifications for user:', user.id)
       const { data, error } = await supabase
         .from('notifications')
         .select('*')
@@ -56,10 +68,23 @@ export const NotificationDropdown: React.FC = () => {
         .limit(50)
 
       if (error) throw error
+      
+      console.log('📥 Fetched notifications:', data?.length || 0)
+      if (data && data.length > 0) {
+        console.log('📥 Recent notifications:', data.slice(0, 3).map((n: any) => ({
+          title: n.title,
+          message: n.message.substring(0, 50),
+          read: n.read,
+          created_at: n.created_at
+        })))
+      }
+      
       setNotifications(data || [])
-      setHasUnreadNotifications((data || []).some(n => !n.read))
+      const unreadCount = (data || []).filter((n: any) => !n.read).length
+      setHasUnreadNotifications(unreadCount > 0)
+      console.log('🔔 Unread notifications:', unreadCount)
     } catch (error) {
-      console.error('Error fetching notifications:', error)
+      console.error('❌ Error fetching notifications:', error)
     } finally {
       setLoading(false)
     }
@@ -68,8 +93,10 @@ export const NotificationDropdown: React.FC = () => {
   const setupRealtimeSubscription = () => {
     if (!user) return
 
+    console.log('🔔 Setting up notification subscription for user:', user.id)
+
     const subscription = supabase
-      .channel('user_notifications')
+      .channel(`user_notifications_${user.id}`) // Unique channel per user
       .on(
         'postgres_changes',
         {
@@ -78,8 +105,19 @@ export const NotificationDropdown: React.FC = () => {
           table: 'notifications',
           filter: `user_id=eq.${user.id}`
         },
-        (payload) => {
-          setNotifications(prev => [payload.new as Notification, ...prev])
+        (payload: any) => {
+          console.log('🔔 New notification received:', payload.new)
+          const newNotification = payload.new as Notification
+          setNotifications(prev => {
+            // Check if notification already exists to prevent duplicates
+            const exists = prev.some(n => n.id === newNotification.id)
+            if (exists) {
+              console.log('⚠️ Notification already exists, skipping')
+              return prev
+            }
+            console.log('✅ Adding new notification to state')
+            return [newNotification, ...prev]
+          })
           setHasUnreadNotifications(true)
         }
       )
@@ -91,7 +129,8 @@ export const NotificationDropdown: React.FC = () => {
           table: 'notifications',
           filter: `user_id=eq.${user.id}`
         },
-        (payload) => {
+        (payload: any) => {
+          console.log('🔔 Notification updated:', payload.new)
           setNotifications(prev => {
             const updatedNotifications = prev.map((notif: Notification) => 
               notif.id === payload.new.id ? payload.new as Notification : notif
@@ -101,9 +140,19 @@ export const NotificationDropdown: React.FC = () => {
           })
         }
       )
-      .subscribe()
+      .subscribe((status: any) => {
+        console.log('📡 Notification subscription status:', status)
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Successfully subscribed to notifications')
+        } else if (status === 'CHANNEL_ERROR') {
+          console.error('❌ Error subscribing to notifications')
+        }
+      })
 
-    return () => subscription.unsubscribe()
+    return () => {
+      console.log('🔌 Unsubscribing from notifications')
+      subscription.unsubscribe()
+    }
   }
 
   const markAsRead = async (notificationId: string) => {
@@ -169,14 +218,27 @@ export const NotificationDropdown: React.FC = () => {
       await markAsRead(notification.id)
     }
 
-    // Navigate to related case study if available
-    if (notification.related_case_study_id) {
+    // Handle different notification types
+    if (notification.title.includes('Chat-Nachricht')) {
+      // This is a chat notification - navigate to chat
+      setIsOpen(false)
+      if (notification.related_case_study_id) {
+        // If we have a conversation ID, we could navigate to specific conversation
+        navigate('/chat')
+      } else {
+        navigate('/chat')
+      }
+    } else if (notification.related_case_study_id) {
+      // Navigate to related case study if available
       setIsOpen(false)
       navigate(`/dashboard?highlight=${notification.related_case_study_id}`)
     }
   }
 
-  const getNotificationIcon = (type: string, message: string) => {
+  const getNotificationIcon = (type: string, message: string, title: string) => {
+    if (title.includes('Chat-Nachricht')) {
+      return <MessageCircle className="w-4 h-4 text-blue-500" />
+    }
     if (message.includes('Sachverhalt verfügbar') || message.includes('hochgeladen')) {
       return <BookOpen className="w-4 h-4 text-blue-500" />
     }
@@ -280,7 +342,7 @@ export const NotificationDropdown: React.FC = () => {
                   >
                     <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0 mt-1">
-                        {getNotificationIcon(notification.type, notification.message)}
+                        {getNotificationIcon(notification.type, notification.message, notification.title)}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
@@ -301,7 +363,7 @@ export const NotificationDropdown: React.FC = () => {
                             </p>
                             {notification.related_case_study_id && (
                               <p className="text-xs text-blue-600 mt-1 font-medium">
-                                → Zur Klausur wechseln
+                                {notification.title.includes('Chat-Nachricht') ? '→ Zum Chat wechseln' : '→ Zur Klausur wechseln'}
                               </p>
                             )}
                           </div>

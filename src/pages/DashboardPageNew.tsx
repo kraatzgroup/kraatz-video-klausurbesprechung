@@ -183,7 +183,7 @@ export const DashboardPageNew: React.FC = () => {
       if (error) throw error
 
       const ratingsMap = new Map<string, CaseStudyRating>()
-      data?.forEach(rating => {
+      data?.forEach((rating: any) => {
         ratingsMap.set(rating.case_study_id, rating)
       })
       setRatings(ratingsMap)
@@ -323,6 +323,53 @@ export const DashboardPageNew: React.FC = () => {
       }, 500)
     }
   }, [searchParams, setSearchParams])
+
+  // Handle hash parameter for direct video opening from results page
+  useEffect(() => {
+    const handleHashChange = () => {
+      const hash = window.location.hash
+      if (hash.startsWith('#case-study-')) {
+        const caseStudyId = hash.replace('#case-study-', '')
+        const caseStudy = caseStudies.find(cs => cs.id === caseStudyId)
+        
+        if (caseStudy && caseStudy.video_correction_url) {
+          // Highlight the case study
+          setHighlightedCaseId(caseStudyId)
+          
+          // Scroll to the case study
+          setTimeout(() => {
+            const element = document.getElementById(`case-study-${caseStudyId}`)
+            if (element) {
+              element.scrollIntoView({ behavior: 'smooth', block: 'center' })
+            }
+          }, 500)
+          
+          // Open the video modal after a short delay
+          setTimeout(() => {
+            openVideoModal(caseStudy.video_correction_url!, caseStudyId)
+          }, 1000)
+          
+          // Clear the hash and highlight after opening
+          setTimeout(() => {
+            window.location.hash = ''
+            setHighlightedCaseId(null)
+          }, 2000)
+        }
+      }
+    }
+
+    // Check hash on mount and when caseStudies are loaded
+    if (caseStudies.length > 0) {
+      handleHashChange()
+    }
+
+    // Listen for hash changes
+    window.addEventListener('hashchange', handleHashChange)
+    
+    return () => {
+      window.removeEventListener('hashchange', handleHashChange)
+    }
+  }, [caseStudies])
 
   const fetchUserData = async () => {
     try {
@@ -527,7 +574,7 @@ export const DashboardPageNew: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
             Willkommen, {profile?.first_name} {profile?.last_name}!
           </h1>
-          <p className="text-gray-600 text-sm sm:text-base">Hier ist Ihr persönliches Dashboard für Klausurbearbeitungen.</p>
+          <p className="text-gray-600 text-sm sm:text-base">Hier ist dein persönliches Dashboard für Klausurbearbeitungen.</p>
         </div>
 
         {/* 1. Verfügbare Klausuren */}
@@ -541,7 +588,7 @@ export const DashboardPageNew: React.FC = () => {
           </div>
           <div className="space-y-3">
             <p className="text-gray-600 text-sm sm:text-base">
-              Sie haben <span className="font-bold">{availableSlots}</span> verfügbare Klausur-Credits.
+              Du hast <span className="font-bold">{availableSlots}</span> verfügbare Klausur-Credits.
             </p>
             {availableSlots > 0 && (
               <Link
@@ -1258,7 +1305,7 @@ export const DashboardPageNew: React.FC = () => {
             <div className="text-center py-8">
               <Video className="w-12 h-12 text-gray-300 mx-auto mb-3" />
               <p className="text-gray-600 mb-2">Noch keine Korrekturen verfügbar.</p>
-              <p className="text-sm text-gray-500">Ihre Korrekturen erscheinen hier, sobald sie von einem Dozenten hochgeladen wurden.</p>
+              <p className="text-sm text-gray-500">Deine Korrekturen erscheinen hier, sobald sie von einem Dozenten hochgeladen wurden.</p>
             </div>
           )}
         </div>

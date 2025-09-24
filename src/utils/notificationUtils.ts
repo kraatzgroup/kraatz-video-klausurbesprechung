@@ -1,10 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
-
-// Create admin client for notification operations
-const supabaseAdmin = createClient(
-  process.env.REACT_APP_SUPABASE_URL || 'https://rpgbyockvpannrupicno.supabase.co',
-  process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk'
-)
+import { supabaseAdmin } from '../lib/supabase-admin'
 
 interface CaseStudyNotificationData {
   id: string
@@ -101,7 +95,7 @@ export async function testNotificationSystem() {
       console.log(`${area}:`, {
         recipients: result.recipients?.length || 0,
         fallbackToSpringer: result.fallbackToSpringer,
-        details: result.recipients?.map(r => ({ email: r.email, role: r.role }))
+        details: result.recipients?.map((r: any) => ({ email: r.email, role: r.role }))
       })
     }
 

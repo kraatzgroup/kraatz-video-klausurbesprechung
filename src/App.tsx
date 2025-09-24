@@ -1,6 +1,7 @@
 import React from 'react'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
+import { ToastProvider } from './contexts/ToastContext'
 import { Layout } from './components/layout/Layout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { RoleBasedRoute } from './components/RoleBasedRoute'
@@ -25,7 +26,8 @@ function App() {
   try {
     return (
       <AuthProvider>
-        <Router>
+        <ToastProvider>
+          <Router>
           <Layout>
             <Routes>
             <Route path="/" element={<HomePage />} />
@@ -143,6 +145,7 @@ function App() {
           </Routes>
         </Layout>
       </Router>
+        </ToastProvider>
     </AuthProvider>
   )
   } catch (error) {

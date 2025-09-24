@@ -89,7 +89,7 @@ export const CaseStudyRequestPage: React.FC = () => {
     e.preventDefault()
     
     if (!profile || profile.account_credits < 1) {
-      setError('Sie haben nicht genügend Klausuren für einen neuen Sachverhalt')
+      setError('Du hast nicht genügend Klausuren für einen neuen Sachverhalt')
       return
     }
 
@@ -155,7 +155,7 @@ export const CaseStudyRequestPage: React.FC = () => {
       navigate('/dashboard')
     } catch (error) {
       console.error('Error creating case study request:', error)
-      setError('Fehler beim Erstellen der Anfrage. Bitte versuchen Sie es erneut.')
+      setError('Fehler beim Erstellen der Anfrage. Bitte versuche es erneut.')
     } finally {
       setSubmitting(false)
     }

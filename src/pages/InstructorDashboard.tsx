@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import PureAutoSaveGradeInput from '../components/PureAutoSaveGradeInput';
 import { 
   BookOpen, 
   FileText, 
@@ -10,7 +11,8 @@ import {
   Upload,
   Eye,
   X,
-  Settings
+  Settings,
+  Table
 } from 'lucide-react';
 
 interface CaseStudyRequest {
@@ -45,8 +47,8 @@ interface Submission {
   file_type: 'pdf' | 'docx';
   submitted_at: string;
   correction_video_url?: string;
-  grade?: number;
-  grade_text?: string;
+  grade?: number | null;
+  grade_text?: string | null;
   status: 'submitted' | 'under_review' | 'corrected';
   case_study_request: {
     title: string;
@@ -78,14 +80,28 @@ const InstructorDashboard: React.FC = () => {
   const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
   const [selectedCaseForCorrection, setSelectedCaseForCorrection] = useState<CaseStudyRequest | null>(null);
   const [correctionPdfFile, setCorrectionPdfFile] = useState<File | null>(null);
+  const [scoringSheetFile, setScoringSheetFile] = useState<File | null>(null);
   const [videoLoomUrl, setVideoLoomUrl] = useState('');
+  const [saveStatus, setSaveStatus] = useState<{[key: string]: 'saving' | 'success' | 'error' | null}>({});
   const [requests, setRequests] = useState<CaseStudyRequest[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
-  const [grades, setGrades] = useState<{[key: string]: {grade: number, gradeText?: string}}>({});
+  const [grades, setGrades] = useState<{[key: string]: {grade: number | null, gradeText?: string}}>({});
   const [materialUrl, setMaterialUrl] = useState('');
   const [additionalMaterialUrl, setAdditionalMaterialUrl] = useState('');
   const [uploadModalOpen, setUploadModalOpen] = useState(false);
+
+  // Function to get grade description based on points
+  const getGradeDescription = (points: number): string => {
+    if (points >= 0 && points <= 1.49) return 'ungenügend';
+    if (points >= 1.5 && points <= 3.99) return 'mangelhaft';
+    if (points >= 4 && points <= 6.49) return 'ausreichend';
+    if (points >= 6.5 && points <= 8.99) return 'befriedigend';
+    if (points >= 9 && points <= 11.49) return 'vollbefriedigend';
+    if (points >= 11.5 && points <= 13.99) return 'gut';
+    if (points >= 14 && points <= 18) return 'sehr gut';
+    return '';
+  };
 
   useEffect(() => {
     fetchData();
@@ -203,13 +219,13 @@ const InstructorDashboard: React.FC = () => {
       
       // Check if any requests have missing user data
       if (requestsData && requestsData.length > 0) {
-        const requestsWithoutUsers = requestsData.filter(req => !req.user);
+        const requestsWithoutUsers = requestsData.filter((req: any) => !req.user);
         if (requestsWithoutUsers.length > 0) {
           console.log('Found requests without user data:', requestsWithoutUsers);
           console.log('This indicates RLS policy issues or missing user records in the users table');
           
           // For debugging: show user_id values for requests without user data
-          requestsWithoutUsers.forEach(req => {
+          requestsWithoutUsers.forEach((req: any) => {
             console.log(`Request ${req.id} has user_id: ${req.user_id} but no user data`);
           });
         }
@@ -228,7 +244,7 @@ const InstructorDashboard: React.FC = () => {
 
       // Fetch existing grades for display
       const gradesMap: {[key: string]: {grade: number, gradeText?: string}} = {};
-      submissionsData?.forEach(submission => {
+      submissionsData?.forEach((submission: any) => {
         if (submission.grade) {
           gradesMap[submission.case_study_request_id] = {
             grade: submission.grade,
@@ -262,53 +278,76 @@ const InstructorDashboard: React.FC = () => {
     }
   };
 
-  const updateGrade = async (requestId: string, grade: number, gradeText?: string) => {
+  const updateGrade = async (caseStudyId: string, grade: number | null, gradeText?: string): Promise<boolean> => {
+    // Prevent multiple simultaneous saves
+    if (saveStatus[caseStudyId] === 'saving') {
+      return false;
+    }
+
+    setSaveStatus(prev => ({ ...prev, [caseStudyId]: 'saving' }));
     try {
-      // First check if a submission exists for this case study
-      const { data: existingSubmission, error: fetchError } = await supabase
-        .from('submissions')
-        .select('id')
-        .eq('case_study_request_id', requestId)
-        .single();
+      console.log('🐘 Edge Function Grade Update:', { caseStudyId, grade, gradeText });
+      
+      // Use Supabase Edge Function for reliable grade saving
+      const { data, error } = await supabase.functions.invoke('save-grade', {
+        body: {
+          caseStudyId,
+          grade,
+          gradeText: gradeText || null
+        }
+      });
 
-      if (fetchError && fetchError.code !== 'PGRST116') {
-        throw fetchError;
+      if (error) {
+        console.error('Edge Function save-grade error:', error);
+        throw error;
       }
 
-      if (existingSubmission) {
-        // Update existing submission
-        const { error } = await supabase
-          .from('submissions')
-          .update({ 
-            grade: grade,
-            grade_text: gradeText || null
-          })
-          .eq('case_study_request_id', requestId);
-
-        if (error) throw error;
-      } else {
-        // Create new submission entry
-        const { error } = await supabase
-          .from('submissions')
-          .insert({
-            case_study_request_id: requestId,
-            file_url: 'placeholder-url',
-            file_type: 'pdf',
-            status: 'corrected',
-            grade: grade,
-            grade_text: gradeText || null,
-            corrected_at: new Date().toISOString()
-          });
-
-        if (error) throw error;
+      if (!data.success) {
+        console.error('Edge Function returned error:', data.error);
+        throw new Error(data.error);
       }
+
+      console.log('✅ Grade saved successfully via Edge Function:', data);
+
+      // Update local grades state
+      setGrades(prev => {
+        if (grade === null) {
+          // Remove the grade entry when grade is NULL
+          const newGrades = { ...prev }
+          delete newGrades[caseStudyId]
+          return newGrades
+        } else {
+          // Update with new grade values
+          return {
+            ...prev,
+            [caseStudyId]: {
+              grade: grade,
+              gradeText: gradeText || ''
+            }
+          }
+        }
+      });
 
       // Refresh data to update display
       fetchData();
-      alert('Note erfolgreich gespeichert!');
+      setSaveStatus(prev => ({ ...prev, [caseStudyId]: 'success' }));
+      
+      // Clear success status after 3 seconds
+      setTimeout(() => {
+        setSaveStatus(prev => ({ ...prev, [caseStudyId]: null }));
+      }, 3000);
+      
+      return true;
     } catch (error) {
       console.error('Error updating grade:', error);
-      alert('Fehler beim Speichern der Note');
+      setSaveStatus(prev => ({ ...prev, [caseStudyId]: 'error' }));
+      
+      // Clear error status after 5 seconds
+      setTimeout(() => {
+        setSaveStatus(prev => ({ ...prev, [caseStudyId]: null }));
+      }, 5000);
+      
+      return false;
     }
   };
 
@@ -346,11 +385,12 @@ const InstructorDashboard: React.FC = () => {
     setSelectedCaseForCorrection(null);
     setVideoLoomUrl('');
     setCorrectionPdfFile(null);
+    setScoringSheetFile(null);
   };
 
   const handleCorrectionUpload = async () => {
-    if (!selectedCaseForCorrection || (!videoLoomUrl && !correctionPdfFile)) {
-      alert('Bitte geben Sie mindestens einen Loom-Video-Link oder eine PDF-Datei an.');
+    if (!selectedCaseForCorrection || (!videoLoomUrl && !correctionPdfFile && !scoringSheetFile)) {
+      alert('Bitte geben Sie mindestens einen Loom-Video-Link, eine PDF-Datei oder eine Excel-Bewertung an.');
       return;
     }
 
@@ -395,6 +435,46 @@ const InstructorDashboard: React.FC = () => {
         pdfUrl = pdfUrlData.publicUrl;
       }
 
+      // Upload Excel file if provided
+      let excelUrl = null;
+      if (scoringSheetFile) {
+        // Validate Excel/CSV file type
+        const allowedTypes = [
+          'application/vnd.ms-excel',
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+          'application/vnd.ms-excel.sheet.macroEnabled.12',
+          'text/csv',
+          'application/csv'
+        ];
+        if (!allowedTypes.includes(scoringSheetFile.type) && !scoringSheetFile.name.toLowerCase().endsWith('.csv')) {
+          alert('Bitte wählen Sie eine Excel- oder CSV-Datei (.xls, .xlsx, .csv) aus.');
+          return;
+        }
+
+        // Validate file size (max 5MB for Excel/CSV)
+        const maxFileSize = 5 * 1024 * 1024; // 5MB
+        if (scoringSheetFile.size > maxFileSize) {
+          alert('Die Datei ist zu groß. Maximale Dateigröße: 5MB');
+          return;
+        }
+
+        // Generate filename based on file type
+        const fileExtension = scoringSheetFile.name.toLowerCase().endsWith('.csv') ? 'csv' : 
+                              scoringSheetFile.name.toLowerCase().endsWith('.xls') ? 'xls' : 'xlsx';
+        const fileName = `${selectedCaseForCorrection.id}_scoring_sheet_${Date.now()}.${fileExtension}`;
+        const { data: excelData, error: excelError } = await supabase.storage
+          .from('case-studies')
+          .upload(fileName, scoringSheetFile);
+
+        if (excelError) throw excelError;
+
+        const { data: excelUrlData } = supabase.storage
+          .from('case-studies')
+          .getPublicUrl(fileName);
+        
+        excelUrl = excelUrlData.publicUrl;
+      }
+
       // Update case study request with correction URLs and set status to completed
       const updateData: any = {
         status: 'completed'
@@ -402,6 +482,7 @@ const InstructorDashboard: React.FC = () => {
       
       if (videoLoomUrl) updateData.video_correction_url = videoLoomUrl;
       if (pdfUrl) updateData.written_correction_url = pdfUrl;
+      if (excelUrl) updateData.scoring_sheet_url = excelUrl;
 
       const { error: updateError } = await supabase
         .from('case_study_requests')
@@ -968,58 +1049,15 @@ const InstructorDashboard: React.FC = () => {
                                 )}
                               </button>
                             </div>
-                            {/* Grade Input for Requests Tab */}
+                            {/* Auto-Save Grade Input for Requests Tab */}
                             <div className="mt-3 p-3 bg-gray-50 rounded border">
                               <h4 className="text-sm font-medium text-gray-700 mb-2">Note eingeben</h4>
-                              <div className="flex flex-col gap-2">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="18"
-                                  step="0.5"
-                                  placeholder="Note (0-18)"
-                                  value={grades[request.id]?.grade || ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    setGrades(prev => ({
-                                      ...prev,
-                                      [request.id]: {
-                                        ...prev[request.id],
-                                        grade: value ? parseFloat(value) : 0
-                                      }
-                                    }));
-                                  }}
-                                  onBlur={(e) => {
-                                    const grade = parseFloat(e.target.value);
-                                    if (grade >= 0 && grade <= 18) {
-                                      updateGrade(request.id, grade, grades[request.id]?.gradeText);
-                                    }
-                                  }}
-                                  className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent"
-                                />
-                                <textarea
-                                  placeholder="Notenbeschreibung (optional)"
-                                  value={grades[request.id]?.gradeText || ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    setGrades(prev => ({
-                                      ...prev,
-                                      [request.id]: {
-                                        ...prev[request.id],
-                                        gradeText: value
-                                      }
-                                    }));
-                                  }}
-                                  onBlur={() => {
-                                    const currentGrade = grades[request.id];
-                                    if (currentGrade?.grade) {
-                                      updateGrade(request.id, currentGrade.grade, currentGrade.gradeText);
-                                    }
-                                  }}
-                                  rows={2}
-                                  className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                                />
-                              </div>
+                              <PureAutoSaveGradeInput
+                                caseStudyId={request.id}
+                                initialGrade={grades[request.id]?.grade}
+                                initialGradeText={grades[request.id]?.gradeText}
+                                onSave={updateGrade}
+                              />
                             </div>
                           </div>
                         </div>
@@ -1121,58 +1159,15 @@ const InstructorDashboard: React.FC = () => {
                                 )}
                               </button>
                             </div>
-                            {/* Grade Input for Materials Sent Tab */}
+                            {/* Auto-Save Grade Input for Materials Sent Tab */}
                             <div className="mt-3 p-3 bg-gray-50 rounded border">
                               <h4 className="text-sm font-medium text-gray-700 mb-2">Note eingeben</h4>
-                              <div className="flex flex-col gap-2">
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max="18"
-                                  step="0.5"
-                                  placeholder="Note (0-18)"
-                                  value={grades[request.id]?.grade || ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    setGrades(prev => ({
-                                      ...prev,
-                                      [request.id]: {
-                                        ...prev[request.id],
-                                        grade: value ? parseFloat(value) : 0
-                                      }
-                                    }));
-                                  }}
-                                  onBlur={(e) => {
-                                    const grade = parseFloat(e.target.value);
-                                    if (grade >= 0 && grade <= 18) {
-                                      updateGrade(request.id, grade, grades[request.id]?.gradeText);
-                                    }
-                                  }}
-                                  className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent"
-                                />
-                                <textarea
-                                  placeholder="Notenbeschreibung (optional)"
-                                  value={grades[request.id]?.gradeText || ''}
-                                  onChange={(e) => {
-                                    const value = e.target.value;
-                                    setGrades(prev => ({
-                                      ...prev,
-                                      [request.id]: {
-                                        ...prev[request.id],
-                                        gradeText: value
-                                      }
-                                    }));
-                                  }}
-                                  onBlur={() => {
-                                    const currentGrade = grades[request.id];
-                                    if (currentGrade?.grade) {
-                                      updateGrade(request.id, currentGrade.grade, currentGrade.gradeText);
-                                    }
-                                  }}
-                                  rows={2}
-                                  className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                                />
-                              </div>
+                              <PureAutoSaveGradeInput
+                                caseStudyId={request.id}
+                                initialGrade={grades[request.id]?.grade}
+                                initialGradeText={grades[request.id]?.gradeText}
+                                onSave={updateGrade}
+                              />
                             </div>
                           </div>
                         </div>
@@ -1228,58 +1223,15 @@ const InstructorDashboard: React.FC = () => {
                               Bearbeitung herunterladen
                             </button>
                           </div>
-                          {/* Grade Input for Submissions Tab */}
+                          {/* Auto-Save Grade Input for Submissions Tab */}
                           <div className="mt-3 p-3 bg-gray-50 rounded border">
                             <h4 className="text-sm font-medium text-gray-700 mb-2">Note eingeben</h4>
-                            <div className="flex flex-col gap-2">
-                              <input
-                                type="number"
-                                min="0"
-                                max="18"
-                                step="0.5"
-                                placeholder="Note (0-18)"
-                                value={grades[caseStudy.id]?.grade || ''}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  setGrades(prev => ({
-                                    ...prev,
-                                    [caseStudy.id]: {
-                                      ...prev[caseStudy.id],
-                                      grade: value ? parseFloat(value) : 0
-                                    }
-                                  }));
-                                }}
-                                onBlur={(e) => {
-                                  const grade = parseFloat(e.target.value);
-                                  if (grade >= 0 && grade <= 18) {
-                                    updateGrade(caseStudy.id, grade, grades[caseStudy.id]?.gradeText);
-                                  }
-                                }}
-                                className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent"
-                              />
-                              <textarea
-                                placeholder="Notenbeschreibung (optional)"
-                                value={grades[caseStudy.id]?.gradeText || ''}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  setGrades(prev => ({
-                                    ...prev,
-                                    [caseStudy.id]: {
-                                      ...prev[caseStudy.id],
-                                      gradeText: value
-                                    }
-                                  }));
-                                }}
-                                onBlur={() => {
-                                  const currentGrade = grades[caseStudy.id];
-                                  if (currentGrade?.grade) {
-                                    updateGrade(caseStudy.id, currentGrade.grade, currentGrade.gradeText);
-                                  }
-                                }}
-                                rows={2}
-                                className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                              />
-                            </div>
+                            <PureAutoSaveGradeInput
+                              caseStudyId={caseStudy.id}
+                              initialGrade={grades[caseStudy.id]?.grade}
+                              initialGradeText={grades[caseStudy.id]?.gradeText}
+                              onSave={updateGrade}
+                            />
                           </div>
                           </div>
                         </div>
@@ -1347,58 +1299,15 @@ const InstructorDashboard: React.FC = () => {
                               Korrektur hochladen
                             </button>
                           </div>
-                          {/* Grade Input for Pending Videos Tab */}
+                          {/* Auto-Save Grade Input for Pending Videos Tab */}
                           <div className="mt-3 p-3 bg-gray-50 rounded border">
                             <h4 className="text-sm font-medium text-gray-700 mb-2">Note eingeben</h4>
-                            <div className="flex flex-col gap-2">
-                              <input
-                                type="number"
-                                min="0"
-                                max="18"
-                                step="0.5"
-                                placeholder="Note (0-18)"
-                                value={grades[caseStudy.id]?.grade || ''}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  setGrades(prev => ({
-                                    ...prev,
-                                    [caseStudy.id]: {
-                                      ...prev[caseStudy.id],
-                                      grade: value ? parseFloat(value) : 0
-                                    }
-                                  }));
-                                }}
-                                onBlur={(e) => {
-                                  const grade = parseFloat(e.target.value);
-                                  if (grade >= 0 && grade <= 18) {
-                                    updateGrade(caseStudy.id, grade, grades[caseStudy.id]?.gradeText);
-                                  }
-                                }}
-                                className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent"
-                              />
-                              <textarea
-                                placeholder="Notenbeschreibung (optional)"
-                                value={grades[caseStudy.id]?.gradeText || ''}
-                                onChange={(e) => {
-                                  const value = e.target.value;
-                                  setGrades(prev => ({
-                                    ...prev,
-                                    [caseStudy.id]: {
-                                      ...prev[caseStudy.id],
-                                      gradeText: value
-                                    }
-                                  }));
-                                }}
-                                onBlur={() => {
-                                  const currentGrade = grades[caseStudy.id];
-                                  if (currentGrade?.grade) {
-                                    updateGrade(caseStudy.id, currentGrade.grade, currentGrade.gradeText);
-                                  }
-                                }}
-                                rows={2}
-                                className="px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
-                              />
-                            </div>
+                            <PureAutoSaveGradeInput
+                              caseStudyId={caseStudy.id}
+                              initialGrade={grades[caseStudy.id]?.grade}
+                              initialGradeText={grades[caseStudy.id]?.gradeText}
+                              onSave={updateGrade}
+                            />
                           </div>
                           </div>
                         </div>
@@ -2002,6 +1911,39 @@ const InstructorDashboard: React.FC = () => {
                   </div>
                   <p className="text-xs text-gray-500 mt-1">Nur PDF-Dateien bis 10MB</p>
                 </div>
+
+                {/* Excel Upload Section */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Bewertungsbogen (Excel/CSV) (optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={(e) => setScoringSheetFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                    id="scoring-sheet-input"
+                  />
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                    onClick={() => document.getElementById('scoring-sheet-input')?.click()}
+                  >
+                    {scoringSheetFile ? (
+                      <div className="text-green-600">
+                        <Table className="w-8 h-8 mx-auto mb-2" />
+                        <p className="font-medium">{scoringSheetFile.name}</p>
+                        <p className="text-sm text-gray-500">{(scoringSheetFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500">
+                        <Table className="w-8 h-8 mx-auto mb-2" />
+                        <p className="mb-1">Excel- oder CSV-Datei hier ablegen oder</p>
+                        <span className="text-blue-600 hover:underline">Datei auswählen</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Nur Excel- oder CSV-Dateien (.xlsx, .xls, .csv) bis 5MB</p>
+                </div>
                 
                 <div className="flex justify-end space-x-3">
                   <button
@@ -2012,7 +1954,7 @@ const InstructorDashboard: React.FC = () => {
                   </button>
                   <button
                     onClick={handleCorrectionUpload}
-                    disabled={!videoLoomUrl && !correctionPdfFile}
+                    disabled={!videoLoomUrl && !correctionPdfFile && !scoringSheetFile}
                     className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     Korrektur hochladen

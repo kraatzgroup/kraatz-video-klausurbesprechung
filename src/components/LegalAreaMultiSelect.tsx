@@ -142,7 +142,7 @@ const LegalAreaMultiSelect: React.FC<LegalAreaMultiSelectProps> = ({
 
       {selectedAreas.length === 0 && (
         <div className="text-sm text-red-600">
-          Bitte wählen Sie mindestens ein Rechtsgebiet aus.
+          Bitte wähle mindestens ein Rechtsgebiet aus.
         </div>
       )}
     </div>

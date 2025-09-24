@@ -213,8 +213,8 @@ export const CaseStudiesPage: React.FC = () => {
           </h3>
           <p className="text-text-secondary mb-4">
             {filter === 'all' 
-              ? 'Sie haben noch keine Sachverhalte angefordert.'
-              : `Sie haben keine Sachverhalte mit dem Status "${getStatusText(filter)}".`
+              ? 'Du hast noch keine Sachverhalte angefordert.'
+              : `Du hast keine Sachverhalte mit dem Status "${getStatusText(filter)}".`
             }
           </p>
           <Link

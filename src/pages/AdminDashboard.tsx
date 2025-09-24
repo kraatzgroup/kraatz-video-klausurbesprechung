@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { useLocation } from 'react-router-dom'
-import { createClient } from '@supabase/supabase-js'
+import { supabaseAdmin } from '../lib/supabase-admin'
 import { 
   Users, 
   BarChart3, 
@@ -19,11 +19,6 @@ import {
 } from 'lucide-react'
 import { createUserAsAdmin, CreateUserData } from '../utils/adminUtils'
 
-// Create admin client
-const supabaseAdmin = createClient(
-  process.env.REACT_APP_SUPABASE_URL || 'https://rpgbyockvpannrupicno.supabase.co',
-  process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk'
-)
 
 interface User {
   id: string
@@ -130,15 +125,15 @@ const AdminDashboard: React.FC = () => {
 
       // Get case study statistics for each user
       const usersWithStats = await Promise.all(
-        (usersData || []).map(async (user) => {
-          const { data: requests } = await supabaseAdmin
+        (usersData || []).map(async (user: any) => {
+          const { data: requests } = await (supabaseAdmin as any)
             .from('case_study_requests')
             .select('id, status')
             .eq('user_id', user.id)
 
           const totalRequests = requests?.length || 0
-          const completedCases = requests?.filter(r => r.status === 'completed').length || 0
-          const pendingCases = requests?.filter(r => r.status !== 'completed').length || 0
+          const completedCases = requests?.filter((r: any) => r.status === 'completed').length || 0
+          const pendingCases = requests?.filter((r: any) => r.status !== 'completed').length || 0
 
           return {
             ...user,
@@ -159,7 +154,7 @@ const AdminDashboard: React.FC = () => {
 
   const fetchRatings = async () => {
     try {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await (supabaseAdmin as any)
         .from('case_study_ratings')
         .select(`
           id,

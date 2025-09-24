@@ -94,7 +94,7 @@ export const UserProvider: React.FC<UserProviderProps> = ({ children }) => {
           table: 'users',
           filter: `id=eq.${user.id}`
         },
-        (payload) => {
+        (payload: any) => {
           setProfile(payload.new as UserProfile)
         }
       )
