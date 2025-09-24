@@ -125,7 +125,7 @@ serve(async (req) => {
       const emailContent = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-            <h2 style="color: #333; margin: 0;">💬 Neue Chat-Nachricht</h2>
+            <h2 style="color: #333; margin: 0;">Neue Chat-Nachricht</h2>
           </div>
           
           <div style="padding: 20px; background-color: white; border-radius: 8px; border: 1px solid #e9ecef;">
@@ -138,17 +138,17 @@ serve(async (req) => {
             </p>
             
             <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0;">
-              <h4 style="margin: 0 0 10px 0; color: #333;">Nachricht-Details:</h4>
-              <p style="margin: 5px 0; color: #555; font-style: italic;">"${record.content}"</p>
+              <h4 style="margin: 0 0 10px 0; color: #333;">Details:</h4>
               <p style="margin: 5px 0; color: #555;"><strong>Von:</strong> ${sender.first_name} ${sender.last_name}</p>
               <p style="margin: 5px 0; color: #555;"><strong>Gesendet am:</strong> ${new Date(record.created_at).toLocaleString('de-DE')}</p>
+              <p style="margin: 5px 0; color: #555;"><strong>Nachricht:</strong> "${record.content}"</p>
             </div>
             
-            <p style="color: #555; font-size: 16px; line-height: 1.5;">
-              Loggen Sie sich ein, um zu antworten und die Unterhaltung fortzusetzen.
-            </p>
-            
             <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+              <p style="color: #666; font-size: 14px;">
+                Bitte loggen Sie sich in das Kraatz-Club System ein, um zu antworten und die Unterhaltung fortzusetzen.
+              </p>
+              
               <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/chat" 
                  style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
                 Zum Chat
@@ -158,7 +158,6 @@ serve(async (req) => {
           
           <div style="text-align: center; margin-top: 30px; padding: 20px; color: #666; font-size: 12px;">
             <p>Diese E-Mail wurde automatisch vom Kraatz-Club System gesendet.</p>
-            <p>Bei Fragen wenden Sie sich bitte an das Support-Team.</p>
           </div>
         </div>
       `

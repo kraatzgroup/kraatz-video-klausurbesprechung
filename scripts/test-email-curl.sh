@@ -4,6 +4,14 @@
 EDGE_FUNCTION_URL="https://rpgbyockvpannrupicno.supabase.co/functions/v1/notify-student"
 TEST_EMAIL="charlenenowak@gmx.de"
 
+# Check if SUPABASE_SERVICE_ROLE_KEY is set
+if [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+    echo "❌ SUPABASE_SERVICE_ROLE_KEY environment variable is required"
+    echo "Please set it before running this script:"
+    echo "export SUPABASE_SERVICE_ROLE_KEY=your_service_role_key_here"
+    exit 1
+fi
+
 # Get the test user ID from database
 echo "🔍 Getting test user ID..."
 USER_ID=$(psql postgresql://postgres.rpgbyockvpannrupicno:datenbankpasswort@aws-1-eu-central-1.pooler.supabase.com:6543/postgres -t -c "SELECT id FROM users WHERE email = '$TEST_EMAIL' LIMIT 1;" | tr -d ' ')
@@ -35,7 +43,7 @@ echo ""
 echo "🧪 Scenario 1: New Case Study Available..."
 curl -X POST "$EDGE_FUNCTION_URL" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -d "{
     \"type\": \"INSERT\",
     \"record\": {
@@ -56,7 +64,7 @@ sleep 3
 echo "🧪 Scenario 2: Correction Available..."
 curl -X POST "$EDGE_FUNCTION_URL" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -d "{
     \"type\": \"INSERT\",
     \"record\": {
@@ -77,7 +85,7 @@ sleep 3
 echo "🧪 Scenario 3: Submission Confirmed..."
 curl -X POST "$EDGE_FUNCTION_URL" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -d "{
     \"type\": \"INSERT\",
     \"record\": {
@@ -98,7 +106,7 @@ sleep 3
 echo "🧪 Scenario 4: Case Study Completed..."
 curl -X POST "$EDGE_FUNCTION_URL" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -d "{
     \"type\": \"INSERT\",
     \"record\": {
@@ -119,7 +127,7 @@ sleep 3
 echo "🧪 Scenario 5: Correction in Progress..."
 curl -X POST "$EDGE_FUNCTION_URL" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -d "{
     \"type\": \"INSERT\",
     \"record\": {
@@ -140,7 +148,7 @@ sleep 3
 echo "🧪 Scenario 6: Additional Materials Available..."
 curl -X POST "$EDGE_FUNCTION_URL" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk" \
+  -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
   -d "{
     \"type\": \"INSERT\",
     \"record\": {
