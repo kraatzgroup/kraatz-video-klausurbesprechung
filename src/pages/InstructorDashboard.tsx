@@ -41,28 +41,7 @@ interface CaseStudyRequest {
   } | null;
 }
 
-interface Submission {
-  id: string;
-  case_study_request_id: string;
-  file_url: string;
-  file_type: 'pdf' | 'docx';
-  submitted_at: string;
-  correction_video_url?: string;
-  grade?: number | null;
-  grade_text?: string | null;
-  status: 'submitted' | 'under_review' | 'corrected';
-  case_study_request: {
-    title: string;
-    legal_area: string;
-    sub_area: string;
-    focus_area: string;
-    user: {
-      first_name: string | null;
-      last_name: string | null;
-      email: string;
-    } | null;
-  };
-}
+// Submission interface commented out - not currently used
 
 const InstructorDashboard: React.FC = () => {
   const { user } = useAuth();
@@ -259,7 +238,7 @@ const InstructorDashboard: React.FC = () => {
         submissionsData = submissionsResult || [];
       }
       
-      setSubmissions(submissionsData);
+      // setSubmissions(submissionsData);
 
       // Fetch existing grades for display
       const gradesMap: {[key: string]: {grade: number, gradeText?: string}} = {};
@@ -537,27 +516,26 @@ const InstructorDashboard: React.FC = () => {
 
   const openMaterialModal = (request: CaseStudyRequest) => {
     setSelectedRequest(request);
-    setMaterialUrl(request.case_study_material_url || '');
+    // setMaterialUrl(request.case_study_material_url || '');
     setMaterialModalOpen(true);
   };
 
   const closeMaterialModal = () => {
     setMaterialModalOpen(false);
     setSelectedRequest(null);
-    setMaterialUrl('');
+    // setMaterialUrl('');
     setMaterialFile(null);
   };
 
   const openAdditionalMaterialModal = (request: CaseStudyRequest) => {
     setSelectedRequest(request);
-    setAdditionalMaterialUrl(request.additional_materials_url || '');
     setAdditionalMaterialModalOpen(true);
   };
 
   const closeAdditionalMaterialModal = () => {
     setAdditionalMaterialModalOpen(false);
     setSelectedRequest(null);
-    setAdditionalMaterialUrl('');
+    // setAdditionalMaterialUrl('');
     setAdditionalMaterialFile(null);
   };
 
@@ -701,7 +679,7 @@ const InstructorDashboard: React.FC = () => {
       alert('Sachverhalt erfolgreich hochgeladen und für Studenten verfügbar!\n\n📧 Der Student wurde per E-Mail benachrichtigt.');
       setMaterialModalOpen(false);
       setMaterialFile(null);
-      setMaterialUrl('');
+      // setMaterialUrl('');
       fetchData(); // Refresh the requests
     } catch (error) {
       console.error('Unexpected error:', error);

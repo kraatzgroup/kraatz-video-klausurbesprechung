@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ConversationList } from './ConversationList';
 import { ChatWindow } from './ChatWindow';
 import { useChat } from '../../hooks/useChat';
-import { useAuth } from '../../contexts/AuthContext';
+// import { useAuth } from '../../contexts/AuthContext';
 // import { ChatUser } from '../../utils/chatPermissions';
 
 export const ChatLayout: React.FC = () => {
