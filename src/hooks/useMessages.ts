@@ -104,7 +104,7 @@ export const useMessages = (conversationId: string | null) => {
     } finally {
       setLoading(false);
     }
-  }, [conversationId, user, page]);
+  }, [conversationId, user, page]); // messages.length intentionally omitted to prevent infinite loops
 
   // Check for new messages (polling fallback)
   const checkForNewMessages = useCallback(async () => {
@@ -403,7 +403,7 @@ export const useMessages = (conversationId: string | null) => {
         clearInterval(interval);
       }
     };
-  }, [conversationId, user, checkForNewMessages]);
+  }, [conversationId, user, checkForNewMessages, pollingInterval]);
 
   // Real-time Subscription für neue Nachrichten (with fallback to polling)
   useEffect(() => {
@@ -549,7 +549,7 @@ export const useMessages = (conversationId: string | null) => {
         setPollingInterval(null);
       }
     }
-  }, [conversationId]); // REMOVED fetchMessages dependency to prevent loop
+  }, [conversationId]); // fetchMessages and pollingInterval intentionally omitted to prevent loops
 
   // Cleanup on unmount
   useEffect(() => {

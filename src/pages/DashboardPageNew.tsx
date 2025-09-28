@@ -369,7 +369,7 @@ export const DashboardPageNew: React.FC = () => {
     return () => {
       window.removeEventListener('hashchange', handleHashChange)
     }
-  }, [caseStudies])
+  }, [caseStudies, openVideoModal])
 
   const fetchUserData = async () => {
     try {

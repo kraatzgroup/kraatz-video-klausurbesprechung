@@ -18,6 +18,13 @@ const Toast: React.FC<ToastProps> = ({ toast, onRemove }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
+  const handleRemove = () => {
+    setIsRemoving(true);
+    setTimeout(() => {
+      onRemove(toast.id);
+    }, 300);
+  };
+
   useEffect(() => {
     // Animate in
     setTimeout(() => setIsVisible(true), 10);
@@ -28,14 +35,7 @@ const Toast: React.FC<ToastProps> = ({ toast, onRemove }) => {
     }, toast.duration || 5000);
 
     return () => clearTimeout(timer);
-  }, []);
-
-  const handleRemove = () => {
-    setIsRemoving(true);
-    setTimeout(() => {
-      onRemove(toast.id);
-    }, 300);
-  };
+  }, [handleRemove, toast.duration]);
 
   const getIcon = () => {
     switch (toast.type) {

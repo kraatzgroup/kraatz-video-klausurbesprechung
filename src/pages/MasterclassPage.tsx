@@ -57,7 +57,7 @@ export const MasterclassPage: React.FC = () => {
     if (user) {
       fetchVideoProgress()
     }
-  }, [user])
+  }, [user]) // fetchLessons and fetchVideoProgress are stable functions
 
   const fetchLessons = async () => {
     try {

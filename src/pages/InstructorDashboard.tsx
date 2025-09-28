@@ -81,7 +81,7 @@ const InstructorDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [user]);
+  }, [user]); // fetchData is stable, no need to include
 
   // const createTestData = async () => {
   //   try {
