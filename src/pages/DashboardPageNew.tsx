@@ -369,7 +369,7 @@ export const DashboardPageNew: React.FC = () => {
     return () => {
       window.removeEventListener('hashchange', handleHashChange)
     }
-  }, [caseStudies, openVideoModal])
+  }, [caseStudies, openVideoModal]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchUserData = async () => {
     try {

@@ -57,7 +57,7 @@ export const MasterclassPage: React.FC = () => {
     if (user) {
       fetchVideoProgress()
     }
-  }, [user]) // fetchLessons and fetchVideoProgress are stable functions
+  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchLessons = async () => {
     try {

@@ -81,7 +81,7 @@ const InstructorDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, [user]); // fetchData is stable, no need to include
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // const createTestData = async () => {
   //   try {

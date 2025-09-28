@@ -35,7 +35,7 @@ const Toast: React.FC<ToastProps> = ({ toast, onRemove }) => {
     }, toast.duration || 5000);
 
     return () => clearTimeout(timer);
-  }, [handleRemove, toast.duration]);
+  }, [handleRemove, toast.duration]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const getIcon = () => {
     switch (toast.type) {

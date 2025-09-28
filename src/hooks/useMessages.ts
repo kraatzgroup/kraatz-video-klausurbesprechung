@@ -104,7 +104,7 @@ export const useMessages = (conversationId: string | null) => {
     } finally {
       setLoading(false);
     }
-  }, [conversationId, user, page]); // messages.length intentionally omitted to prevent infinite loops
+  }, [conversationId, user, page]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Check for new messages (polling fallback)
   const checkForNewMessages = useCallback(async () => {
@@ -549,7 +549,7 @@ export const useMessages = (conversationId: string | null) => {
         setPollingInterval(null);
       }
     }
-  }, [conversationId]); // fetchMessages and pollingInterval intentionally omitted to prevent loops
+  }, [conversationId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Cleanup on unmount
   useEffect(() => {
