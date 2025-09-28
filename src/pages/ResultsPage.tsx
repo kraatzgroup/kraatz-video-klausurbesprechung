@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { FileText, Download, Eye, Search, Filter, ChevronDown, TrendingUp, Award, Target, BarChart3, BookOpen, CheckCircle, Play, TrendingDown } from 'lucide-react'
+import { TrendingUp, Award, BarChart3, BookOpen, CheckCircle, Play, TrendingDown } from 'lucide-react'
 import { XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, LineChart, Line } from 'recharts'
 
 interface SubmissionResult {
@@ -99,9 +99,6 @@ export const ResultsPage: React.FC = () => {
     if (results.length === 0) return
 
     // Overall statistics
-    const totalGrades = results.reduce((sum, result) => sum + result.grade, 0)
-    const overallAvg = totalGrades / results.length
-    // setOverallAverage(overallAvg)
     setTotalSubmissions(results.length)
 
     // Group by legal area

@@ -68,7 +68,7 @@ export const initToastSystem = () => {
   };
 };
 
-export default {
+const toastUtils = {
   showSuccessToast,
   showErrorToast,
   showWarningToast,
@@ -77,3 +77,5 @@ export default {
   initToastSystem,
   setGlobalToastContext,
 };
+
+export default toastUtils;

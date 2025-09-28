@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext'
 import { createUserAsAdmin, CreateUserData } from '../utils/adminUtils'
 import { 
   Settings, Users, UserPlus, Search, Trash2, Plus, Crown, 
-  GraduationCap, CreditCard, User, Mail, Lock, Bell, Shield, Globe, Palette, MailX, Calendar
+  GraduationCap, User, Mail, Bell, MailX, Calendar
 } from 'lucide-react'
 import ProfileImageUpload from '../components/ProfileImageUpload'
 import ProfileImage from '../components/ProfileImage'

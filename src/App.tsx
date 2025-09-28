@@ -156,7 +156,7 @@ function App() {
       </Router>
         </ToastProvider>
     </AuthProvider>
-  )
+    )
   } catch (error) {
     console.error('App Error:', error);
     return (

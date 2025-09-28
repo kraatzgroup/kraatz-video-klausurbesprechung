@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Users, Settings, Shield, Activity, BarChart3, UserCheck, AlertTriangle, TrendingUp, Clock, CheckCircle, XCircle, Eye, Plus, Search, Filter, Download, Upload, RefreshCw, Trash2, Crown, Video, GraduationCap, UserPlus, Play } from 'lucide-react'
+import { Users, Settings, Shield, Activity, BarChart3, Clock, Plus, Search, Trash2, Crown, Video, GraduationCap, UserPlus, Play } from 'lucide-react'
 import { Link } from 'react-router-dom'
 
 interface User {
