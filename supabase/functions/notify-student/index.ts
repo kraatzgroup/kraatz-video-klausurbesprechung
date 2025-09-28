@@ -1,4 +1,4 @@
-// @ts-nocheck
+/// <reference path="../deno.d.ts" />
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
@@ -80,7 +80,7 @@ serve(async (req) => {
     }
 
     // Get case study details if available
-    let caseStudyDetails = null
+    let caseStudyDetails: any = null
     let instructorName = ''
     if (notification.related_case_study_id) {
       const { data: caseStudy } = await supabaseClient

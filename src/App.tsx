@@ -22,6 +22,7 @@ import { ProfilePage } from './pages/ProfilePage'
 import { MasterclassPage } from './pages/MasterclassPage'
 import { ChatPage } from './pages/ChatPage'
 import ToastTestPage from './pages/ToastTestPage'
+import { CheckoutSuccessPage } from './pages/CheckoutSuccessPage'
 
 function App() {
   try {
@@ -35,6 +36,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/packages" element={<PackagesPage />} />
+            <Route path="/checkout-success" element={<CheckoutSuccessPage />} />
             <Route
               path="/dashboard"
               element={

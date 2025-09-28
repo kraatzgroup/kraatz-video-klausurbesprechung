@@ -384,6 +384,7 @@ export interface Database {
       packages: {
         Row: {
           id: string
+          package_key: string
           name: string
           description: string
           case_study_count: number
@@ -394,6 +395,7 @@ export interface Database {
         }
         Insert: {
           id?: string
+          package_key: string
           name: string
           description: string
           case_study_count: number
@@ -404,6 +406,7 @@ export interface Database {
         }
         Update: {
           id?: string
+          package_key?: string
           name?: string
           description?: string
           case_study_count?: number

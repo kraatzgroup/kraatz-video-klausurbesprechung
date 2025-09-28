@@ -1,66 +1,47 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
-import { Check, CreditCard, ChevronDown, ChevronUp } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { Check, CreditCard, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
+// import { Link } from 'react-router-dom' // Removed unused import
+import { getPackages, createCheckoutSession } from '../utils/stripeUtils'
 
 interface Package {
   id: string
+  package_key: string
   name: string
   description: string
   case_study_count: number
-  price_euros: number
+  price_cents: number
+  stripe_price_id: string
+  active: boolean
   popular?: boolean
 }
 
 export const PackagesPage: React.FC = () => {
   const { user } = useAuth()
   const [openFaq, setOpenFaq] = useState<number | null>(null)
+  const [packages, setPackages] = useState<Package[]>([])
+  const [loading, setLoading] = useState(true)
+  const [processingPayment, setProcessingPayment] = useState<string | null>(null)
   
-  const packages: Package[] = [
-    {
-      id: '5er',
-      name: '5er Paket',
-      description: 'Perfekt für den Einstieg',
-      case_study_count: 5,
-      price_euros: 675
-    },
-    {
-      id: '10er',
-      name: '10er Paket',
-      description: 'Ideal für regelmäßiges Üben',
-      case_study_count: 10,
-      price_euros: 1250,
-      popular: true
-    },
-    {
-      id: '15er',
-      name: '15er Paket',
-      description: 'Für intensive Vorbereitung',
-      case_study_count: 15,
-      price_euros: 1800
-    },
-    {
-      id: '20er',
-      name: '20er Paket',
-      description: 'Umfassende Klausurvorbereitung',
-      case_study_count: 20,
-      price_euros: 2360
-    },
-    {
-      id: '25er',
-      name: '25er Paket',
-      description: 'Maximale Flexibilität',
-      case_study_count: 25,
-      price_euros: 2875
-    },
-    {
-      id: '30er',
-      name: '30er Paket',
-      description: 'Das Komplettpaket für Profis',
-      case_study_count: 30,
-      price_euros: 3375
+  useEffect(() => {
+    const fetchPackages = async () => {
+      try {
+        const packagesData = await getPackages()
+        // Add popular flag to 10er package
+        const packagesWithPopular = packagesData.map((pkg: Package) => ({
+          ...pkg,
+          popular: pkg.package_key === '10er'
+        }))
+        setPackages(packagesWithPopular)
+      } catch (error) {
+        console.error('Error fetching packages:', error)
+      } finally {
+        setLoading(false)
+      }
     }
-  ]
+
+    fetchPackages()
+  }, [])
 
   const faqData = [
     {
@@ -93,18 +74,44 @@ export const PackagesPage: React.FC = () => {
     }
   ]
 
-  const handlePurchase = (packageId: string) => {
+  const handlePurchase = async (packageId: string) => {
     if (!user) {
-      // Redirect to login
+      // Redirect to register page for non-logged-in users
+      window.location.href = '/register'
       return
     }
-    // TODO: Implement Stripe checkout
-    console.log('Purchase package:', packageId)
+
+    setProcessingPayment(packageId)
+    
+    try {
+      // Create checkout session and redirect to Stripe
+      const { url } = await createCheckoutSession({
+        packageId: packageId,
+        userId: user.id
+      })
+      
+      // Redirect to Stripe Checkout
+      window.location.href = url
+    } catch (error) {
+      console.error('Error creating checkout session:', error)
+      alert('Fehler beim Erstellen der Checkout-Session. Bitte versuchen Sie es erneut.')
+      setProcessingPayment(null)
+    }
   }
 
   const toggleFaq = (index: number) => {
     setOpenFaq(openFaq === index ? null : index)
   }
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-64">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <span className="ml-2 text-text-secondary">Pakete werden geladen...</span>
+      </div>
+    )
+  }
+
 
   return (
     <div className="space-y-8">
@@ -143,7 +150,7 @@ export const PackagesPage: React.FC = () => {
 
               <div className="mb-6">
                 <span className="text-3xl font-bold text-primary">
-                  €{pkg.price_euros.toLocaleString('de-DE')}
+                  €{(pkg.price_cents / 100).toLocaleString('de-DE')}
                 </span>
                 <span className="text-text-secondary ml-2">
                   für {pkg.case_study_count} Klausuren
@@ -177,30 +184,27 @@ export const PackagesPage: React.FC = () => {
                 </div>
               </div>
 
-              {user ? (
-                <button
-                  onClick={() => handlePurchase(pkg.id)}
-                  className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2 ${
-                    pkg.popular
-                      ? 'bg-primary text-white hover:bg-blue-700'
-                      : 'border border-primary text-primary hover:bg-primary hover:text-white'
-                  }`}
-                >
-                  <CreditCard className="w-4 h-4" />
-                  <span>Jetzt kaufen</span>
-                </button>
-              ) : (
-                <Link
-                  to="/register"
-                  className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2 ${
-                    pkg.popular
-                      ? 'bg-primary text-white hover:bg-blue-700'
-                      : 'border border-primary text-primary hover:bg-primary hover:text-white'
-                  }`}
-                >
-                  <span>Jetzt durchstarten!</span>
-                </Link>
-              )}
+              <button
+                onClick={() => handlePurchase(pkg.id)}
+                disabled={processingPayment === pkg.id}
+                className={`w-full py-2 px-4 rounded-lg font-semibold transition-colors flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed ${
+                  pkg.popular
+                    ? 'bg-primary text-white hover:bg-blue-700'
+                    : 'border border-primary text-primary hover:bg-primary hover:text-white'
+                }`}
+              >
+                {processingPayment === pkg.id ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Weiterleitung...</span>
+                  </>
+                ) : (
+                  <>
+                    <CreditCard className="w-4 h-4" />
+                    <span>{user ? 'Jetzt kaufen' : 'Jetzt durchstarten!'}</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         ))}

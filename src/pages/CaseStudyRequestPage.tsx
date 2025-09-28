@@ -240,7 +240,7 @@ export const CaseStudyRequestPage: React.FC = () => {
               Neuen Sachverhalt anfordern
             </h1>
             <p className="text-text-secondary">
-              Verfügbare Klausuren: {profile.account_credits}
+              Verfügbare Credits: {profile.account_credits}
             </p>
           </div>
         </div>
