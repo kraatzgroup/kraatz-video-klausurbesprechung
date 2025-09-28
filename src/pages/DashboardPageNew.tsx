@@ -95,7 +95,7 @@ export const DashboardPageNew: React.FC = () => {
     } catch (error) {
       console.error('Error tracking video view:', error)
     }
-  }, []) // fetchUserData is stable
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Track PDF download
   const handlePdfDownload = async (caseStudyId: string) => {
@@ -139,7 +139,7 @@ export const DashboardPageNew: React.FC = () => {
     } catch (error) {
       console.error('Error marking correction as viewed:', error)
     }
-  }, []) // fetchUserData is stable
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Open video modal
   const openVideoModal = useCallback((videoUrl: string, caseStudyId: string) => {
