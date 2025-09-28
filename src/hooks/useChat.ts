@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useConversations } from './useConversations';
 import { useMessages } from './useMessages';
 import { useAuth } from '../contexts/AuthContext';

@@ -30,7 +30,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   onLoadMoreMessages,
   onLeaveConversation
 }) => {
-  const [isTyping, setIsTyping] = useState(false);
+  // const [isTyping, setIsTyping] = useState(false);
 
   // Handle typing indicator (placeholder for future real-time typing)
   // const handleTypingStart = () => {
@@ -84,7 +84,7 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
       />
 
       {/* Typing Indicator */}
-      {isTyping && (
+      {false && (
         <div className="px-4 py-2 text-sm text-gray-500">
           <div className="flex items-center gap-2">
             <div className="flex gap-1">

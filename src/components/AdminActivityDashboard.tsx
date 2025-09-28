@@ -8,11 +8,9 @@ import {
   User,
   RefreshCw,
   Zap,
-  Upload,
   MessageCircle,
   Award,
-  Video,
-  FileText
+  Video
 } from 'lucide-react'
 import { supabaseAdmin } from '../lib/supabase-admin'
 

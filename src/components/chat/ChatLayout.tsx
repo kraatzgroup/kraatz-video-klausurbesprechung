@@ -3,10 +3,10 @@ import { ConversationList } from './ConversationList';
 import { ChatWindow } from './ChatWindow';
 import { useChat } from '../../hooks/useChat';
 import { useAuth } from '../../contexts/AuthContext';
-import { ChatUser } from '../../utils/chatPermissions';
+// import { ChatUser } from '../../utils/chatPermissions';
 
 export const ChatLayout: React.FC = () => {
-  const { user } = useAuth();
+  // const { user } = useAuth();
   const [participants, setParticipants] = useState<any[]>([]);
   
   const {

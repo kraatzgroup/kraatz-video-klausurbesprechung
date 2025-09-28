@@ -68,12 +68,7 @@ const InstructorDashboard: React.FC = () => {
   const { user } = useAuth();
   const { showSuccess, showError } = useToastContext();
   const [activeTab, setActiveTab] = useState<'requests' | 'materials_sent' | 'submissions' | 'pending_videos' | 'completed'>('requests');
-  const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
-  const [uploadData, setUploadData] = useState({
-    videoUrl: '',
-    grade: '',
-    gradeText: ''
-  });
+  // const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [materialModalOpen, setMaterialModalOpen] = useState(false);
   const [additionalMaterialModalOpen, setAdditionalMaterialModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<CaseStudyRequest | null>(null);
@@ -775,11 +770,11 @@ const InstructorDashboard: React.FC = () => {
   //   setUploadModalOpen(true);
   // };
 
-  const closeUploadModal = () => {
-    setUploadModalOpen(false);
-    setSelectedSubmission(null);
-    setUploadData({ videoUrl: '', grade: '', gradeText: '' });
-  };
+  // const closeUploadModal = () => {
+  //   setUploadModalOpen(false);
+  //   setSelectedSubmission(null);
+  //   setUploadData({ videoUrl: '', grade: '', gradeText: '' });
+  // };
 
   // const handleVideoUpload = async () => {
   //   if (!selectedSubmission || !uploadData.videoUrl || !uploadData.grade) {
