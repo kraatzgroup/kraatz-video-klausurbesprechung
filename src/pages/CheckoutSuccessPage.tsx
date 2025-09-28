@@ -5,6 +5,7 @@ import { Check, Loader2 } from 'lucide-react'
 export const CheckoutSuccessPage: React.FC = () => {
   const [searchParams] = useSearchParams()
   const [loading, setLoading] = useState(true)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [error, setError] = useState<string | null>(null)
   
   const sessionId = searchParams.get('session_id')
