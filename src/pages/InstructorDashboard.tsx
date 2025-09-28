@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { useToastContext } from '../contexts/ToastContext';
@@ -79,88 +79,7 @@ const InstructorDashboard: React.FC = () => {
     return '';
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
-
-  // const createTestData = async () => {
-  //   try {
-  //     // First, ensure we have a test user
-  //     const { data: existingUser } = await supabase
-  //       .from('users')
-  //       .select('id')
-  //       .eq('email', 'test@student.de')
-  //       .single();
-
-  //     let userId = existingUser?.id;
-
-  //     if (!userId) {
-  //       // Create a test user
-  //       const { data: newUser, error: userError } = await supabase
-  //         .from('users')
-  //         .insert({
-  //           email: 'test@student.de',
-  //           first_name: 'Max',
-  //           last_name: 'Mustermann',
-  //           role: 'student',
-  //           account_credits: 5
-  //         })
-  //         .select('id')
-  //         .single();
-
-  //       if (userError) {
-  //         console.error('Error creating test user:', userError);
-  //         return;
-  //       }
-  //       userId = newUser.id;
-  //     }
-
-  //     // Create test case study requests
-  //     const testRequests = [
-  //       {
-  //         user_id: userId,
-  //         case_study_number: 1,
-  //         study_phase: '1. Semester',
-  //         legal_area: 'Zivilrecht',
-  //         sub_area: 'BGB AT',
-  //         focus_area: 'Willenserklärung',
-  //         status: 'requested'
-  //       },
-  //       {
-  //         user_id: userId,
-  //         case_study_number: 2,
-  //         study_phase: '2. Semester',
-  //         legal_area: 'Strafrecht',
-  //         sub_area: 'Strafrecht AT',
-  //         focus_area: 'Tatbestand',
-  //         status: 'materials_ready'
-  //       },
-  //       {
-  //         user_id: userId,
-  //         case_study_number: 3,
-  //         study_phase: '3. Semester',
-  //         legal_area: 'Öffentliches Recht',
-  //         sub_area: 'Staatsrecht',
-  //         focus_area: 'Grundrechte',
-  //         status: 'submitted'
-  //       }
-  //     ];
-
-  //     const { error: requestsError } = await supabase
-  //       .from('case_study_requests')
-  //       .insert(testRequests);
-
-  //     if (requestsError) {
-  //       console.error('Error creating test requests:', requestsError);
-  //     } else {
-  //       console.log('Test data created successfully');
-  //     }
-  //   } catch (error) {
-  //     console.error('Error in createTestData:', error);
-  //   }
-  // };
-
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       // First, get current user's role and legal area specialization
       const { data: currentUser, error: userError } = await supabase
@@ -257,7 +176,11 @@ const InstructorDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [user]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const updateRequestStatus = async (requestId: string, newStatus: string) => {
     try {

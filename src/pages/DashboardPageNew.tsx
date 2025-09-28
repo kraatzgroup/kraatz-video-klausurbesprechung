@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 import { CreditCard, BookOpen, Plus, Download, Upload, FileText, Video, X, Clock, CheckCircle, ChevronDown, ChevronUp, Star, MessageSquare, Table } from 'lucide-react'
@@ -142,7 +142,7 @@ export const DashboardPageNew: React.FC = () => {
   }
 
   // Open video modal
-  const openVideoModal = (videoUrl: string, caseStudyId: string) => {
+  const openVideoModal = useCallback((videoUrl: string, caseStudyId: string) => {
     // Convert Loom share URL to embed URL
     const embedUrl = videoUrl.replace('https://www.loom.com/share/', 'https://www.loom.com/embed/')
     setCurrentVideoUrl(embedUrl)
@@ -151,7 +151,7 @@ export const DashboardPageNew: React.FC = () => {
     // Mark video as viewed and correction as viewed
     handleVideoView(caseStudyId)
     markCorrectionAsViewed(caseStudyId)
-  }
+  }, [handleVideoView, markCorrectionAsViewed])
 
   // Close video modal
   const closeVideoModal = () => {

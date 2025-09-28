@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { Play, Clock, BookOpen, Upload, X, Edit, Trash2, Settings, CheckCircle, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useUserRole } from '../hooks/useUserRole'
@@ -51,15 +51,7 @@ export const MasterclassPage: React.FC = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
-
-  useEffect(() => {
-    fetchLessons()
-    if (user) {
-      fetchVideoProgress()
-    }
-  }, [user]) // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchLessons = async () => {
+  const fetchLessons = useCallback(async () => {
     try {
       console.log('Fetching video lessons...')
       console.log('Current user:', user)
@@ -144,9 +136,9 @@ export const MasterclassPage: React.FC = () => {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user, userProfile])
 
-  const fetchVideoProgress = async () => {
+  const fetchVideoProgress = useCallback(async () => {
     if (!user) return
     
     try {
@@ -160,7 +152,14 @@ export const MasterclassPage: React.FC = () => {
     } catch (error) {
       console.error('Error fetching video progress:', error)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    fetchLessons()
+    if (user) {
+      fetchVideoProgress()
+    }
+  }, [user, fetchLessons, fetchVideoProgress])
 
   const markVideoAsWatched = async (videoId: string) => {
     if (!user) return

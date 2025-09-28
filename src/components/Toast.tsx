@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CheckCircle, XCircle, AlertCircle, X } from 'lucide-react';
 
 export interface ToastMessage {
@@ -18,12 +18,12 @@ const Toast: React.FC<ToastProps> = ({ toast, onRemove }) => {
   const [isVisible, setIsVisible] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
-  const handleRemove = () => {
+  const handleRemove = useCallback(() => {
     setIsRemoving(true);
     setTimeout(() => {
       onRemove(toast.id);
     }, 300);
-  };
+  }, [onRemove, toast.id]);
 
   useEffect(() => {
     // Animate in

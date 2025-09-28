@@ -104,7 +104,7 @@ export const useMessages = (conversationId: string | null) => {
     } finally {
       setLoading(false);
     }
-  }, [conversationId, user, page]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [conversationId, user, page, messages.length]);
 
   // Check for new messages (polling fallback)
   const checkForNewMessages = useCallback(async () => {
