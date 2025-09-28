@@ -81,12 +81,12 @@ const InstructorDashboard: React.FC = () => {
   const [videoLoomUrl, setVideoLoomUrl] = useState('');
   const [saveStatus, setSaveStatus] = useState<{[key: string]: 'saving' | 'success' | 'error' | null}>({});
   const [requests, setRequests] = useState<CaseStudyRequest[]>([]);
-  const [submissions, setSubmissions] = useState<Submission[]>([]);
+  // const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [grades, setGrades] = useState<{[key: string]: {grade: number | null, gradeText?: string}}>({});
-  const [materialUrl, setMaterialUrl] = useState('');
-  const [additionalMaterialUrl, setAdditionalMaterialUrl] = useState('');
-  const [uploadModalOpen, setUploadModalOpen] = useState(false);
+  // const [materialUrl, setMaterialUrl] = useState('');
+  // const [additionalMaterialUrl, setAdditionalMaterialUrl] = useState('');
+  // const [uploadModalOpen, setUploadModalOpen] = useState(false);
 
   // Function to get grade description based on points
   const getGradeDescription = (points: number): string => {
