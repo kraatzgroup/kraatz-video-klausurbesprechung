@@ -707,7 +707,7 @@ const InstructorDashboard: React.FC = () => {
       }
       
       const fileName = `zusatzmaterial_${selectedRequest.id}_${Date.now()}.pdf`;
-      const { data, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('case-studies')
         .upload(fileName, additionalMaterialFile);
       
