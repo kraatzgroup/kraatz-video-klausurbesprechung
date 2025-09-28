@@ -73,7 +73,7 @@ export const DashboardPageNew: React.FC = () => {
   const [submittingRating, setSubmittingRating] = useState(false)
 
   // Track video view
-  const handleVideoView = async (caseStudyId: string) => {
+  const handleVideoView = useCallback(async (caseStudyId: string) => {
     try {
       const { error } = await supabase
         .from('case_study_requests')
@@ -95,7 +95,7 @@ export const DashboardPageNew: React.FC = () => {
     } catch (error) {
       console.error('Error tracking video view:', error)
     }
-  }
+  }, [])
 
   // Track PDF download
   const handlePdfDownload = async (caseStudyId: string) => {
@@ -123,7 +123,7 @@ export const DashboardPageNew: React.FC = () => {
   }
 
   // Mark correction as viewed
-  const markCorrectionAsViewed = async (caseStudyId: string) => {
+  const markCorrectionAsViewed = useCallback(async (caseStudyId: string) => {
     try {
       const { error } = await supabase
         .from('case_study_requests')
@@ -139,7 +139,7 @@ export const DashboardPageNew: React.FC = () => {
     } catch (error) {
       console.error('Error marking correction as viewed:', error)
     }
-  }
+  }, [])
 
   // Open video modal
   const openVideoModal = useCallback((videoUrl: string, caseStudyId: string) => {
