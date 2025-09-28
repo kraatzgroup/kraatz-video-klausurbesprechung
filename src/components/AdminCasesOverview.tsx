@@ -145,12 +145,13 @@ const AdminCasesOverview: React.FC = () => {
   }
 
   const handleDeleteCase = async (caseId: string, studentName: string) => {
-    const confirmMessage = `Sind Sie sicher, dass Sie den Auftrag von ${studentName} löschen möchten?\n\nDies wird:\n- Den Auftrag komplett aus der Datenbank entfernen\n- Alle zugehörigen Dateien löschen\n- Den Auftrag bei Student und Dozent entfernen\n\nDiese Aktion kann nicht rückgängig gemacht werden!`
+    const confirmMessage = `Sind Sie sicher, dass Sie den Auftrag von ${studentName} vollständig löschen möchten?\n\nDies wird:\n✅ Den Auftrag komplett aus der Datenbank entfernen\n✅ Alle Bewertungen und Noten löschen\n✅ Alle Benachrichtigungen entfernen\n✅ Alle zugehörigen Dateien löschen\n✅ Den Auftrag aus Student- und Dozenten-Statistiken entfernen\n\n⚠️ Diese Aktion kann NICHT rückgängig gemacht werden!`
     
     if (!window.confirm(confirmMessage)) return
     
     try {
       setLoading(true)
+      console.log(`🗑️ Starting deletion of case study: ${caseId}`)
       
       // Get the case details first to find related files
       const { data: caseData, error: fetchError } = await supabaseAdmin
@@ -159,39 +160,21 @@ const AdminCasesOverview: React.FC = () => {
         .eq('id', caseId)
         .single()
       
-      if (fetchError) throw fetchError
+      if (fetchError) {
+        console.error('Error fetching case data:', fetchError)
+        throw fetchError
+      }
       
-      // Delete related submissions first (foreign key constraint)
-      const { error: submissionsError } = await supabaseAdmin
-        .from('submissions')
-        .delete()
-        .eq('case_study_request_id', caseId)
+      console.log('📄 Case data retrieved, deleting related files from storage...')
       
-      if (submissionsError) throw submissionsError
-      
-      // Delete related ratings
-      const { error: ratingsError } = await supabaseAdmin
-        .from('case_study_ratings')
-        .delete()
-        .eq('case_study_request_id', caseId)
-      
-      if (ratingsError) throw ratingsError
-      
-      // Delete the main case study request
-      const { error: deleteError } = await supabaseAdmin
-        .from('case_study_requests')
-        .delete()
-        .eq('id', caseId)
-      
-      if (deleteError) throw deleteError
-      
-      // Delete related files from storage if they exist
+      // Delete related files from storage first
       const filesToDelete = []
       if (caseData.submission_url) filesToDelete.push(caseData.submission_url)
-      if (caseData.correction_video_url) filesToDelete.push(caseData.correction_video_url)
+      if (caseData.video_correction_url) filesToDelete.push(caseData.video_correction_url)
       if (caseData.written_correction_url) filesToDelete.push(caseData.written_correction_url)
       if (caseData.solution_pdf_url) filesToDelete.push(caseData.solution_pdf_url)
       if (caseData.additional_materials_url) filesToDelete.push(caseData.additional_materials_url)
+      if (caseData.case_study_material_url) filesToDelete.push(caseData.case_study_material_url)
       
       // Extract file paths from URLs and delete from storage
       for (const fileUrl of filesToDelete) {
@@ -199,25 +182,49 @@ const AdminCasesOverview: React.FC = () => {
           try {
             const fileName = fileUrl.split('/').pop()
             if (fileName) {
+              console.log(`🗂️ Deleting file: ${fileName}`)
               await supabaseAdmin.storage
                 .from('case-studies')
                 .remove([fileName])
             }
           } catch (storageError) {
-            console.warn('Error deleting file from storage:', storageError)
+            console.warn('⚠️ Error deleting file from storage:', storageError)
             // Continue with deletion even if file removal fails
           }
         }
       }
       
+      console.log('🗄️ Using PostgreSQL function to delete case and all related data...')
+      
+      // Use the PostgreSQL function to delete everything
+      const { data: deleteResult, error: deleteError } = await supabaseAdmin
+        .rpc('admin_delete_case_study', { case_id: caseId })
+      
+      if (deleteError) {
+        console.error('Error calling delete function:', deleteError)
+        throw deleteError
+      }
+      
+      console.log('📊 Delete result:', deleteResult)
+      
+      if (!deleteResult.success) {
+        throw new Error(deleteResult.error || 'Unknown error during deletion')
+      }
+      
       // Refresh the cases list
+      console.log('🔄 Refreshing cases list...')
       await fetchAllCases()
       
-      alert(`Auftrag von ${studentName} wurde erfolgreich gelöscht.`)
+      // Show success message with details
+      const message = `✅ Auftrag von ${studentName} wurde erfolgreich gelöscht!\n\n📊 Gelöschte Daten:\n- Bewertungen: ${deleteResult.deleted_ratings}\n- Abgaben: ${deleteResult.deleted_submissions}\n- Benachrichtigungen: ${deleteResult.deleted_notifications}\n- Dateien: ${filesToDelete.length}`
+      
+      alert(message)
+      console.log('✅ Case deletion completed successfully')
       
     } catch (error) {
-      console.error('Error deleting case:', error)
-      alert('Fehler beim Löschen des Auftrags. Bitte versuchen Sie es erneut.')
+      console.error('❌ Error deleting case:', error)
+      const errorMessage = error instanceof Error ? error.message : 'Unbekannter Fehler'
+      alert(`❌ Fehler beim Löschen des Auftrags:\n\n${errorMessage}\n\nBitte versuchen Sie es erneut oder kontaktieren Sie den Support.`)
     } finally {
       setLoading(false)
     }

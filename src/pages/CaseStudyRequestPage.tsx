@@ -25,8 +25,29 @@ export const CaseStudyRequestPage: React.FC = () => {
     legalArea: '',
     subArea: '',
     focusArea: '',
+    federalState: '',
     randomAssignment: false
   })
+
+  // German federal states (Bundesländer)
+  const federalStates = [
+    'Baden-Württemberg',
+    'Bayern',
+    'Berlin',
+    'Brandenburg',
+    'Bremen',
+    'Hamburg',
+    'Hessen',
+    'Mecklenburg-Vorpommern',
+    'Niedersachsen',
+    'Nordrhein-Westfalen',
+    'Rheinland-Pfalz',
+    'Saarland',
+    'Sachsen',
+    'Sachsen-Anhalt',
+    'Schleswig-Holstein',
+    'Thüringen'
+  ]
 
   useEffect(() => {
     if (user) {
@@ -60,6 +81,7 @@ export const CaseStudyRequestPage: React.FC = () => {
       legalArea: newLegalArea,
       subArea: '',
       focusArea: '',
+      federalState: '', // Reset federal state when legal area changes
       randomAssignment: formData.randomAssignment
     })
   }
@@ -68,6 +90,13 @@ export const CaseStudyRequestPage: React.FC = () => {
     setFormData({
       ...formData,
       subArea: e.target.value
+    })
+  }
+
+  const handleFederalStateChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData({
+      ...formData,
+      federalState: e.target.value
     })
   }
 
@@ -106,6 +135,7 @@ export const CaseStudyRequestPage: React.FC = () => {
           legal_area: formData.legalArea,
           sub_area: formData.randomAssignment ? null : formData.subArea,
           focus_area: formData.randomAssignment ? 'Beliebige Klausur gewünscht' : formData.focusArea,
+          federal_state: formData.legalArea === 'Öffentliches Recht' && !formData.randomAssignment ? formData.federalState : null,
           status: 'requested'
         })
         .select()
@@ -125,10 +155,14 @@ export const CaseStudyRequestPage: React.FC = () => {
       if (updateError) throw updateError
 
       // Create student notification
+      const studentMessage = formData.legalArea === 'Öffentliches Recht' && formData.federalState
+        ? `Ihr Sachverhalt für ${formData.legalArea} - ${formData.subArea || 'beliebiges Teilgebiet'} (${formData.federalState}) wurde erfolgreich angefordert.`
+        : `Ihr Sachverhalt für ${formData.legalArea} - ${formData.subArea || 'beliebiges Teilgebiet'} wurde erfolgreich angefordert.`
+      
       await NotificationService.createNotification({
         userId: user!.id,
         title: 'Sachverhalt angefordert',
-        message: `Ihr Sachverhalt für ${formData.legalArea} - ${formData.subArea || 'beliebiges Teilgebiet'} wurde erfolgreich angefordert.`,
+        message: studentMessage,
         type: 'success',
         relatedCaseStudyId: caseStudyData.id
       })
@@ -148,7 +182,8 @@ export const CaseStudyRequestPage: React.FC = () => {
           `${profile.first_name} ${profile.last_name}`,
           formData.legalArea,
           formData.subArea || 'beliebiges Teilgebiet',
-          caseStudyData.id
+          caseStudyData.id,
+          formData.legalArea === 'Öffentliches Recht' ? formData.federalState : undefined
         )
       }
 
@@ -248,6 +283,33 @@ export const CaseStudyRequestPage: React.FC = () => {
             </select>
           </div>
 
+          {/* Federal State Dropdown - only show for "Öffentliches Recht" */}
+          {formData.legalArea === 'Öffentliches Recht' && (
+            <div>
+              <label htmlFor="federalState" className="block text-sm font-medium text-text-secondary mb-2">
+                Bundesland *
+              </label>
+              <select
+                id="federalState"
+                value={formData.federalState}
+                onChange={handleFederalStateChange}
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary focus:border-transparent"
+                required={formData.legalArea === 'Öffentliches Recht' && !formData.randomAssignment}
+                disabled={formData.randomAssignment}
+              >
+                <option value="">Bitte wähle Dein Bundesland</option>
+                {federalStates.map((state) => (
+                  <option key={state} value={state}>
+                    {state}
+                  </option>
+                ))}
+              </select>
+              <p className="text-xs text-text-secondary mt-1">
+                Das Bundesland ist wichtig für landesspezifische Regelungen im öffentlichen Recht.
+              </p>
+            </div>
+          )}
+
           <div>
             <label htmlFor="subArea" className="block text-sm font-medium text-text-secondary mb-2">
               Teilrechtsgebiet *
@@ -328,7 +390,13 @@ export const CaseStudyRequestPage: React.FC = () => {
             </button>
             <button
               type="submit"
-              disabled={submitting || !formData.studyPhase || !formData.legalArea || (!formData.randomAssignment && (!formData.subArea || !formData.focusArea))}
+              disabled={
+                submitting || 
+                !formData.studyPhase || 
+                !formData.legalArea || 
+                (formData.legalArea === 'Öffentliches Recht' && !formData.randomAssignment && !formData.federalState) ||
+                (!formData.randomAssignment && (!formData.subArea || !formData.focusArea))
+              }
               className="flex-1 bg-primary text-white px-6 py-3 rounded-lg hover:bg-blue-700 focus:ring-2 focus:ring-primary focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
             >
               {submitting ? 'Wird angefordert...' : 'Sachverhalt anfordern (1 Klausur)'}

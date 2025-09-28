@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
+import { useToastContext } from '../contexts/ToastContext';
 import PureAutoSaveGradeInput from '../components/PureAutoSaveGradeInput';
 import { 
   BookOpen, 
@@ -65,6 +66,7 @@ interface Submission {
 
 const InstructorDashboard: React.FC = () => {
   const { user } = useAuth();
+  const { showSuccess, showError } = useToastContext();
   const [activeTab, setActiveTab] = useState<'requests' | 'materials_sent' | 'submissions' | 'pending_videos' | 'completed'>('requests');
   const [selectedSubmission, setSelectedSubmission] = useState<Submission | null>(null);
   const [uploadData, setUploadData] = useState({
@@ -105,7 +107,7 @@ const InstructorDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [user]);
 
   const createTestData = async () => {
     try {
@@ -186,28 +188,42 @@ const InstructorDashboard: React.FC = () => {
 
   const fetchData = async () => {
     try {
-      // Debug: Check users and case study requests separately
-      const { data: usersCheck } = await supabase
+      // First, get current user's role and legal area specialization
+      const { data: currentUser, error: userError } = await supabase
         .from('users')
-        .select('id, first_name, last_name, email')
-        .limit(10);
-      
-      console.log('Available users:', usersCheck);
+        .select('role, instructor_legal_area')
+        .eq('id', user?.id)
+        .single();
 
-      const { data: requestsCheck } = await supabase
-        .from('case_study_requests')
-        .select('id, user_id, legal_area, sub_area')
-        .limit(10);
-      
-      console.log('Available case study requests:', requestsCheck);
+      if (userError) {
+        console.error('Error fetching current user:', userError);
+        throw userError;
+      }
 
-      // Fetch case study requests with user data
-      const { data: requestsData, error: requestsError } = await supabase
+      console.log('Current user role and legal area:', currentUser);
+
+      // Build query for case study requests with user data
+      let query = supabase
         .from('case_study_requests')
         .select(`
           *,
           user:users!case_study_requests_user_id_fkey(first_name, last_name, email)
-        `)
+        `);
+
+      // Apply filtering based on user role
+      if (currentUser?.role === 'instructor' && currentUser?.instructor_legal_area) {
+        // Instructors only see cases from their assigned legal area
+        query = query.eq('legal_area', currentUser.instructor_legal_area);
+        console.log(`🎯 Filtering cases for instructor legal area: ${currentUser.instructor_legal_area}`);
+      } else if (currentUser?.role === 'admin') {
+        // Admins see all cases (no filtering)
+        console.log('👑 Admin user - showing all cases');
+      } else {
+        // Other roles (students, etc.) should not access instructor dashboard
+        console.warn('⚠️ Non-instructor/admin user accessing instructor dashboard');
+      }
+
+      const { data: requestsData, error: requestsError } = await query
         .order('created_at', { ascending: false });
 
       if (requestsError) {
@@ -234,13 +250,21 @@ const InstructorDashboard: React.FC = () => {
         setRequests([]);
       }
 
-      const { data: submissionsData, error: submissionsError } = await supabase
-        .from('submissions')
-        .select('*')
-        .order('submitted_at', { ascending: false });
+      // Fetch submissions - filter based on the case study requests we have access to
+      let submissionsData = [];
+      if (requestsData && requestsData.length > 0) {
+        const requestIds = requestsData.map((req: any) => req.id);
+        const { data: submissionsResult, error: submissionsError } = await supabase
+          .from('submissions')
+          .select('*')
+          .in('case_study_request_id', requestIds)
+          .order('submitted_at', { ascending: false });
 
-      if (submissionsError) throw submissionsError;
-      setSubmissions(submissionsData || []);
+        if (submissionsError) throw submissionsError;
+        submissionsData = submissionsResult || [];
+      }
+      
+      setSubmissions(submissionsData);
 
       // Fetch existing grades for display
       const gradesMap: {[key: string]: {grade: number, gradeText?: string}} = {};
@@ -279,6 +303,8 @@ const InstructorDashboard: React.FC = () => {
   };
 
   const updateGrade = async (caseStudyId: string, grade: number | null, gradeText?: string): Promise<boolean> => {
+    console.log('🎯 updateGrade called:', { caseStudyId, grade, gradeText });
+    
     // Prevent multiple simultaneous saves
     if (saveStatus[caseStudyId] === 'saving') {
       return false;
@@ -332,6 +358,17 @@ const InstructorDashboard: React.FC = () => {
       fetchData();
       setSaveStatus(prev => ({ ...prev, [caseStudyId]: 'success' }));
       
+      // Show success toast
+      console.log('🎉 Showing success toast...');
+      if (grade === null) {
+        console.log('📝 Showing "Note entfernt" toast');
+        showSuccess('Note entfernt', 'Die Note wurde erfolgreich entfernt.');
+      } else {
+        const gradeDesc = getGradeDescription(grade);
+        console.log('📝 Showing "Note gespeichert" toast:', { grade, gradeDesc });
+        showSuccess('Note gespeichert', `Note ${grade} Punkte (${gradeDesc}) wurde erfolgreich gespeichert.`);
+      }
+      
       // Clear success status after 3 seconds
       setTimeout(() => {
         setSaveStatus(prev => ({ ...prev, [caseStudyId]: null }));
@@ -341,6 +378,9 @@ const InstructorDashboard: React.FC = () => {
     } catch (error) {
       console.error('Error updating grade:', error);
       setSaveStatus(prev => ({ ...prev, [caseStudyId]: 'error' }));
+      
+      // Show error toast
+      showError('Fehler beim Speichern', 'Die Note konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.');
       
       // Clear error status after 5 seconds
       setTimeout(() => {
@@ -643,7 +683,27 @@ const InstructorDashboard: React.FC = () => {
       }
 
       console.log('Case study request updated successfully');
-      alert('Sachverhalt erfolgreich hochgeladen und für Studenten verfügbar!');
+
+      // Create notification for student about new material
+      console.log('Creating notification for student...');
+      const { error: notificationError } = await supabase
+        .from('notifications')
+        .insert({
+          user_id: selectedRequest.user_id,
+          title: '📚 Sachverhalt verfügbar',
+          message: `Dein Sachverhalt für ${selectedRequest.legal_area} - ${selectedRequest.sub_area} ist jetzt verfügbar. Du kannst mit der Bearbeitung beginnen.`,
+          type: 'info',
+          related_case_study_id: selectedRequest.id
+        });
+
+      if (notificationError) {
+        console.error('Error creating notification:', notificationError);
+        // Don't fail the whole process if notification fails
+      } else {
+        console.log('✅ Notification created successfully - email will be sent automatically');
+      }
+
+      alert('Sachverhalt erfolgreich hochgeladen und für Studenten verfügbar!\n\n📧 Der Student wurde per E-Mail benachrichtigt.');
       setMaterialModalOpen(false);
       setMaterialFile(null);
       setMaterialUrl('');
@@ -780,7 +840,7 @@ const InstructorDashboard: React.FC = () => {
   const materialsSentCases = requests.filter(r => r.status === 'materials_ready');
   const submittedCases = requests.filter(r => r.status === 'submitted');
   const pendingVideoCorrections = requests.filter(r => r.status === 'under_review');
-  const completedCases = requests.filter(r => r.status === 'completed');
+  const completedCases = requests.filter(r => r.status === 'completed' || r.status === 'corrected');
 
   const stats = {
     totalRequests: pendingRequests.length,
@@ -1554,22 +1614,37 @@ const InstructorDashboard: React.FC = () => {
                                     value={grades[request.id]?.grade || ''}
                                     onChange={(e) => {
                                       const value = e.target.value;
+                                      const numericValue = value ? parseFloat(value) : 0;
+                                      
+                                      // Auto-populate grade description
+                                      const description = value && !isNaN(numericValue) ? getGradeDescription(numericValue) : '';
+                                      
                                       setGrades(prev => ({
                                         ...prev,
                                         [request.id]: {
                                           ...prev[request.id],
-                                          grade: value ? parseFloat(value) : 0
+                                          grade: numericValue,
+                                          gradeText: description
                                         }
                                       }));
                                     }}
                                     onBlur={(e) => {
-                                      const grade = parseFloat(e.target.value);
-                                      if (grade >= 0 && grade <= 18) {
-                                        updateGrade(request.id, grade, grades[request.id]?.gradeText);
+                                      const value = e.target.value;
+                                      const grade = value ? parseFloat(value) : null;
+                                      
+                                      // Auto-save grade (including null for empty values)
+                                      if (grade === null || (grade >= 0 && grade <= 18)) {
+                                        updateGrade(request.id, grade, grades[request.id]?.gradeText || null);
                                       }
                                     }}
                                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent"
                                   />
+                                  {/* Grade description display */}
+                                  {grades[request.id]?.grade && (
+                                    <div className="text-xs text-gray-600 mt-1">
+                                      {getGradeDescription(grades[request.id].grade)}
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="space-y-2">
                                   <label className="text-xs text-gray-600">Notenbeschreibung (optional)</label>
@@ -1588,9 +1663,8 @@ const InstructorDashboard: React.FC = () => {
                                     }}
                                     onBlur={() => {
                                       const currentGrade = grades[request.id];
-                                      if (currentGrade?.grade) {
-                                        updateGrade(request.id, currentGrade.grade, currentGrade.gradeText);
-                                      }
+                                      // Auto-save when grade text changes (even if grade is null)
+                                      updateGrade(request.id, currentGrade?.grade || null, currentGrade?.gradeText || null);
                                     }}
                                     rows={2}
                                     className="w-full px-3 py-2 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-primary focus:border-transparent resize-none"

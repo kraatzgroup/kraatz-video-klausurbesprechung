@@ -6,9 +6,11 @@ import {
   Settings, Users, UserPlus, Search, Trash2, Plus, Crown, 
   GraduationCap, CreditCard, User, Mail, Lock, Bell, Shield, Globe, Palette, MailX, Calendar
 } from 'lucide-react'
+import ProfileImageUpload from '../components/ProfileImageUpload'
+import ProfileImage from '../components/ProfileImage'
 
 
-interface User {
+interface UserData {
   id: string
   email: string
   first_name: string
@@ -16,6 +18,7 @@ interface User {
   role: string
   instructor_legal_area?: string
   email_notifications_enabled?: boolean
+  profile_image_url?: string | null
   account_credits: number
   created_at: string
   totalRequests?: number
@@ -25,12 +28,12 @@ interface User {
 
 const SettingsPage: React.FC = () => {
   const { user: currentUser } = useAuth()
-  const [users, setUsers] = useState<User[]>([])
+  const [users, setUsers] = useState<UserData[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState<'profile' | 'user-management' | 'create-user'>('profile')
   const [searchTerm, setSearchTerm] = useState('')
   const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'instructor' | 'admin'>('all')
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
+  const [selectedUser, setSelectedUser] = useState<UserData | null>(null)
   const [grantModalOpen, setGrantModalOpen] = useState(false)
   const [grantAmount, setGrantAmount] = useState('')
   const [newUser, setNewUser] = useState({
@@ -41,11 +44,21 @@ const SettingsPage: React.FC = () => {
     password: ''
   })
   const [currentUserRole, setCurrentUserRole] = useState('')
-  const [currentUserProfile, setCurrentUserProfile] = useState<User | null>(null)
+  const [currentUserProfile, setCurrentUserProfile] = useState<UserData | null>(null)
   const [emailNotificationsEnabled, setEmailNotificationsEnabled] = useState(true)
   const [vacationStartDate, setVacationStartDate] = useState('')
   const [vacationEndDate, setVacationEndDate] = useState('')
   const [vacationModalOpen, setVacationModalOpen] = useState(false)
+
+  // Profile image update callback
+  const handleProfileImageUpdate = (newImageUrl: string | null) => {
+    if (currentUserProfile) {
+      setCurrentUserProfile({
+        ...currentUserProfile,
+        profile_image_url: newImageUrl
+      })
+    }
+  }
 
   useEffect(() => {
     if (currentUser) {
@@ -471,6 +484,27 @@ const SettingsPage: React.FC = () => {
         {/* Profile Tab */}
         {activeTab === 'profile' && (
           <div className="max-w-2xl space-y-6">
+            {/* Profile Image Section - Only for Instructors, Springer, and Admins */}
+            {(currentUserRole === 'instructor' || currentUserRole === 'springer' || currentUserRole === 'admin') && currentUser && (
+              <div className="bg-white shadow rounded-lg p-6">
+                <h2 className="text-lg font-medium text-gray-900 mb-6 flex items-center gap-3">
+                  <User className="w-6 h-6 text-blue-600" />
+                  Profilbild
+                </h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Laden Sie ein Profilbild hoch, um Ihre Interaktionen mit Studenten persönlicher zu gestalten. 
+                  Ihr Profilbild wird Studenten angezeigt, wenn Sie Korrekturen oder Nachrichten senden.
+                </p>
+                
+                <ProfileImageUpload
+                  currentImageUrl={currentUserProfile?.profile_image_url}
+                  userId={currentUser.id}
+                  onImageUpdate={handleProfileImageUpdate}
+                  size="lg"
+                />
+              </div>
+            )}
+
             <div className="bg-white shadow rounded-lg p-6">
               <h2 className="text-lg font-medium text-gray-900 mb-6">Profil Informationen</h2>
               <div className="space-y-4">
@@ -716,9 +750,20 @@ const SettingsPage: React.FC = () => {
                       <tr key={user.id} className="hover:bg-gray-50">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center space-x-3">
-                            {user.role === 'admin' && <Crown className="w-5 h-5 text-yellow-500" />}
-                            {user.role === 'instructor' && <GraduationCap className="w-5 h-5 text-green-500" />}
-                            {user.role === 'student' && <Users className="w-5 h-5 text-blue-500" />}
+                            {/* Show profile image for instructors, springer, and admins */}
+                            {(user.role === 'instructor' || user.role === 'springer' || user.role === 'admin') ? (
+                              <ProfileImage
+                                imageUrl={user.profile_image_url}
+                                name={`${user.first_name || ''} ${user.last_name || ''}`.trim()}
+                                size="sm"
+                              />
+                            ) : (
+                              <>
+                                {user.role === 'admin' && <Crown className="w-5 h-5 text-yellow-500" />}
+                                {user.role === 'instructor' && <GraduationCap className="w-5 h-5 text-green-500" />}
+                                {user.role === 'student' && <Users className="w-5 h-5 text-blue-500" />}
+                              </>
+                            )}
                             <div>
                               <div className="text-sm font-medium text-gray-900">
                                 {user.first_name} {user.last_name}

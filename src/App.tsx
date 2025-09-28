@@ -21,6 +21,7 @@ import SettingsPage from './pages/SettingsPage'
 import { ProfilePage } from './pages/ProfilePage'
 import { MasterclassPage } from './pages/MasterclassPage'
 import { ChatPage } from './pages/ChatPage'
+import ToastTestPage from './pages/ToastTestPage'
 
 function App() {
   try {
@@ -139,6 +140,14 @@ function App() {
                   <RoleBasedRoute allowedRoles={['student', 'instructor', 'springer', 'admin']}>
                     <ChatPage />
                   </RoleBasedRoute>
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/toast-test"
+              element={
+                <ProtectedRoute>
+                  <ToastTestPage />
                 </ProtectedRoute>
               }
             />

@@ -4,12 +4,18 @@ import { useAuth } from '../../contexts/AuthContext'
 import { supabase } from '../../lib/supabase'
 import { User, CreditCard, LogOut, Users, Video, Star, MessageCircle } from 'lucide-react'
 import { NotificationDropdown } from '../NotificationDropdown'
+import ProfileImage from '../ProfileImage'
 
 export const Header: React.FC = () => {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
   const [userRole, setUserRole] = useState<string>('student')
   const [userCredits, setUserCredits] = useState<number>(0)
+  const [userProfile, setUserProfile] = useState<{
+    first_name: string | null
+    last_name: string | null
+    profile_image_url: string | null
+  } | null>(null)
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -17,13 +23,18 @@ export const Header: React.FC = () => {
         try {
           const { data, error } = await supabase
             .from('users')
-            .select('role, account_credits')
+            .select('role, account_credits, first_name, last_name, profile_image_url')
             .eq('id', user.id)
             .single()
           
           if (data && !error) {
             setUserRole(data.role || 'student')
             setUserCredits(data.account_credits || 0)
+            setUserProfile({
+              first_name: data.first_name,
+              last_name: data.last_name,
+              profile_image_url: data.profile_image_url
+            })
           }
         } catch (error) {
           console.error('Error fetching user data:', error)
@@ -150,7 +161,17 @@ export const Header: React.FC = () => {
 
                 <div className="relative group">
                   <button className="flex items-center space-x-2 p-2 rounded-md hover:bg-gray-100 transition-colors">
-                    <User className="w-5 h-5 text-text-secondary" />
+                    {/* Show profile image for instructors, springer, and admins */}
+                    {(userRole === 'instructor' || userRole === 'springer' || userRole === 'admin') && userProfile?.profile_image_url ? (
+                      <ProfileImage
+                        imageUrl={userProfile.profile_image_url}
+                        name={`${userProfile.first_name || ''} ${userProfile.last_name || ''}`.trim()}
+                        size="sm"
+                        showBorder={false}
+                      />
+                    ) : (
+                      <User className="w-5 h-5 text-text-secondary" />
+                    )}
                     <span className="text-sm text-text-secondary">{user.email}</span>
                   </button>
                   

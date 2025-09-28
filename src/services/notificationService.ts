@@ -91,7 +91,8 @@ export class NotificationService {
     studentName: string,
     legalArea: string,
     subArea: string,
-    caseStudyId: string
+    caseStudyId: string,
+    federalState?: string
   ) {
     let title = ''
     let message = ''
@@ -100,13 +101,21 @@ export class NotificationService {
     switch (action) {
       case 'new_request':
         title = '📝 Neue Sachverhalt-Anfrage'
-        message = `${studentName} hat einen Sachverhalt für ${legalArea} - ${subArea} angefordert.`
+        if (legalArea === 'Öffentliches Recht' && federalState) {
+          message = `${studentName} hat einen Sachverhalt für ${legalArea} - ${subArea} (${federalState}) angefordert.`
+        } else {
+          message = `${studentName} hat einen Sachverhalt für ${legalArea} - ${subArea} angefordert.`
+        }
         type = 'info'
         break
       
       case 'submission_received':
         title = '📄 Neue Bearbeitung eingereicht'
-        message = `${studentName} hat eine Bearbeitung für ${legalArea} - ${subArea} eingereicht.`
+        if (legalArea === 'Öffentliches Recht' && federalState) {
+          message = `${studentName} hat eine Bearbeitung für ${legalArea} - ${subArea} (${federalState}) eingereicht.`
+        } else {
+          message = `${studentName} hat eine Bearbeitung für ${legalArea} - ${subArea} eingereicht.`
+        }
         type = 'info'
         break
       

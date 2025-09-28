@@ -125,44 +125,52 @@ serve(async (req) => {
     
     let emailSubject = notification.title.replace(/📝|📄|🎓|✅|👨‍🏫|🎉|📚/g, '').trim()
     let emailContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-          <h2 style="color: #333; margin: 0;">${emailSubject}</h2>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+        <!-- Header -->
+        <div style="background-color: #ffffff; padding: 30px 20px; text-align: center; border-bottom: 1px solid #e9ecef;">
+          <img src="https://rpgbyockvpannrupicno.supabase.co/storage/v1/object/public/images/logos/9674199.png" 
+               alt="Kraatz-Club Logo" 
+               style="height: 60px; margin: 0 auto; display: block;">
         </div>
         
-        <div style="padding: 20px; background-color: white; border-radius: 8px; border: 1px solid #e9ecef;">
-          <p style="color: #555; font-size: 16px; line-height: 1.5;">
+        <!-- Main Content -->
+        <div style="padding: 30px 20px; background-color: white;">
+          <h2 style="color: #333; margin: 0 0 20px 0; font-size: 20px;">${emailSubject}</h2>
+          
+          <p style="color: #555; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
             Liebe/r ${instructorName},
           </p>
           
-          <p style="color: #555; font-size: 16px; line-height: 1.5;">
+          <p style="color: #555; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
             ${notification.message}
           </p>
           
           ${caseStudyDetails ? `
-            <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0;">
-              <h4 style="margin: 0 0 10px 0; color: #333;">Details:</h4>
-              <p style="margin: 5px 0; color: #555;"><strong>Student:</strong> ${studentName}</p>
-              <p style="margin: 5px 0; color: #555;"><strong>Rechtsgebiet:</strong> ${legalArea}</p>
-              <p style="margin: 5px 0; color: #555;"><strong>Teilbereich:</strong> ${subArea}</p>
-              ${focusArea ? `<p style="margin: 5px 0; color: #555;"><strong>Schwerpunkt/Notiz:</strong> ${focusArea}</p>` : ''}
+            <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #2e83c2;">
+              <h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Details:</h4>
+              <p style="margin: 8px 0; color: #555; font-size: 14px;"><strong>Student:</strong> ${studentName}</p>
+              <p style="margin: 8px 0; color: #555; font-size: 14px;"><strong>Rechtsgebiet:</strong> ${legalArea}</p>
+              <p style="margin: 8px 0; color: #555; font-size: 14px;"><strong>Teilbereich:</strong> ${subArea}</p>
+              ${focusArea ? `<p style="margin: 8px 0; color: #555; font-size: 14px;"><strong>Schwerpunkt/Notiz:</strong> ${focusArea}</p>` : ''}
             </div>
           ` : ''}
           
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
-            <p style="color: #666; font-size: 14px;">
-              Bitte loggen Sie sich in das Kraatz-Club System ein, um weitere Details zu sehen und entsprechende Maßnahmen zu ergreifen.
-            </p>
-            
+          <p style="color: #555; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+            Bitte loggen Sie sich in das Kraatz-Club System ein, um weitere Details zu sehen und entsprechende Maßnahmen zu ergreifen.
+          </p>
+          
+          <!-- Action Button -->
+          <div style="text-align: center; margin: 30px 0;">
             <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/instructor" 
-               style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
+               style="display: inline-block; background-color: #2e83c2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
               Zum Dozenten-Dashboard
             </a>
           </div>
         </div>
         
-        <div style="text-align: center; margin-top: 30px; padding: 20px; color: #666; font-size: 12px;">
-          <p>Diese E-Mail wurde automatisch vom Kraatz-Club System gesendet.</p>
+        <!-- Footer -->
+        <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
+          <p style="color: #666; font-size: 12px; margin: 5px 0;">Diese E-Mail wurde automatisch vom Kraatz-Club System gesendet.</p>
         </div>
       </div>
     `

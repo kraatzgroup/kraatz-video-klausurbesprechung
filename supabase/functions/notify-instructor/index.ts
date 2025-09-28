@@ -105,44 +105,52 @@ serve(async (req) => {
     const emailSubject = `Neue Klausur-Einreichung: ${caseStudy.legal_area} - ${caseStudy.sub_area}`
     
     const emailContent = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-          <h2 style="color: #333; margin: 0;">📝 Neue Klausur-Einreichung</h2>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+        <!-- Header -->
+        <div style="background-color: #ffffff; padding: 30px 20px; text-align: center; border-bottom: 1px solid #e9ecef;">
+          <img src="https://rpgbyockvpannrupicno.supabase.co/storage/v1/object/public/images/logos/9674199.png" 
+               alt="Kraatz-Club Logo" 
+               style="height: 60px; margin: 0 auto; display: block;">
         </div>
         
-        <div style="padding: 20px; background-color: white; border-radius: 8px; border: 1px solid #e9ecef;">
-          <p style="color: #555; font-size: 16px; line-height: 1.5;">
+        <!-- Main Content -->
+        <div style="padding: 30px 20px; background-color: white;">
+          <h2 style="color: #333; margin: 0 0 20px 0; font-size: 20px;">📝 Neue Klausur-Einreichung</h2>
+          
+          <p style="color: #555; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
             Liebe Kollegin, lieber Kollege,
           </p>
           
-          <p style="color: #555; font-size: 16px; line-height: 1.5;">
+          <p style="color: #555; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
             eine neue Klausur wurde zur Korrektur eingereicht und wartet auf Ihre Bearbeitung.
           </p>
           
-          <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin: 20px 0;">
-            <h4 style="margin: 0 0 10px 0; color: #333;">Klausur-Details:</h4>
-            <p style="margin: 5px 0; color: #555;"><strong>Student:</strong> ${student.first_name} ${student.last_name}</p>
-            <p style="margin: 5px 0; color: #555;"><strong>E-Mail:</strong> ${student.email}</p>
-            <p style="margin: 5px 0; color: #555;"><strong>Rechtsgebiet:</strong> ${caseStudy.legal_area}</p>
-            <p style="margin: 5px 0; color: #555;"><strong>Teilbereich:</strong> ${caseStudy.sub_area}</p>
-            <p style="margin: 5px 0; color: #555;"><strong>Eingereicht am:</strong> ${new Date(caseStudy.created_at).toLocaleString('de-DE')}</p>
+          <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #2e83c2;">
+            <h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">Klausur-Details:</h4>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;"><strong>Student:</strong> ${student.first_name} ${student.last_name}</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;"><strong>E-Mail:</strong> ${student.email}</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;"><strong>Rechtsgebiet:</strong> ${caseStudy.legal_area}</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;"><strong>Teilbereich:</strong> ${caseStudy.sub_area}</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;"><strong>Eingereicht am:</strong> ${new Date(caseStudy.created_at).toLocaleString('de-DE')}</p>
           </div>
           
-          <p style="color: #555; font-size: 16px; line-height: 1.5;">
+          <p style="color: #555; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
             Bitte loggen Sie sich in das Dozenten-Dashboard ein, um die Klausur zu korrigieren.
           </p>
           
-          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e9ecef;">
+          <!-- Action Button -->
+          <div style="text-align: center; margin: 30px 0;">
             <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/instructor-dashboard" 
-               style="display: inline-block; background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
+               style="display: inline-block; background-color: #2e83c2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
               Zum Dozenten-Dashboard
             </a>
           </div>
         </div>
         
-        <div style="text-align: center; margin-top: 30px; padding: 20px; color: #666; font-size: 12px;">
-          <p>Diese E-Mail wurde automatisch vom Kraatz-Club System gesendet.</p>
-          <p>Bei Fragen wenden Sie sich bitte an das Support-Team.</p>
+        <!-- Footer -->
+        <div style="background-color: #f8f9fa; padding: 20px; text-align: center; border-top: 1px solid #e9ecef;">
+          <p style="color: #666; font-size: 12px; margin: 5px 0;">Diese E-Mail wurde automatisch vom Kraatz-Club System gesendet.</p>
+          <p style="color: #666; font-size: 12px; margin: 5px 0;">Bei Fragen wenden Sie sich bitte an das Support-Team.</p>
         </div>
       </div>
     `

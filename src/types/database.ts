@@ -14,6 +14,7 @@ export interface Database {
           account_credits: number
           instructor_legal_area: string | null
           email_notifications_enabled: boolean
+          profile_image_url: string | null
           created_at: string
           updated_at: string | null
         }
@@ -26,6 +27,7 @@ export interface Database {
           account_credits?: number
           instructor_legal_area?: string | null
           email_notifications_enabled?: boolean
+          profile_image_url?: string | null
           created_at?: string
           updated_at?: string | null
         }
@@ -38,6 +40,7 @@ export interface Database {
           account_credits?: number
           instructor_legal_area?: string | null
           email_notifications_enabled?: boolean
+          profile_image_url?: string | null
           created_at?: string
           updated_at?: string | null
         }
@@ -448,6 +451,20 @@ export interface Database {
           p_grade_text: string | null
         }
         Returns: any
+      }
+      admin_delete_case_study: {
+        Args: {
+          case_id: string
+        }
+        Returns: {
+          success: boolean
+          deleted_submissions: number
+          deleted_ratings: number
+          deleted_notifications: number
+          message?: string
+          error?: string
+          error_code?: string
+        }
       }
     }
   }
