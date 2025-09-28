@@ -25,7 +25,7 @@ import ToastTestPage from './pages/ToastTestPage'
 
 function App() {
   try {
-    return (
+    const appContent = (
       <AuthProvider>
         <ToastProvider>
           <Router>
@@ -157,6 +157,8 @@ function App() {
         </ToastProvider>
     </AuthProvider>
     );
+    
+    return appContent;
   } catch (error) {
     console.error('App Error:', error);
     return (
