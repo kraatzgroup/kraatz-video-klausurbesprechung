@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, MoreVertical } from 'lucide-react';
 import { Conversation, ConversationParticipant } from '../../hooks/useConversations';
-import { formatUserRole, getRoleColor } from '../../utils/chatPermissions';
+// import { formatUserRole, getRoleColor } from '../../utils/chatPermissions';
 
 interface ChatHeaderProps {
   conversation: Conversation | null;

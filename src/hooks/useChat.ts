@@ -1,10 +1,9 @@
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useConversations } from './useConversations';
 import { useMessages } from './useMessages';
 import { useAuth } from '../contexts/AuthContext';
 import { supabase } from '../lib/supabase';
 import { 
-  canChatWith, 
   canStartChatWith,
   getAvailableChatPartners, 
   generateConversationTitle,

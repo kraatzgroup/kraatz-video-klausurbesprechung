@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Play, Clock, BookOpen, Upload, X, FileVideo, Edit, Trash2, Settings, Eye, CheckCircle, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
+import { Play, Clock, BookOpen, Upload, X, Edit, Trash2, Settings, CheckCircle, GripVertical, ArrowUp, ArrowDown } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
 import { useUserRole } from '../hooks/useUserRole'
 import { supabase } from '../lib/supabase'
@@ -45,7 +45,7 @@ export const MasterclassPage: React.FC = () => {
   const [selectedVideo, setSelectedVideo] = useState<VideoLesson | null>(null)
   const [showAdminView, setShowAdminView] = useState(false)
   const [videoProgress, setVideoProgress] = useState<VideoProgress[]>([])
-  const [videoOrder, setVideoOrder] = useState<string[]>([])
+  // const [videoOrder, setVideoOrder] = useState<string[]>([])
   const [draggedItem, setDraggedItem] = useState<string | null>(null)
   const [dragOverItem, setDragOverItem] = useState<string | null>(null)
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
@@ -228,7 +228,7 @@ export const MasterclassPage: React.FC = () => {
       localStorage.setItem('video-order-detailed', JSON.stringify(orderWithTimestamps))
       
       // Update the videoOrder state to match what we saved
-      setVideoOrder(currentVideoOrder)
+      // setVideoOrder(currentVideoOrder)
       setHasUnsavedChanges(false)
       
       // Verify the save worked

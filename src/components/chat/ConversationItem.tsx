@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { formatDistanceToNow } from 'date-fns';
-import { de } from 'date-fns/locale';
+// import { formatDistanceToNow } from 'date-fns';
+// import { de } from 'date-fns/locale';
 import { Users, MessageCircle } from 'lucide-react';
-import { Conversation, ConversationParticipant } from '../../hooks/useConversations';
+import { Conversation } from '../../hooks/useConversations';
 import { useAuth } from '../../contexts/AuthContext';
 import { supabase } from '../../lib/supabase';
 

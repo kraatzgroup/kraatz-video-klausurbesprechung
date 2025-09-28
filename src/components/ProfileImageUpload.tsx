@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react'
-import { Camera, Upload, X, User, Check, AlertCircle } from 'lucide-react'
+import { Camera, X, User, Check, AlertCircle } from 'lucide-react'
 import { supabase } from '../lib/supabase'
 import { supabaseAdmin } from '../lib/supabase-admin'
 
@@ -83,7 +83,7 @@ const ProfileImageUpload: React.FC<ProfileImageUploadProps> = ({
       const filePath = `profile-images/${fileName}`
 
       // Upload to Supabase storage
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('case-studies')
         .upload(filePath, file, {
           cacheControl: '3600',

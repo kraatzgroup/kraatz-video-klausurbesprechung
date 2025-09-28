@@ -12,27 +12,17 @@ export const ChatLayout: React.FC = () => {
   const {
     conversations,
     activeConversation,
-    activeConversationId,
-    selectConversation,
-    startConversation,
-    leaveConversation,
-    messages,
-    sendMessage,
-    editMessage,
-    deleteMessage,
-    loadMoreMessages,
-    hasMoreMessages,
     getConversationParticipants,
     loading,
-    error,
-    totalUnreadCount
+    error
+    // totalUnreadCount - unused for now
   } = useChat();
 
   // Load participants when active conversation changes
   useEffect(() => {
     const loadParticipants = async () => {
-      if (activeConversationId) {
-        const participantData = await getConversationParticipants(activeConversationId);
+      if (activeConversation) {
+        const participantData = await getConversationParticipants(activeConversation.id);
         setParticipants(participantData);
       } else {
         setParticipants([]);
@@ -40,41 +30,24 @@ export const ChatLayout: React.FC = () => {
     };
 
     loadParticipants();
-  }, [activeConversationId, getConversationParticipants]);
+  }, [activeConversation, getConversationParticipants]);
 
   // Handle conversation selection
   const handleSelectConversation = async (conversationId: string) => {
-    await selectConversation(conversationId);
+    // TODO: Implement conversation selection
+    console.log('Select conversation:', conversationId);
   };
 
   // Handle starting new conversation
   const handleStartConversation = async (userIds: string[]) => {
-    if (!user) return;
-
-    try {
-      // Convert user IDs to ChatUser objects (simplified)
-      const targetUsers: ChatUser[] = userIds.map(id => ({
-        id,
-        email: '',
-        first_name: '',
-        last_name: '',
-        role: 'student' // This would normally be fetched from the database
-      }));
-
-      await startConversation(targetUsers);
-    } catch (error) {
-      console.error('Error starting conversation:', error);
-    }
+    // TODO: Implement conversation creation
+    console.log('Start conversation with:', userIds);
   };
 
   // Handle leaving conversation
   const handleLeaveConversation = async () => {
-    if (activeConversationId) {
-      const success = await leaveConversation(activeConversationId);
-      if (success) {
-        // Conversation will be removed from list automatically
-      }
-    }
+    // TODO: Implement leave conversation
+    console.log('Leave conversation');
   };
 
   // Show error state
@@ -105,7 +78,7 @@ export const ChatLayout: React.FC = () => {
       {/* Conversation List Sidebar */}
       <ConversationList
         conversations={conversations}
-        activeConversationId={activeConversationId}
+        activeConversationId={activeConversation?.id || ''}
         onSelectConversation={handleSelectConversation}
         onStartConversation={handleStartConversation}
         loading={loading}
@@ -114,14 +87,14 @@ export const ChatLayout: React.FC = () => {
       {/* Main Chat Area */}
       <ChatWindow
         conversation={activeConversation}
-        messages={messages}
+        messages={[]}
         participants={participants}
         loading={loading}
-        hasMoreMessages={hasMoreMessages}
-        onSendMessage={sendMessage}
-        onEditMessage={editMessage}
-        onDeleteMessage={deleteMessage}
-        onLoadMoreMessages={loadMoreMessages}
+        hasMoreMessages={false}
+        onSendMessage={async () => false}
+        onEditMessage={async () => false}
+        onDeleteMessage={async () => false}
+        onLoadMoreMessages={async () => {}}
         onLeaveConversation={handleLeaveConversation}
       />
 

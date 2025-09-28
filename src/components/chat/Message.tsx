@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Edit2, Trash2, MoreVertical } from 'lucide-react';
+import { Edit2, Trash2 } from 'lucide-react';
 import { Message as MessageType } from '../../hooks/useMessages';
 import { useAuth } from '../../contexts/AuthContext';
 import { canDeleteMessage, canEditMessage, formatUserRole, getRoleColor } from '../../utils/chatPermissions';

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { ChatHeader } from './ChatHeader';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
@@ -33,13 +33,13 @@ export const ChatWindow: React.FC<ChatWindowProps> = ({
   const [isTyping, setIsTyping] = useState(false);
 
   // Handle typing indicator (placeholder for future real-time typing)
-  const handleTypingStart = () => {
-    setIsTyping(true);
-  };
+  // const handleTypingStart = () => {
+  //   setIsTyping(true);
+  // };
 
-  const handleTypingStop = () => {
-    setIsTyping(false);
-  };
+  // const handleTypingStop = () => {
+  //   setIsTyping(false);
+  // };
 
   if (!conversation) {
     return (

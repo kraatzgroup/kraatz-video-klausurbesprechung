@@ -109,82 +109,82 @@ const InstructorDashboard: React.FC = () => {
     fetchData();
   }, [user]);
 
-  const createTestData = async () => {
-    try {
-      // First, ensure we have a test user
-      const { data: existingUser } = await supabase
-        .from('users')
-        .select('id')
-        .eq('email', 'test@student.de')
-        .single();
+  // const createTestData = async () => {
+  //   try {
+  //     // First, ensure we have a test user
+  //     const { data: existingUser } = await supabase
+  //       .from('users')
+  //       .select('id')
+  //       .eq('email', 'test@student.de')
+  //       .single();
 
-      let userId = existingUser?.id;
+  //     let userId = existingUser?.id;
 
-      if (!userId) {
-        // Create a test user
-        const { data: newUser, error: userError } = await supabase
-          .from('users')
-          .insert({
-            email: 'test@student.de',
-            first_name: 'Max',
-            last_name: 'Mustermann',
-            role: 'student',
-            account_credits: 5
-          })
-          .select('id')
-          .single();
+  //     if (!userId) {
+  //       // Create a test user
+  //       const { data: newUser, error: userError } = await supabase
+  //         .from('users')
+  //         .insert({
+  //           email: 'test@student.de',
+  //           first_name: 'Max',
+  //           last_name: 'Mustermann',
+  //           role: 'student',
+  //           account_credits: 5
+  //         })
+  //         .select('id')
+  //         .single();
 
-        if (userError) {
-          console.error('Error creating test user:', userError);
-          return;
-        }
-        userId = newUser.id;
-      }
+  //       if (userError) {
+  //         console.error('Error creating test user:', userError);
+  //         return;
+  //       }
+  //       userId = newUser.id;
+  //     }
 
-      // Create test case study requests
-      const testRequests = [
-        {
-          user_id: userId,
-          case_study_number: 1,
-          study_phase: '1. Semester',
-          legal_area: 'Zivilrecht',
-          sub_area: 'BGB AT',
-          focus_area: 'Willenserklärung',
-          status: 'requested'
-        },
-        {
-          user_id: userId,
-          case_study_number: 2,
-          study_phase: '2. Semester',
-          legal_area: 'Strafrecht',
-          sub_area: 'Strafrecht AT',
-          focus_area: 'Tatbestand',
-          status: 'materials_ready'
-        },
-        {
-          user_id: userId,
-          case_study_number: 3,
-          study_phase: '3. Semester',
-          legal_area: 'Öffentliches Recht',
-          sub_area: 'Staatsrecht',
-          focus_area: 'Grundrechte',
-          status: 'submitted'
-        }
-      ];
+  //     // Create test case study requests
+  //     const testRequests = [
+  //       {
+  //         user_id: userId,
+  //         case_study_number: 1,
+  //         study_phase: '1. Semester',
+  //         legal_area: 'Zivilrecht',
+  //         sub_area: 'BGB AT',
+  //         focus_area: 'Willenserklärung',
+  //         status: 'requested'
+  //       },
+  //       {
+  //         user_id: userId,
+  //         case_study_number: 2,
+  //         study_phase: '2. Semester',
+  //         legal_area: 'Strafrecht',
+  //         sub_area: 'Strafrecht AT',
+  //         focus_area: 'Tatbestand',
+  //         status: 'materials_ready'
+  //       },
+  //       {
+  //         user_id: userId,
+  //         case_study_number: 3,
+  //         study_phase: '3. Semester',
+  //         legal_area: 'Öffentliches Recht',
+  //         sub_area: 'Staatsrecht',
+  //         focus_area: 'Grundrechte',
+  //         status: 'submitted'
+  //       }
+  //     ];
 
-      const { error: requestsError } = await supabase
-        .from('case_study_requests')
-        .insert(testRequests);
+  //     const { error: requestsError } = await supabase
+  //       .from('case_study_requests')
+  //       .insert(testRequests);
 
-      if (requestsError) {
-        console.error('Error creating test requests:', requestsError);
-      } else {
-        console.log('Test data created successfully');
-      }
-    } catch (error) {
-      console.error('Error in createTestData:', error);
-    }
-  };
+  //     if (requestsError) {
+  //       console.error('Error creating test requests:', requestsError);
+  //     } else {
+  //       console.log('Test data created successfully');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error in createTestData:', error);
+  //   }
+  // };
 
   const fetchData = async () => {
     try {
@@ -462,7 +462,7 @@ const InstructorDashboard: React.FC = () => {
         }
 
         const pdfFileName = `${selectedCaseForCorrection.id}_written_correction_${Date.now()}.pdf`;
-        const { data: pdfData, error: pdfError } = await supabase.storage
+        const { error: pdfError } = await supabase.storage
           .from('case-studies')
           .upload(pdfFileName, correctionPdfFile);
 
@@ -502,7 +502,7 @@ const InstructorDashboard: React.FC = () => {
         const fileExtension = scoringSheetFile.name.toLowerCase().endsWith('.csv') ? 'csv' : 
                               scoringSheetFile.name.toLowerCase().endsWith('.xls') ? 'xls' : 'xlsx';
         const fileName = `${selectedCaseForCorrection.id}_scoring_sheet_${Date.now()}.${fileExtension}`;
-        const { data: excelData, error: excelError } = await supabase.storage
+        const { error: excelError } = await supabase.storage
           .from('case-studies')
           .upload(fileName, scoringSheetFile);
 
@@ -643,7 +643,7 @@ const InstructorDashboard: React.FC = () => {
       const fileName = `${selectedRequest.id}_sachverhalt_${Date.now()}.pdf`;
       console.log('Uploading file with name:', fileName);
       
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('case-studies')
         .upload(fileName, materialFile);
 
@@ -765,15 +765,15 @@ const InstructorDashboard: React.FC = () => {
 
 
 
-  const openUploadModal = (submission: Submission) => {
-    setSelectedSubmission(submission);
-    setUploadData({
-      videoUrl: submission.correction_video_url || '',
-      grade: submission.grade?.toString() || '',
-      gradeText: submission.grade_text || ''
-    });
-    setUploadModalOpen(true);
-  };
+  // const openUploadModal = (submission: Submission) => {
+  //   setSelectedSubmission(submission);
+  //   setUploadData({
+  //     videoUrl: submission.correction_video_url || '',
+  //     grade: submission.grade?.toString() || '',
+  //     gradeText: submission.grade_text || ''
+  //   });
+  //   setUploadModalOpen(true);
+  // };
 
   const closeUploadModal = () => {
     setUploadModalOpen(false);
@@ -781,39 +781,39 @@ const InstructorDashboard: React.FC = () => {
     setUploadData({ videoUrl: '', grade: '', gradeText: '' });
   };
 
-  const handleVideoUpload = async () => {
-    if (!selectedSubmission || !uploadData.videoUrl || !uploadData.grade) {
-      alert('Bitte füllen Sie alle Pflichtfelder aus.');
-      return;
-    }
+  // const handleVideoUpload = async () => {
+  //   if (!selectedSubmission || !uploadData.videoUrl || !uploadData.grade) {
+  //     alert('Bitte füllen Sie alle Pflichtfelder aus.');
+  //     return;
+  //   }
 
-    try {
-      const { error } = await supabase
-        .from('submissions')
-        .update({
-          correction_video_url: uploadData.videoUrl,
-          grade: parseFloat(uploadData.grade),
-          grade_text: uploadData.gradeText,
-          status: 'corrected'
-        })
-        .eq('id', selectedSubmission.id);
+  //   try {
+  //     const { error } = await supabase
+  //       .from('submissions')
+  //       .update({
+  //         correction_video_url: uploadData.videoUrl,
+  //         grade: parseFloat(uploadData.grade),
+  //         grade_text: uploadData.gradeText,
+  //         status: 'corrected'
+  //       })
+  //       .eq('id', selectedSubmission.id);
 
-      if (error) throw error;
+  //     if (error) throw error;
 
-      // Also update the case study request status
-      await supabase
-        .from('case_study_requests')
-        .update({ status: 'corrected' })
-        .eq('id', selectedSubmission.case_study_request_id);
+  //     // Also update the case study request status
+  //     await supabase
+  //       .from('case_study_requests')
+  //       .update({ status: 'corrected' })
+  //       .eq('id', selectedSubmission.case_study_request_id);
 
-      fetchData();
-      closeUploadModal();
-      alert('Video erfolgreich hochgeladen und Note eingetragen!');
-    } catch (error) {
-      console.error('Error uploading video:', error);
-      alert('Fehler beim Hochladen. Bitte versuchen Sie es erneut.');
-    }
-  };
+  //     fetchData();
+  //     closeUploadModal();
+  //     alert('Video erfolgreich hochgeladen und Note eingetragen!');
+  //   } catch (error) {
+  //     console.error('Error uploading video:', error);
+  //     alert('Fehler beim Hochladen. Bitte versuchen Sie es erneut.');
+  //   }
+  // };
 
   const getStatusBadge = (status: string) => {
     const statusConfig = {
