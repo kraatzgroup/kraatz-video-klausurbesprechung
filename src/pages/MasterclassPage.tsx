@@ -89,7 +89,7 @@ export const MasterclassPage: React.FC = () => {
       if (fetchedLessons.length === 0) {
         console.log('No videos found - this could be RLS blocking access')
         setLessons([])
-        setVideoOrder([])
+        // setVideoOrder([])
         return
       }
 
@@ -118,7 +118,7 @@ export const MasterclassPage: React.FC = () => {
           
           console.log('Applied saved order to lessons')
           setLessons(sortedLessons)
-          setVideoOrder(sortedLessons.map(lesson => lesson.id))
+          // setVideoOrder(sortedLessons.map(lesson => lesson.id))
         } catch (e) {
           console.error('Error parsing saved video order:', e)
           // Fallback to creation date order
@@ -126,7 +126,7 @@ export const MasterclassPage: React.FC = () => {
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           )
           setLessons(sortedByDate)
-          setVideoOrder(sortedByDate.map(lesson => lesson.id))
+          // setVideoOrder(sortedByDate.map(lesson => lesson.id))
         }
       } else {
         // No saved order or not admin - use creation date order
@@ -134,13 +134,13 @@ export const MasterclassPage: React.FC = () => {
           new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
         )
         setLessons(sortedByDate)
-        setVideoOrder(sortedByDate.map(lesson => lesson.id))
+        // setVideoOrder(sortedByDate.map(lesson => lesson.id))
       }
     } catch (error) {
       console.error('Error fetching lessons:', error)
       // Set empty array to show the "no videos" message
       setLessons([])
-      setVideoOrder([])
+      // setVideoOrder([])
     } finally {
       setLoading(false)
     }
@@ -202,7 +202,7 @@ export const MasterclassPage: React.FC = () => {
 
     // Update lessons state and video order
     setLessons(updatedLessons)
-    setVideoOrder(updatedLessons.map(lesson => lesson.id))
+    // setVideoOrder(updatedLessons.map(lesson => lesson.id))
     setHasUnsavedChanges(true)
   }
 
@@ -282,7 +282,7 @@ export const MasterclassPage: React.FC = () => {
     updatedLessons.splice(targetIndex, 0, movedLesson)
 
     setLessons(updatedLessons)
-    setVideoOrder(updatedLessons.map(lesson => lesson.id))
+    // setVideoOrder(updatedLessons.map(lesson => lesson.id))
     setDraggedItem(null)
     setDragOverItem(null)
     setHasUnsavedChanges(true)

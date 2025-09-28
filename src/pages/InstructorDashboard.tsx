@@ -653,7 +653,7 @@ const InstructorDashboard: React.FC = () => {
         return;
       }
 
-      console.log('Upload successful:', data);
+      console.log('Upload successful');
 
       // Get public URL
       const { data: urlData } = supabase.storage
