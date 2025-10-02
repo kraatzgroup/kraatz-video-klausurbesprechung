@@ -93,8 +93,8 @@ export const StudentLoginForm: React.FC<StudentLoginFormProps> = ({ onSuccess })
     } catch (error: any) {
       console.error('❌ Login error:', error)
       
-      if (error.message?.includes('nicht im System gefunden')) {
-        setError('Diese E-Mail-Adresse ist nicht im Kraatz Club System registriert. Bitte erstellen Sie zunächst einen Account.')
+      if (error.message?.includes('nicht im System gefunden') || error.message?.includes('Edge Function returned a non-2xx status code')) {
+        setError('Hoppla! 😬 Es wurde kein Kraatz Club Mitglied mit dieser E-Mail Adresse gefunden.')
       } else {
         setError(error.message || 'Ein Fehler ist aufgetreten. Bitte versuchen Sie es erneut.')
       }
@@ -177,16 +177,20 @@ export const StudentLoginForm: React.FC<StudentLoginFormProps> = ({ onSuccess })
             <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
             <div>
               <p>{error}</p>
-              {error.includes('nicht im System registriert') && (
+              {error.includes('kein Kraatz Club Mitglied') && (
                 <div className="mt-2">
-                  <a 
-                    href="https://kraatz-club.de" 
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="text-red-700 hover:text-red-800 underline font-medium"
-                  >
-                    Jetzt Kraatz Club Account erstellen →
-                  </a>
+                  <p className="text-red-700">
+                    Überprüfe die E-Mail oder registriere Dich zuerst{' '}
+                    <a 
+                      href="https://kraatz-club.de" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-red-700 hover:text-red-800 underline font-medium"
+                    >
+                      hier
+                    </a>
+                    {' '}für den Kraatz Club.
+                  </p>
                 </div>
               )}
             </div>

@@ -255,15 +255,9 @@ export const Header: React.FC = () => {
                     to="/login"
                     className="text-text-secondary hover:text-primary transition-colors"
                   >
-                    Studenten Login
+                    Login
                   </Link>
                 </div>
-                <Link
-                  to="/admin"
-                  className="text-text-secondary hover:text-primary transition-colors text-sm"
-                >
-                  Dozenten/Admin
-                </Link>
                 <Link
                   to="/register"
                   className="bg-primary text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
