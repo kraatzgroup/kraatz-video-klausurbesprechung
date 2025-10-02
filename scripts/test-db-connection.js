@@ -1,7 +1,7 @@
 const { createClient } = require('@supabase/supabase-js');
 
-const supabaseUrl = 'https://rpgbyockvpannrupicno.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTYzOTM1MTksImV4cCI6MjA3MTk2OTUxOX0._zvzPGXEkQLh-_IcmS7JcgndKbOq6eD3SViizKH0oos';
+const supabaseUrl = process.env.SUPABASE_URL || 'https://rpgbyockvpannrupicno.supabase.co';
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
 async function testDatabase() {
   const supabase = createClient(supabaseUrl, supabaseAnonKey);

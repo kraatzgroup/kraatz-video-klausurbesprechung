@@ -101,7 +101,7 @@ async function setupVacationCron() {
             url := 'https://rpgbyockvpannrupicno.supabase.co/functions/v1/vacation-checker',
             headers := jsonb_build_object(
               'Content-Type', 'application/json',
-              'Authorization', 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJwZ2J5b2NrdnBhbm5ydXBpY25vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1NjM5MzUxOSwiZXhwIjoyMDcxOTY5NTE5fQ.7qzGyeOOVwNbmZPxgK4aiQi9mh4gipFWV8kk-LngUbk'
+              'Authorization', 'Bearer ' || current_setting('app.supabase_service_role_key')
             ),
             body := jsonb_build_object(
               'source', 'cron_job',
