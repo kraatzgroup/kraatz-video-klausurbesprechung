@@ -13,13 +13,21 @@ export const AuthCallbackPage: React.FC = () => {
     const handleAuthCallback = async () => {
       try {
         console.log('🔗 Processing auth callback...')
+        console.log('🌐 Current URL:', window.location.href)
+        console.log('🔍 Search params:', window.location.search)
         
         // Get parameters from URL
         const token = searchParams.get('token')
         const type = searchParams.get('type')
         const redirectTo = searchParams.get('redirect_to') || '/dashboard'
 
-        console.log('📝 Auth callback params:', { token: !!token, type, redirectTo })
+        console.log('📝 Auth callback params:', { 
+          token: !!token, 
+          tokenLength: token?.length, 
+          type, 
+          redirectTo,
+          allParams: Object.fromEntries(searchParams.entries())
+        })
 
         if (!token || !type) {
           console.error('❌ Missing token or type in callback URL')
