@@ -24,6 +24,7 @@ import { MasterclassPage } from './pages/MasterclassPage'
 import { ChatPage } from './pages/ChatPage'
 import ToastTestPage from './pages/ToastTestPage'
 import { CheckoutSuccessPage } from './pages/CheckoutSuccessPage'
+import { AuthCallbackPage } from './pages/AuthCallbackPage'
 
 function App() {
   try {
@@ -39,6 +40,7 @@ function App() {
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/packages" element={<PackagesPage />} />
             <Route path="/checkout-success" element={<CheckoutSuccessPage />} />
+            <Route path="/auth/callback" element={<AuthCallbackPage />} />
             <Route
               path="/dashboard"
               element={

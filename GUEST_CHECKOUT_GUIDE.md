@@ -67,8 +67,9 @@ if (isGuestCheckout) {
 - Wird zu Stripe Checkout weitergeleitet
 
 ### 2. **Stripe Checkout**
-- User gibt Email und Zahlungsdaten ein
-- User gibt optional Namen ein
+- User gibt **Email und Zahlungsdaten ein** (erforderlich)
+- User gibt **Rechnungsadresse mit vollständigem Namen ein** (erforderlich)
+- Optional: Lieferadresse für DACH-Region
 - Stripe erstellt automatisch Customer
 - Payment wird verarbeitet
 
@@ -121,8 +122,14 @@ async function handleGuestCheckoutSession(supabaseClient, checkoutSession, packa
 
 ### **Stripe Customer Erstellung**
 ```typescript
-customer_creation: 'always' // Erstellt immer neuen Customer
-// Kein customer_email vorgegeben - User gibt eigene Email ein
+customer_creation: 'always', // Erstellt immer neuen Customer
+billing_address_collection: 'required', // Rechnungsadresse mit Name erforderlich
+shipping_address_collection: {
+  allowed_countries: ['DE', 'AT', 'CH'] // DACH-Region
+},
+phone_number_collection: {
+  enabled: false // Telefonnummer optional
+}
 ```
 
 ### **Metadata Tracking**
@@ -137,11 +144,17 @@ metadata: {
 
 ### **User-Erstellung**
 ```typescript
+// Name aus Billing Address parsen
+const fullName = checkoutSession.customer_details?.address?.name
+const nameParts = fullName.split(' ')
+const firstName = nameParts[0] || null
+const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null
+
 // Neue User werden mit allen erforderlichen Feldern erstellt:
 {
   email: customerEmail, // Aus Stripe Checkout
-  first_name: firstName, // Aus Stripe Name geparst
-  last_name: lastName,
+  first_name: firstName, // Aus Billing Address Name geparst
+  last_name: lastName, // Aus Billing Address Name geparst
   role: 'student', // Standard-Rolle
   account_credits: 0, // Startwert (wird dann erhöht)
   stripe_customer_id: stripeCustomerId, // Sofortige Verknüpfung

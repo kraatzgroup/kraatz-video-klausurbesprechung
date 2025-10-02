@@ -1,5 +1,8 @@
+// @ts-ignore - Deno runtime modules
 import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+// @ts-ignore - Deno runtime modules
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+// @ts-ignore - Deno runtime modules
 import Stripe from 'https://esm.sh/stripe@14.21.0'
 
 const corsHeaders = {
@@ -27,6 +30,7 @@ serve(async (req) => {
     }
 
     // Initialize Stripe
+    // @ts-ignore - Deno runtime API
     const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
       apiVersion: '2023-10-16',
     })
@@ -57,13 +61,20 @@ serve(async (req) => {
     console.log(`✅ Stripe customer found: ${customer.id} for email: ${email}`)
 
     // Initialize Supabase client for generating magic link
+    // @ts-ignore - Deno runtime API
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
+    // @ts-ignore - Deno runtime API
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false
+      },
+      global: {
+        headers: {
+          'X-Client-Info': 'kraatz-club-magic-link'
+        }
       }
     })
 
@@ -74,7 +85,7 @@ serve(async (req) => {
       type: 'magiclink',
       email: email,
       options: {
-        redirectTo: `${req.headers.get('origin') || 'https://klausuren.kraatz-club.de'}/dashboard`
+        redirectTo: 'https://klausuren.kraatz-club.de/dashboard'
       }
     })
 
@@ -92,8 +103,8 @@ serve(async (req) => {
       )
     }
 
-    const magicLink = authData.properties?.action_link
-    if (!magicLink) {
+    const originalMagicLink = authData.properties?.action_link
+    if (!originalMagicLink) {
       console.error(`❌ No magic link generated`)
       return new Response(
         JSON.stringify({ 
@@ -106,11 +117,39 @@ serve(async (req) => {
       )
     }
 
+    console.log('📝 Original Supabase magic link:', originalMagicLink)
+
+    // ALWAYS create custom magic link with our domain and callback
+    let magicLink = originalMagicLink
+    
+    // Extract token and type from Supabase link
+    const tokenMatch = originalMagicLink.match(/[?&]token=([^&]+)/)
+    const typeMatch = originalMagicLink.match(/[?&]type=([^&]+)/)
+    
+    if (tokenMatch && typeMatch) {
+      const token = tokenMatch[1]
+      const type = typeMatch[1]
+      
+      // Create our custom magic link that points to our callback
+      magicLink = `https://klausuren.kraatz-club.de/auth/callback?token=${token}&type=${type}&redirect_to=${encodeURIComponent('https://klausuren.kraatz-club.de/dashboard')}`
+      
+      console.log('✅ Created custom magic link:', magicLink)
+    } else {
+      console.error('❌ Could not extract token from Supabase magic link')
+      // Fallback: try to replace URLs in original link
+      magicLink = originalMagicLink
+        .replace(/https?:\/\/rpgbyockvpannrupicno\.supabase\.co/g, 'https://klausuren.kraatz-club.de')
+        .replace(/\/auth\/v1\/verify/g, '/auth/callback')
+      
+      console.log('⚠️ Using fallback magic link:', magicLink)
+    }
+
     console.log(`✅ Magic link generated successfully`)
 
     // Send email via Mailgun (same system as other notifications)
     console.log(`📧 Sending magic link email via Mailgun to: ${email}`)
 
+    // @ts-ignore - Deno runtime API
     const mailgunApiKey = Deno.env.get('MAILGUN_API_KEY')
     const mailgunDomain = 'kraatz-group.de' // Same as other functions
 

@@ -529,37 +529,213 @@ async function handleCustomerCreated(supabaseClient: any, customer: any) {
         console.log('ℹ️ User already has Stripe customer ID:', existingUser.stripe_customer_id)
       }
     } else {
-      // User doesn't exist - create new user
-      console.log('👤 Creating new user from Stripe customer')
+      // User doesn't exist - create new user with Auth + Database
+      console.log('👤 Creating new user from Stripe customer with Auth + Database')
       
-      const { data: newUser, error: createError } = await supabaseClient
-        .from('users')
-        .insert({
+      try {
+        // Create Auth user first using Supabase Admin API
+        const { data: authUser, error: authError } = await supabaseClient.auth.admin.createUser({
           email: customer.email,
-          first_name: firstName,
-          last_name: lastName,
-          role: 'student', // Default role for new customers
-          account_credits: 0, // Start with 0 credits
-          stripe_customer_id: customer.id,
-          email_notifications_enabled: true // Default to enabled
+          email_confirm: true, // Skip email confirmation
+          user_metadata: {
+            first_name: firstName,
+            last_name: lastName,
+            stripe_customer_id: customer.id,
+            created_via: 'stripe_customer_created'
+          }
         })
-        .select()
-        .single()
 
-      if (createError) {
-        console.error('❌ Error creating new user:', createError)
+        if (authError) {
+          console.error('❌ Error creating auth user:', authError)
+          return
+        }
+
+        console.log('✅ Created auth user:', authUser.user.id)
+
+        // Create database user with same ID
+        const { data: newUser, error: createError } = await supabaseClient
+          .from('users')
+          .insert({
+            id: authUser.user.id, // Use same ID as auth user
+            email: customer.email,
+            first_name: firstName,
+            last_name: lastName,
+            role: 'student', // Default role for new customers
+            account_credits: 0, // Start with 0 credits
+            stripe_customer_id: customer.id,
+            email_notifications_enabled: true // Default to enabled
+          })
+          .select()
+          .single()
+
+        if (createError) {
+          console.error('❌ Error creating database user:', createError)
+          
+          // Cleanup: Delete auth user if database creation failed
+          await supabaseClient.auth.admin.deleteUser(authUser.user.id)
+          console.log('🧹 Cleaned up auth user due to database error')
+          return
+        }
+
+        console.log('✅ Successfully created complete user:', {
+          userId: newUser.id,
+          email: newUser.email,
+          stripeCustomerId: newUser.stripe_customer_id
+        })
+
+        // Check if there are any completed checkout sessions for this customer
+        // that haven't been processed yet (race condition handling)
+        console.log('🔍 Checking for pending checkout sessions for customer:', customer.id)
+        
+        try {
+          const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
+            apiVersion: '2023-10-16',
+          })
+
+          // Get recent checkout sessions for this customer
+          const sessionsResponse = await fetch(`https://api.stripe.com/v1/checkout/sessions?customer=${customer.id}&limit=5`, {
+            headers: {
+              'Authorization': `Bearer ${Deno.env.get('STRIPE_SECRET_KEY')}`,
+            }
+          })
+
+          if (sessionsResponse.ok) {
+            const sessionsData = await sessionsResponse.json()
+            
+            for (const session of sessionsData.data) {
+              if (session.status === 'complete' && session.metadata?.guestCheckout === 'true') {
+                console.log('🎯 Found completed guest checkout session:', session.id)
+                
+                // Check if order already exists for this session
+                const { data: existingOrder } = await supabaseClient
+                  .from('orders')
+                  .select('id')
+                  .eq('stripe_payment_intent_id', session.id)
+                  .single()
+
+                if (!existingOrder) {
+                  const packageId = session.metadata?.packageId
+                  if (packageId) {
+                    console.log('📦 Processing pending package order:', packageId)
+                    await createOrderFromSession(supabaseClient, session, packageId, newUser.id)
+                  }
+                } else {
+                  console.log('⚠️ Order already exists for session:', session.id)
+                }
+              }
+            }
+          }
+        } catch (stripeError) {
+          console.error('⚠️ Error checking for pending checkout sessions:', stripeError)
+          // Don't fail the user creation if this fails
+        }
+
+      } catch (error) {
+        console.error('❌ Error in user creation process:', error)
         return
       }
-
-      console.log('✅ Successfully created new user:', {
-        userId: newUser.id,
-        email: newUser.email,
-        stripeCustomerId: newUser.stripe_customer_id
-      })
     }
 
   } catch (error) {
     console.error('❌ Error processing customer.created:', error)
+  }
+}
+
+async function createOrderFromSession(supabaseClient: any, checkoutSession: any, packageId: string, userId: string) {
+  try {
+    console.log('📦 Creating order from checkout session:', {
+      sessionId: checkoutSession.id,
+      packageId: packageId,
+      userId: userId
+    })
+
+    // Get package data
+    const { data: packageData, error: packageError } = await supabaseClient
+      .from('packages')
+      .select('*')
+      .eq('id', packageId)
+      .single()
+
+    if (packageError || !packageData) {
+      console.error('❌ Package not found:', packageId)
+      return
+    }
+
+    // Create order
+    const { data: newOrder, error: createOrderError } = await supabaseClient
+      .from('orders')
+      .insert({
+        user_id: userId,
+        package_id: packageId,
+        stripe_payment_intent_id: checkoutSession.id,
+        status: 'completed',
+        total_cents: checkoutSession.amount_total || 0
+      })
+      .select('*, packages(*)')
+      .single()
+
+    if (createOrderError) {
+      console.error('❌ Error creating order:', createOrderError)
+      return
+    }
+
+    console.log('✅ Order created:', newOrder.id)
+
+    // Add credits to user account
+    const { data: userData, error: userError } = await supabaseClient
+      .from('users')
+      .select('account_credits')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !userData) {
+      console.error('❌ User not found for credit update:', userId)
+      return
+    }
+
+    const newCredits = userData.account_credits + packageData.case_study_count
+
+    const { error: updateUserError } = await supabaseClient
+      .from('users')
+      .update({ account_credits: newCredits })
+      .eq('id', userId)
+
+    if (updateUserError) {
+      console.error('❌ Error updating user credits:', updateUserError)
+      return
+    }
+
+    console.log('✅ Credits updated:', {
+      userId: userId,
+      oldCredits: userData.account_credits,
+      newCredits: newCredits,
+      addedCredits: packageData.case_study_count
+    })
+
+    // Create notification for user
+    try {
+      await supabaseClient
+        .from('notifications')
+        .insert({
+          user_id: userId,
+          type: 'order_completed',
+          title: 'Bestellung abgeschlossen',
+          message: `Ihre Bestellung für ${packageData.name} wurde erfolgreich abgeschlossen. ${packageData.case_study_count} Credits wurden Ihrem Konto gutgeschrieben.`,
+          metadata: {
+            order_id: newOrder.id,
+            package_name: packageData.name,
+            credits_added: packageData.case_study_count
+          }
+        })
+
+      console.log('✅ Notification created for user:', userId)
+    } catch (notificationError) {
+      console.error('⚠️ Error creating notification:', notificationError)
+      // Don't fail the order creation if notification fails
+    }
+
+  } catch (error) {
+    console.error('❌ Error creating order from session:', error)
   }
 }
 
@@ -576,15 +752,45 @@ async function handleCustomerUpdated(supabaseClient: any, customer: any) {
       return
     }
 
-    // Find user by Stripe customer ID
-    const { data: existingUser, error: findError } = await supabaseClient
+    // Find user by Stripe customer ID first
+    let { data: existingUser, error: findError } = await supabaseClient
       .from('users')
-      .select('id, email, first_name, last_name')
+      .select('id, email, first_name, last_name, stripe_customer_id')
       .eq('stripe_customer_id', customer.id)
       .single()
 
-    if (findError) {
-      console.log('⚠️ User not found for Stripe customer ID:', customer.id)
+    // If not found by customer ID, try to find by email and link them
+    if (findError && findError.code === 'PGRST116') {
+      console.log('🔍 User not found by customer ID, searching by email:', customer.email)
+      
+      const { data: userByEmail, error: emailError } = await supabaseClient
+        .from('users')
+        .select('id, email, first_name, last_name, stripe_customer_id')
+        .eq('email', customer.email)
+        .single()
+
+      if (userByEmail && !emailError) {
+        console.log('✅ Found user by email, linking Stripe customer ID')
+        
+        // Update user with Stripe customer ID
+        const { error: linkError } = await supabaseClient
+          .from('users')
+          .update({ stripe_customer_id: customer.id })
+          .eq('id', userByEmail.id)
+
+        if (linkError) {
+          console.error('❌ Error linking Stripe customer ID:', linkError)
+          return
+        }
+
+        existingUser = { ...userByEmail, stripe_customer_id: customer.id }
+        console.log('🔗 Successfully linked user to Stripe customer')
+      } else {
+        console.log('⚠️ User not found by email either:', customer.email)
+        return
+      }
+    } else if (findError) {
+      console.error('❌ Error finding user:', findError)
       return
     }
 
@@ -654,14 +860,32 @@ async function handleGuestCheckoutSession(supabaseClient: any, checkoutSession: 
       return
     }
 
-    // Parse customer name from Stripe
+    // Parse customer name from Stripe billing address (primary source)
     let firstName: string | null = null
     let lastName: string | null = null
     
-    if (checkoutSession.customer_details?.name) {
-      const nameParts = checkoutSession.customer_details.name.trim().split(' ')
+    // Primary: Get name from billing address (required field)
+    if (checkoutSession.customer_details?.address?.name) {
+      const fullName = checkoutSession.customer_details.address.name.trim()
+      const nameParts = fullName.split(' ')
       firstName = nameParts[0] || null
       lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null
+      console.log('📝 Name from billing address:', { firstName, lastName, fullName })
+    }
+    
+    // Fallback to customer_details name if billing address name not available
+    else if (checkoutSession.customer_details?.name) {
+      const fullName = checkoutSession.customer_details.name.trim()
+      const nameParts = fullName.split(' ')
+      firstName = nameParts[0] || null
+      lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null
+      console.log('📝 Name from customer_details (fallback):', { firstName, lastName, fullName })
+    }
+    
+    // Validate that we have at least first name
+    if (!firstName) {
+      console.error('❌ No name found in billing address or customer details')
+      return
     }
 
     // Check if user already exists by email
@@ -687,29 +911,60 @@ async function handleGuestCheckoutSession(supabaseClient: any, checkoutSession: 
       }
     } else {
       // Create new user from guest checkout
-      console.log('👤 Creating new user from guest checkout')
+      console.log('👤 Creating new user from guest checkout with Auth + Database')
       
-      const { data: newUser, error: createError } = await supabaseClient
-        .from('users')
-        .insert({
+      try {
+        // Create Auth user first using Supabase Admin API
+        const { data: authUser, error: authError } = await supabaseClient.auth.admin.createUser({
           email: customerEmail,
-          first_name: firstName,
-          last_name: lastName,
-          role: 'student',
-          account_credits: 0,
-          stripe_customer_id: stripeCustomerId,
-          email_notifications_enabled: true
+          email_confirm: true, // Skip email confirmation for guest checkout
+          user_metadata: {
+            first_name: firstName,
+            last_name: lastName,
+            stripe_customer_id: stripeCustomerId,
+            created_via: 'guest_checkout'
+          }
         })
-        .select()
-        .single()
 
-      if (createError) {
-        console.error('❌ Error creating user from guest checkout:', createError)
+        if (authError) {
+          console.error('❌ Error creating auth user:', authError)
+          return
+        }
+
+        console.log('✅ Created auth user:', authUser.user.id)
+
+        // Create database user with same ID
+        const { data: newUser, error: createError } = await supabaseClient
+          .from('users')
+          .insert({
+            id: authUser.user.id, // Use same ID as auth user
+            email: customerEmail,
+            first_name: firstName,
+            last_name: lastName,
+            role: 'student',
+            account_credits: 0,
+            stripe_customer_id: stripeCustomerId,
+            email_notifications_enabled: true
+          })
+          .select()
+          .single()
+
+        if (createError) {
+          console.error('❌ Error creating database user:', createError)
+          
+          // Cleanup: Delete auth user if database creation failed
+          await supabaseClient.auth.admin.deleteUser(authUser.user.id)
+          console.log('🧹 Cleaned up auth user due to database error')
+          return
+        }
+
+        userId = newUser.id
+        console.log('✅ Created complete user (auth + database):', userId)
+
+      } catch (error) {
+        console.error('❌ Error in user creation process:', error)
         return
       }
-
-      userId = newUser.id
-      console.log('✅ Created new user:', userId)
     }
 
     // Create order

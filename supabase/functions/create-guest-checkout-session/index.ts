@@ -55,6 +55,13 @@ serve(async (req) => {
       // No customer_email - let user enter their own email
       allow_promotion_codes: true, // Enable promotion codes
       customer_creation: 'always', // Always create a customer
+      billing_address_collection: 'required', // Require billing address with name
+      shipping_address_collection: {
+        allowed_countries: ['DE', 'AT', 'CH'] // Limit to DACH region
+      },
+      phone_number_collection: {
+        enabled: false // Optional: disable phone collection
+      },
       metadata: {
         packageId: packageId,
         packageName: packageData.name,

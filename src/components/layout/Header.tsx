@@ -78,7 +78,11 @@ export const Header: React.FC = () => {
         <div className="flex justify-between items-center h-16">
           <div className="flex items-center">
             <Link to="/" className="flex items-center">
-              <img src="/4 Kopie (1).png" alt="Kraatz Logo" className="h-10" />
+              <img 
+                src="/4 Kopie (1).png" 
+                alt="Kraatz Logo" 
+                className="h-8 sm:h-10 w-auto object-contain" 
+              />
             </Link>
           </div>
 
@@ -258,12 +262,6 @@ export const Header: React.FC = () => {
                     Login
                   </Link>
                 </div>
-                <Link
-                  to="/register"
-                  className="bg-primary text-white px-4 py-2 rounded-md hover:bg-blue-700 transition-colors"
-                >
-                  Registrieren
-                </Link>
               </div>
             )}
           </div>
