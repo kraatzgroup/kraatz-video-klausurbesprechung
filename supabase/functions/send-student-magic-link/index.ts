@@ -81,12 +81,10 @@ serve(async (req) => {
     console.log(`🔗 Generating magic link for verified email: ${email}`)
 
     // Generate magic link via Supabase Auth (valid for 30 minutes)
+    // Don't specify redirectTo - let our callback handle it
     const { data: authData, error: authError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
-      email: email,
-      options: {
-        redirectTo: 'https://klausuren.kraatz-club.de/dashboard'
-      }
+      email: email
     })
 
     if (authError) {
@@ -130,8 +128,8 @@ serve(async (req) => {
       const token = tokenMatch[1]
       const type = typeMatch[1]
       
-      // Create our custom magic link that points to our callback
-      magicLink = `https://klausuren.kraatz-club.de/auth/callback?token=${token}&type=${type}&redirect_to=${encodeURIComponent('https://klausuren.kraatz-club.de/dashboard')}`
+      // Create our custom magic link that points to our callback (no redirect_to needed)
+      magicLink = `https://klausuren.kraatz-club.de/auth/callback?token=${token}&type=${type}`
       
       console.log('✅ Created custom magic link:', magicLink)
     } else {

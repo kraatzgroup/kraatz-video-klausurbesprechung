@@ -16,24 +16,16 @@ export const AuthCallbackPage: React.FC = () => {
         console.log('🌐 Current URL:', window.location.href)
         console.log('🔍 Search params:', window.location.search)
         
+        // SIMPLE SOLUTION: Always redirect to /dashboard
+        // Magic links are for student login, so always go to dashboard
+        const redirectTo = '/dashboard'
+        
         // Get parameters from URL
         let token = searchParams.get('token')
         let type = searchParams.get('type')
-        let redirectTo = searchParams.get('redirect_to') || '/dashboard'
 
-        // Handle malformed URLs where redirect_to might be in the pathname
-        const pathname = window.location.pathname
-        if (pathname.includes('/auth/callback/') && !token) {
-          console.log('🔧 Detected malformed URL, attempting to parse...')
-          
-          // Extract from pathname like /auth/callback/https://klausuren.kraatz-club.de/dashboard
-          const pathParts = pathname.split('/auth/callback/')
-          if (pathParts.length > 1) {
-            redirectTo = '/' + pathParts[1].split('/').slice(-1)[0] // Get last part (dashboard)
-            console.log('🔧 Extracted redirectTo from pathname:', redirectTo)
-          }
-          
-          // Try to get token and type from hash or search params
+        // Handle malformed URLs - try to extract token from hash or other sources
+        if (!token) {
           const hash = window.location.hash
           if (hash) {
             const hashParams = new URLSearchParams(hash.substring(1))
