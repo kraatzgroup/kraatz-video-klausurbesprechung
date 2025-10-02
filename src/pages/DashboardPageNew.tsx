@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
-import { CreditCard, BookOpen, Plus, Download, Upload, FileText, Video, X, Clock, CheckCircle, ChevronDown, ChevronUp, Star, MessageSquare, Table } from 'lucide-react'
+import { CreditCard, BookOpen, Plus, Download, Upload, FileText, Video, X, Clock, CheckCircle, ChevronDown, ChevronUp, Star, MessageSquare, Table, Edit3, Eye } from 'lucide-react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { NotificationService } from '../services/notificationService'
+import { FeedbackForm } from '../components/FeedbackForm'
+import { FeedbackPDFPreview } from '../components/FeedbackPDFPreview'
+import { previewFeedbackPDF, downloadFeedbackPDF } from '../utils/pdfGenerator'
 
 interface UserProfile {
   account_credits: number
@@ -52,6 +55,19 @@ interface CaseStudyRating {
   updated_at: string;
 }
 
+interface StudentFeedback {
+  id: string;
+  case_study_id: string;
+  user_id: string;
+  mistakes_learned: string;
+  improvements_planned: string;
+  review_date: string;
+  email_reminder: boolean;
+  reminder_sent: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
 export const DashboardPageNew: React.FC = () => {
   const { user } = useAuth()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -71,6 +87,12 @@ export const DashboardPageNew: React.FC = () => {
   const [tempRating, setTempRating] = useState(0)
   const [tempFeedback, setTempFeedback] = useState('')
   const [submittingRating, setSubmittingRating] = useState(false)
+  const [showFeedbackModal, setShowFeedbackModal] = useState(false)
+  const [currentFeedbackCaseId, setCurrentFeedbackCaseId] = useState<string | null>(null)
+  const [studentFeedbacks, setStudentFeedbacks] = useState<Map<string, StudentFeedback>>(new Map())
+  const [showPDFPreview, setShowPDFPreview] = useState(false)
+  const [currentPDFData, setCurrentPDFData] = useState<string>('')
+  const [currentPDFFilename, setCurrentPDFFilename] = useState<string>('')
 
   // Track video view
   const handleVideoView = useCallback(async (caseStudyId: string) => {
@@ -192,6 +214,26 @@ export const DashboardPageNew: React.FC = () => {
     }
   }
 
+  // Fetch student feedbacks for completed case studies
+  const fetchStudentFeedbacks = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('student_feedback')
+        .select('*')
+        .eq('user_id', user?.id)
+
+      if (error) throw error
+
+      const feedbacksMap = new Map<string, StudentFeedback>()
+      data?.forEach((feedback: any) => {
+        feedbacksMap.set(feedback.case_study_id, feedback)
+      })
+      setStudentFeedbacks(feedbacksMap)
+    } catch (error) {
+      console.error('Error fetching student feedbacks:', error)
+    }
+  }
+
   // Open rating modal
   const openRatingModal = (caseStudyId: string) => {
     const existingRating = ratings.get(caseStudyId)
@@ -199,6 +241,112 @@ export const DashboardPageNew: React.FC = () => {
     setTempRating(existingRating?.rating || 0)
     setTempFeedback(existingRating?.feedback || '')
     setShowRatingModal(true)
+  }
+
+  // Open feedback modal
+  const openFeedbackModal = (caseStudyId: string) => {
+    setCurrentFeedbackCaseId(caseStudyId)
+    setShowFeedbackModal(true)
+  }
+
+  // Close feedback modal
+  const closeFeedbackModal = () => {
+    setShowFeedbackModal(false)
+    setCurrentFeedbackCaseId(null)
+    // Refresh feedbacks after closing modal
+    fetchStudentFeedbacks()
+  }
+
+  // Open PDF preview
+  const openPDFPreview = (caseStudyId: string) => {
+    const feedback = studentFeedbacks.get(caseStudyId)
+    const caseStudy = caseStudies.find(cs => cs.id === caseStudyId)
+    
+    if (!feedback || !caseStudy || !profile) {
+      alert('Feedbackpapier konnte nicht gefunden werden.')
+      return
+    }
+
+    const caseStudyInfo = {
+      legal_area: caseStudy.legal_area,
+      sub_area: caseStudy.sub_area,
+      focus_area: caseStudy.focus_area,
+      case_study_number: caseStudy.case_study_number
+    }
+
+    const userInfo = {
+      first_name: profile.first_name,
+      last_name: profile.last_name
+    }
+
+    const pdfDataUri = previewFeedbackPDF(feedback, caseStudyInfo, userInfo)
+    const filename = `Feedbackpapier_${caseStudy.legal_area}_${caseStudy.sub_area}_${new Date(feedback.created_at).toLocaleDateString('de-DE').replace(/\./g, '-')}.pdf`
+    
+    // Set the current case study ID for download
+    setCurrentFeedbackCaseId(caseStudyId)
+    setCurrentPDFData(pdfDataUri)
+    setCurrentPDFFilename(filename)
+    setShowPDFPreview(true)
+  }
+
+  // Close PDF preview
+  const closePDFPreview = () => {
+    setShowPDFPreview(false)
+    setCurrentPDFData('')
+    setCurrentPDFFilename('')
+    setCurrentFeedbackCaseId(null)
+  }
+
+  // Download PDF from preview
+  const handlePDFDownload = () => {
+    console.log('🔄 handlePDFDownload called with currentFeedbackCaseId:', currentFeedbackCaseId)
+    
+    const feedback = studentFeedbacks.get(currentFeedbackCaseId || '')
+    const caseStudy = caseStudies.find(cs => cs.id === currentFeedbackCaseId)
+    
+    console.log('📊 Data check:', {
+      currentFeedbackCaseId,
+      feedback: !!feedback,
+      caseStudy: !!caseStudy,
+      profile: !!profile,
+      studentFeedbacksSize: studentFeedbacks.size,
+      caseStudiesLength: caseStudies.length
+    })
+    
+    if (!feedback || !caseStudy || !profile) {
+      console.error('❌ Missing data for PDF download:', { 
+        feedback: !!feedback, 
+        caseStudy: !!caseStudy, 
+        profile: !!profile,
+        currentFeedbackCaseId 
+      })
+      alert('Fehler: Nicht alle Daten für den PDF-Download verfügbar.')
+      return
+    }
+
+    const caseStudyInfo = {
+      legal_area: caseStudy.legal_area,
+      sub_area: caseStudy.sub_area,
+      focus_area: caseStudy.focus_area,
+      case_study_number: caseStudy.case_study_number
+    }
+
+    const userInfo = {
+      first_name: profile.first_name,
+      last_name: profile.last_name
+    }
+
+    try {
+      console.log('🔄 Starting PDF download from Dashboard...', {
+        feedback,
+        caseStudyInfo,
+        userInfo
+      })
+      downloadFeedbackPDF(feedback, caseStudyInfo, userInfo)
+    } catch (error) {
+      console.error('❌ Error in handlePDFDownload:', error)
+      alert('Fehler beim PDF-Download. Bitte versuchen Sie es erneut.')
+    }
   }
 
   // Close rating modal
@@ -299,6 +447,7 @@ export const DashboardPageNew: React.FC = () => {
     if (user) {
       fetchUserData()
       fetchRatings()
+      fetchStudentFeedbacks()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
@@ -990,7 +1139,7 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                                      onClick={(e) => e.stopPropagation()}
+                                      onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>Sachverhalt</span>
@@ -1002,7 +1151,7 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="px-3 py-2 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2"
-                                      onClick={(e) => e.stopPropagation()}
+                                      onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>Zusatzmaterial</span>
@@ -1014,7 +1163,7 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="px-3 py-2 rounded-lg text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2"
-                                      onClick={(e) => e.stopPropagation()}
+                                      onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <Upload className="w-4 h-4" />
                                       <span>Meine Bearbeitung</span>
@@ -1043,6 +1192,30 @@ export const DashboardPageNew: React.FC = () => {
                                       {caseStudy.video_viewed_at && <span className="text-xs">✓</span>}
                                     </button>
                                   )}
+                                  { (
+                                    <a
+                                      href={caseStudy.solution_pdf_url || "#"}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
+                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${ caseStudy.solution_pdf_url ? "bg-indigo-600 text-white hover:bg-indigo-700" : "bg-gray-300 text-gray-500 cursor-not-allowed" }`}
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      <span>Klausur-Lösung</span>
+                                    </a>
+                                  )}
+                                  {caseStudy.scoring_sheet_url && (
+                                    <a
+                                      href={caseStudy.scoring_sheet_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
+                                      className="px-3 py-2 rounded-lg text-sm bg-orange-600 text-white hover:bg-orange-700 transition-colors flex items-center space-x-2"
+                                    >
+                                      <Table className="w-4 h-4" />
+                                      <span>Korrekturbogen</span>
+                                    </a>
+                                  )}
                                   {caseStudy.written_correction_url && (
                                     <a
                                       href={caseStudy.written_correction_url}
@@ -1059,9 +1232,38 @@ export const DashboardPageNew: React.FC = () => {
                                       }`}
                                     >
                                       <FileText className="w-4 h-4" />
-                                      <span>PDF herunterladen</span>
+                                      <span>Schriftliche Korrektur</span>
                                       {caseStudy.pdf_downloaded_at && <span className="text-xs">✓</span>}
                                     </a>
+                                  )}
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      openFeedbackModal(caseStudy.id)
+                                    }}
+                                    className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
+                                      studentFeedbacks.has(caseStudy.id)
+                                        ? 'bg-green-600 text-white hover:bg-green-700'
+                                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                                    }`}
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                    <span>
+                                      {studentFeedbacks.has(caseStudy.id) ? 'Feedbackpapier bearbeiten' : 'Feedbackpapier erstellen'}
+                                    </span>
+                                    {studentFeedbacks.has(caseStudy.id) && <span className="text-xs">✓</span>}
+                                  </button>
+                                  {studentFeedbacks.has(caseStudy.id) && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        openPDFPreview(caseStudy.id)
+                                      }}
+                                      className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 bg-orange-600 text-white hover:bg-orange-700"
+                                    >
+                                      <Eye className="w-4 h-4" />
+                                      <span>Feedbackpapier anzeigen</span>
+                                    </button>
                                   )}
                                 </div>
                               </div>
@@ -1164,7 +1366,7 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2"
-                                      onClick={(e) => e.stopPropagation()}
+                                      onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>Sachverhalt</span>
@@ -1176,7 +1378,7 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="px-3 py-2 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2"
-                                      onClick={(e) => e.stopPropagation()}
+                                      onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>Zusatzmaterial</span>
@@ -1188,7 +1390,7 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="px-3 py-2 rounded-lg text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2"
-                                      onClick={(e) => e.stopPropagation()}
+                                      onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <Upload className="w-4 h-4" />
                                       <span>Meine Bearbeitung</span>
@@ -1217,6 +1419,30 @@ export const DashboardPageNew: React.FC = () => {
                                       {caseStudy.video_viewed_at && <span className="text-xs">✓</span>}
                                     </button>
                                   )}
+                                  { (
+                                    <a
+                                      href={caseStudy.solution_pdf_url || "#"}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
+                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${ caseStudy.solution_pdf_url ? "bg-indigo-600 text-white hover:bg-indigo-700" : "bg-gray-300 text-gray-500 cursor-not-allowed" }`}
+                                    >
+                                      <FileText className="w-4 h-4" />
+                                      <span>Klausur-Lösung</span>
+                                    </a>
+                                  )}
+                                  {caseStudy.scoring_sheet_url && (
+                                    <a
+                                      href={caseStudy.scoring_sheet_url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
+                                      className="px-3 py-2 rounded-lg text-sm bg-orange-600 text-white hover:bg-orange-700 transition-colors flex items-center space-x-2"
+                                    >
+                                      <Table className="w-4 h-4" />
+                                      <span>Korrekturbogen</span>
+                                    </a>
+                                  )}
                                   {caseStudy.written_correction_url && (
                                     <a
                                       href={caseStudy.written_correction_url}
@@ -1233,21 +1459,38 @@ export const DashboardPageNew: React.FC = () => {
                                       }`}
                                     >
                                       <FileText className="w-4 h-4" />
-                                      <span>PDF herunterladen</span>
+                                      <span>Schriftliche Korrektur</span>
                                       {caseStudy.pdf_downloaded_at && <span className="text-xs">✓</span>}
                                     </a>
                                   )}
-                                  {caseStudy.scoring_schema_url && (
-                                    <a
-                                      href={caseStudy.scoring_schema_url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      onClick={(e) => e.stopPropagation()}
-                                      className="px-3 py-2 rounded-lg text-sm bg-orange-600 text-white hover:bg-orange-700 transition-colors flex items-center space-x-2"
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation()
+                                      openFeedbackModal(caseStudy.id)
+                                    }}
+                                    className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
+                                      studentFeedbacks.has(caseStudy.id)
+                                        ? 'bg-green-600 text-white hover:bg-green-700'
+                                        : 'bg-purple-600 text-white hover:bg-purple-700'
+                                    }`}
+                                  >
+                                    <Edit3 className="w-4 h-4" />
+                                    <span>
+                                      {studentFeedbacks.has(caseStudy.id) ? 'Feedbackpapier bearbeiten' : 'Feedbackpapier erstellen'}
+                                    </span>
+                                    {studentFeedbacks.has(caseStudy.id) && <span className="text-xs">✓</span>}
+                                  </button>
+                                  {studentFeedbacks.has(caseStudy.id) && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        openPDFPreview(caseStudy.id)
+                                      }}
+                                      className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 bg-orange-600 text-white hover:bg-orange-700"
                                     >
-                                      <Table className="w-4 h-4" />
-                                      <span>Punkteschema (Excel)</span>
-                                    </a>
+                                      <Eye className="w-4 h-4" />
+                                      <span>Feedbackpapier anzeigen</span>
+                                    </button>
                                   )}
                                 </div>
                               </div>
@@ -1427,6 +1670,44 @@ export const DashboardPageNew: React.FC = () => {
               </div>
             </div>
           </div>
+        )}
+
+        {/* Feedback Modal */}
+        {showFeedbackModal && currentFeedbackCaseId && (
+          <FeedbackForm
+            isOpen={showFeedbackModal}
+            onClose={closeFeedbackModal}
+            caseStudyId={currentFeedbackCaseId}
+            caseStudyTitle={(() => {
+              const caseStudy = caseStudies.find(cs => cs.id === currentFeedbackCaseId)
+              return caseStudy ? `${caseStudy.legal_area} - ${caseStudy.sub_area}` : 'Klausur'
+            })()}
+            existingFeedback={studentFeedbacks.get(currentFeedbackCaseId) || null}
+            caseStudyInfo={(() => {
+              const caseStudy = caseStudies.find(cs => cs.id === currentFeedbackCaseId)
+              return caseStudy ? {
+                legal_area: caseStudy.legal_area,
+                sub_area: caseStudy.sub_area,
+                focus_area: caseStudy.focus_area,
+                case_study_number: caseStudy.case_study_number
+              } : undefined
+            })()}
+            userInfo={profile ? {
+              first_name: profile.first_name,
+              last_name: profile.last_name
+            } : undefined}
+          />
+        )}
+
+        {/* PDF Preview Modal */}
+        {showPDFPreview && (
+          <FeedbackPDFPreview
+            isOpen={showPDFPreview}
+            onClose={closePDFPreview}
+            pdfDataUri={currentPDFData}
+            filename={currentPDFFilename}
+            onDownload={handlePDFDownload}
+          />
         )}
       </div>
     </div>

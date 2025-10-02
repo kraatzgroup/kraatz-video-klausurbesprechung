@@ -7,6 +7,7 @@ import { ProtectedRoute } from './components/ProtectedRoute'
 import { RoleBasedRoute } from './components/RoleBasedRoute'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
+import { AdminLoginPage } from './pages/AdminLoginPage'
 import { RegisterPage } from './pages/RegisterPage'
 import { PackagesPage } from './pages/PackagesPage'
 import { DashboardPage } from './pages/DashboardPage'
@@ -34,6 +35,7 @@ function App() {
             <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/admin" element={<AdminLoginPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/packages" element={<PackagesPage />} />
             <Route path="/checkout-success" element={<CheckoutSuccessPage />} />
@@ -96,7 +98,7 @@ function App() {
               }
             />
             <Route
-              path="/admin"
+              path="/admin/dashboard"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <AdminDashboard />
@@ -112,7 +114,7 @@ function App() {
               }
             />
             <Route
-              path="/admin/dashboard"
+              path="/admin/super"
               element={
                 <ProtectedRoute requiredRole="admin">
                   <SuperAdminDashboard />

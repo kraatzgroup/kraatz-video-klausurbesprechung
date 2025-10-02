@@ -16,6 +16,14 @@ import {
   Table
 } from 'lucide-react';
 
+interface AdditionalMaterial {
+  id: string;
+  filename: string;
+  url: string;
+  uploaded_at: string;
+  size: number | null;
+}
+
 interface CaseStudyRequest {
   id: string;
   user_id: string;
@@ -28,10 +36,14 @@ interface CaseStudyRequest {
   pdf_url?: string;
   case_study_material_url?: string;
   additional_materials_url?: string;
+  additional_materials?: AdditionalMaterial[];
   submission_url?: string;
   submission_downloaded_at?: string;
   video_correction_url?: string;
   written_correction_url?: string;
+  federal_state?: string;
+  solution_pdf_url?: string;
+  scoring_sheet_url?: string;
   created_at: string;
   updated_at: string;
   user?: {
@@ -52,14 +64,22 @@ const InstructorDashboard: React.FC = () => {
   const [additionalMaterialModalOpen, setAdditionalMaterialModalOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<CaseStudyRequest | null>(null);
   const [materialFile, setMaterialFile] = useState<File | null>(null);
-  const [additionalMaterialFile, setAdditionalMaterialFile] = useState<File | null>(null);
+  const [additionalMaterialFiles, setAdditionalMaterialFiles] = useState<File[]>([]);
   const [correctionModalOpen, setCorrectionModalOpen] = useState(false);
   const [selectedCaseForCorrection, setSelectedCaseForCorrection] = useState<CaseStudyRequest | null>(null);
   const [correctionPdfFile, setCorrectionPdfFile] = useState<File | null>(null);
   const [scoringSheetFile, setScoringSheetFile] = useState<File | null>(null);
+  const [solutionPdfFile, setSolutionPdfFile] = useState<File | null>(null);
   const [videoLoomUrl, setVideoLoomUrl] = useState('');
   const [saveStatus, setSaveStatus] = useState<{[key: string]: 'saving' | 'success' | 'error' | null}>({});
-  const [requests, setRequests] = useState<CaseStudyRequest[]>([]);
+
+  // Helper function to format case titles with federal state for public law
+  const [requests, setRequests] = useState<CaseStudyRequest[]>([]);  const formatCaseTitle = (legal_area: string, sub_area: string, federal_state?: string) => {
+    if (legal_area === "Öffentliches Recht" && federal_state) {
+      return `${legal_area} - ${sub_area} (${federal_state})`
+    }
+    return `${legal_area} - ${sub_area}`
+  }
   // const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [loading, setLoading] = useState(true);
   const [grades, setGrades] = useState<{[key: string]: {grade: number | null, gradeText?: string}}>({});
@@ -104,16 +124,16 @@ const InstructorDashboard: React.FC = () => {
         `);
 
       // Apply filtering based on user role
-      if (currentUser?.role === 'instructor' && currentUser?.instructor_legal_area) {
-        // Instructors only see cases from their assigned legal area
+      if ((currentUser?.role === 'instructor' || currentUser?.role === 'springer') && currentUser?.instructor_legal_area) {
+        // Instructors and Springer only see cases from their assigned legal area
         query = query.eq('legal_area', currentUser.instructor_legal_area);
-        console.log(`🎯 Filtering cases for instructor legal area: ${currentUser.instructor_legal_area}`);
+        console.log(`🎯 Filtering cases for ${currentUser.role} legal area: ${currentUser.instructor_legal_area}`);
       } else if (currentUser?.role === 'admin') {
         // Admins see all cases (no filtering)
         console.log('👑 Admin user - showing all cases');
       } else {
-        // Other roles (students, etc.) should not access instructor dashboard
-        console.warn('⚠️ Non-instructor/admin user accessing instructor dashboard');
+        // Other roles (students, etc.) should not access instructor/springer dashboard
+        console.warn('⚠️ Non-instructor/springer/admin user accessing instructor dashboard');
       }
 
       const { data: requestsData, error: requestsError } = await query
@@ -323,11 +343,12 @@ const InstructorDashboard: React.FC = () => {
     setVideoLoomUrl('');
     setCorrectionPdfFile(null);
     setScoringSheetFile(null);
+    setSolutionPdfFile(null);
   };
 
   const handleCorrectionUpload = async () => {
-    if (!selectedCaseForCorrection || (!videoLoomUrl && !correctionPdfFile && !scoringSheetFile)) {
-      alert('Bitte geben Sie mindestens einen Loom-Video-Link, eine PDF-Datei oder eine Excel-Bewertung an.');
+    if (!selectedCaseForCorrection || (!videoLoomUrl && !correctionPdfFile && !scoringSheetFile && !solutionPdfFile)) {
+      alert('Bitte geben Sie mindestens einen Loom-Video-Link, eine schriftliche Korrektur, eine Lösung oder eine Excel-Bewertung an.');
       return;
     }
 
@@ -412,6 +433,35 @@ const InstructorDashboard: React.FC = () => {
         excelUrl = excelUrlData.publicUrl;
       }
 
+      // Upload Solution PDF file if provided
+      let solutionPdfUrl = null;
+      if (solutionPdfFile) {
+        // Validate PDF file type
+        if (solutionPdfFile.type !== 'application/pdf') {
+          alert('Bitte wählen Sie eine PDF-Datei für die Lösung aus.');
+          return;
+        }
+
+        // Validate file size (max 10MB for PDF)
+        const maxPdfSize = 10 * 1024 * 1024; // 10MB
+        if (solutionPdfFile.size > maxPdfSize) {
+          alert('Die Lösungs-PDF-Datei ist zu groß. Maximale Dateigröße: 10MB');
+          return;
+        }
+
+        const solutionPdfFileName = `${selectedCaseForCorrection.id}_solution_pdf_${Date.now()}.pdf`;
+        const { error: solutionPdfError } = await supabase.storage
+          .from('case-studies')
+          .upload(solutionPdfFileName, solutionPdfFile);
+
+        if (solutionPdfError) throw solutionPdfError;
+
+        const { data: solutionPdfUrlData } = supabase.storage
+          .from('case-studies')
+          .getPublicUrl(solutionPdfFileName);
+        
+        solutionPdfUrl = solutionPdfUrlData.publicUrl;      }
+
       // Update case study request with correction URLs and set status to completed
       const updateData: any = {
         status: 'completed'
@@ -420,6 +470,7 @@ const InstructorDashboard: React.FC = () => {
       if (videoLoomUrl) updateData.video_correction_url = videoLoomUrl;
       if (pdfUrl) updateData.written_correction_url = pdfUrl;
       if (excelUrl) updateData.scoring_sheet_url = excelUrl;
+      if (solutionPdfUrl) updateData.solution_pdf_url = solutionPdfUrl;
 
       const { error: updateError } = await supabase
         .from('case_study_requests')
@@ -458,8 +509,7 @@ const InstructorDashboard: React.FC = () => {
   const closeAdditionalMaterialModal = () => {
     setAdditionalMaterialModalOpen(false);
     setSelectedRequest(null);
-    // setAdditionalMaterialUrl('');
-    setAdditionalMaterialFile(null);
+    setAdditionalMaterialFiles([]);
   };
 
   // Remove material function
@@ -611,50 +661,72 @@ const InstructorDashboard: React.FC = () => {
   };
 
   const handleAdditionalMaterialUpload = async () => {
-    if (!selectedRequest || !additionalMaterialFile) {
-      alert('Bitte wählen Sie eine PDF-Datei aus.');
+    if (!selectedRequest || additionalMaterialFiles.length === 0) {
+      alert('Bitte wählen Sie mindestens eine PDF-Datei aus.');
       return;
     }
 
     try {
-      if (additionalMaterialFile.type !== 'application/pdf') {
-        alert('Bitte wählen Sie nur PDF-Dateien aus.');
-        return;
+      // Validate all files
+      for (const file of additionalMaterialFiles) {
+        if (file.type !== 'application/pdf') {
+          alert(`Die Datei "${file.name}" ist keine PDF-Datei. Bitte wählen Sie nur PDF-Dateien aus.`);
+          return;
+        }
+        
+        // Validate file size (max 10MB)
+        const maxSize = 10 * 1024 * 1024; // 10MB in bytes
+        if (file.size > maxSize) {
+          alert(`Die Datei "${file.name}" ist zu groß. Maximale Dateigröße: 10MB`);
+          return;
+        }
       }
-      
-      // Validate file size (max 10MB)
-      const maxSize = 10 * 1024 * 1024; // 10MB in bytes
-      if (additionalMaterialFile.size > maxSize) {
-        alert('Die Datei ist zu groß. Maximale Dateigröße: 10MB');
-        return;
-      }
-      
-      const fileName = `zusatzmaterial_${selectedRequest.id}_${Date.now()}.pdf`;
-      const { error: uploadError } = await supabase.storage
-        .from('case-studies')
-        .upload(fileName, additionalMaterialFile);
-      
-      if (uploadError) throw uploadError;
-      
-      const { data: { publicUrl } } = supabase.storage
-        .from('case-studies')
-        .getPublicUrl(fileName);
 
-      // Update additional materials URL - don't change status if already completed
-      const updateData: any = { additional_materials_url: publicUrl };
-      
+      // Get existing additional materials
+      const existingMaterials = selectedRequest.additional_materials || [];
+      const newMaterials = [];
+
+      // Upload each file
+      for (const file of additionalMaterialFiles) {
+        const fileName = `zusatzmaterial_${selectedRequest.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.pdf`;
+        const { error: uploadError } = await supabase.storage
+          .from('case-studies')
+          .upload(fileName, file);
+        
+        if (uploadError) throw uploadError;
+        
+        const { data: { publicUrl } } = supabase.storage
+          .from('case-studies')
+          .getPublicUrl(fileName);
+
+        // Create material object
+        const materialObject = {
+          id: `material_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          filename: file.name,
+          url: publicUrl,
+          uploaded_at: new Date().toISOString(),
+          size: file.size
+        };
+
+        newMaterials.push(materialObject);
+      }
+
+      // Combine existing and new materials
+      const allMaterials = [...existingMaterials, ...newMaterials];
+
+      // Update database with new materials array
       const { error } = await supabase
         .from('case_study_requests')
-        .update(updateData)
+        .update({ additional_materials: allMaterials })
         .eq('id', selectedRequest.id);
 
       if (error) throw error;
 
       fetchData();
       closeAdditionalMaterialModal();
-      alert('Zusatzmaterialien erfolgreich hochgeladen und für Studenten verfügbar!');
+      alert(`${additionalMaterialFiles.length} Zusatzmaterial${additionalMaterialFiles.length > 1 ? 'ien' : ''} erfolgreich hochgeladen und für Studenten verfügbar!`);
     } catch (error) {
-      console.error('Error uploading additional material:', error);
+      console.error('Error uploading additional materials:', error);
       alert('Fehler beim Hochladen.');
     }
   };
@@ -927,7 +999,7 @@ const InstructorDashboard: React.FC = () => {
                             <span className="bg-kraatz-primary text-white text-xs font-bold px-2 py-1 rounded">
                               #{request.case_study_number}
                             </span>
-                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">{request.legal_area} - {request.sub_area}</h3>
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">{formatCaseTitle(request.legal_area, request.sub_area, request.federal_state)}</h3>
                           </div>
                           <p className="text-sm text-gray-600 mt-1 truncate">
                             {request.user ? 
@@ -984,7 +1056,7 @@ const InstructorDashboard: React.FC = () => {
                               <button
                                 onClick={() => openAdditionalMaterialModal(request)}
                                 className={`flex flex-col items-center gap-1 px-3 py-2 text-xs rounded transition-colors flex-1 justify-center ${
-                                  request.additional_materials_url
+                                  (request.additional_materials && request.additional_materials.length > 0) || request.additional_materials_url
                                     ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                     : 'bg-red-100 text-red-700 hover:bg-red-200'
                                 }`}
@@ -992,13 +1064,18 @@ const InstructorDashboard: React.FC = () => {
                                 <div className="flex items-center gap-1">
                                   <Upload className="w-3 h-3" />
                                   <span className="hidden sm:inline">
-                                    {request.additional_materials_url ? 'Zusatzmaterialien aktualisieren' : 'Zusatzmaterialien hochladen'}
+                                    {(request.additional_materials && request.additional_materials.length > 0) || request.additional_materials_url ? 'Zusatzmaterialien aktualisieren' : 'Zusatzmaterialien hochladen'}
                                   </span>
                                   <span className="sm:hidden">
-                                    {request.additional_materials_url ? '✓ Zusatz' : 'Zusatz'}
+                                    {(request.additional_materials && request.additional_materials.length > 0) || request.additional_materials_url ? '✓ Zusatz' : 'Zusatz'}
                                   </span>
                                 </div>
-                                {request.additional_materials_url && (
+                                {request.additional_materials && request.additional_materials.length > 0 && (
+                                  <span className="text-xs text-gray-600 mt-1 truncate max-w-[120px]">
+                                    {request.additional_materials.length} Datei{request.additional_materials.length > 1 ? 'en' : ''}
+                                  </span>
+                                )}
+                                {!request.additional_materials && request.additional_materials_url && (
                                   <span className="text-xs text-gray-600 mt-1 truncate max-w-[120px]">
                                     {request.additional_materials_url.split('/').pop()?.split('zusatzmaterial_')[1]?.split('_')[1] || 'Zusatzmaterial'}.pdf
                                   </span>
@@ -1037,7 +1114,7 @@ const InstructorDashboard: React.FC = () => {
                             <span className="bg-kraatz-primary text-white text-xs font-bold px-2 py-1 rounded">
                               #{request.case_study_number}
                             </span>
-                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">{request.legal_area} - {request.sub_area}</h3>
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">{formatCaseTitle(request.legal_area, request.sub_area, request.federal_state)}</h3>
                           </div>
                           <p className="text-sm text-gray-600 mt-1 truncate">
                             {request.user ? 
@@ -1094,7 +1171,7 @@ const InstructorDashboard: React.FC = () => {
                               <button
                                 onClick={() => openAdditionalMaterialModal(request)}
                                 className={`flex flex-col items-center gap-1 px-3 py-2 text-xs rounded transition-colors flex-1 justify-center ${
-                                  request.additional_materials_url
+                                  (request.additional_materials && request.additional_materials.length > 0) || request.additional_materials_url
                                     ? 'bg-green-100 text-green-700 hover:bg-green-200'
                                     : 'bg-red-100 text-red-700 hover:bg-red-200'
                                 }`}
@@ -1102,13 +1179,18 @@ const InstructorDashboard: React.FC = () => {
                                 <div className="flex items-center gap-1">
                                   <Upload className="w-3 h-3" />
                                   <span className="hidden sm:inline">
-                                    {request.additional_materials_url ? 'Zusatzmaterialien aktualisieren' : 'Zusatzmaterialien hochladen'}
+                                    {(request.additional_materials && request.additional_materials.length > 0) || request.additional_materials_url ? 'Zusatzmaterialien aktualisieren' : 'Zusatzmaterialien hochladen'}
                                   </span>
                                   <span className="sm:hidden">
-                                    {request.additional_materials_url ? '✓ Zusatz' : 'Zusatz'}
+                                    {(request.additional_materials && request.additional_materials.length > 0) || request.additional_materials_url ? '✓ Zusatz' : 'Zusatz'}
                                   </span>
                                 </div>
-                                {request.additional_materials_url && (
+                                {request.additional_materials && request.additional_materials.length > 0 && (
+                                  <span className="text-xs text-gray-600 mt-1 truncate max-w-[120px]">
+                                    {request.additional_materials.length} Datei{request.additional_materials.length > 1 ? 'en' : ''}
+                                  </span>
+                                )}
+                                {!request.additional_materials && request.additional_materials_url && (
                                   <span className="text-xs text-gray-600 mt-1 truncate max-w-[120px]">
                                     {request.additional_materials_url.split('/').pop()?.split('zusatzmaterial_')[1]?.split('_')[1] || 'Zusatzmaterial'}.pdf
                                   </span>
@@ -1144,7 +1226,7 @@ const InstructorDashboard: React.FC = () => {
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
                         <div className="flex-1">
                           <h3 className="text-base sm:text-lg font-semibold text-gray-900">
-                            {caseStudy.legal_area} - {caseStudy.sub_area}
+                            {formatCaseTitle(caseStudy.legal_area, caseStudy.sub_area, caseStudy.federal_state)}
                           </h3>
                           <p className="text-sm text-gray-600 mt-1 truncate">
                             {caseStudy.user ? `${caseStudy.user.first_name || 'Demo'} ${caseStudy.user.last_name || ''} (${caseStudy.user.email})` : 'Demo (demo@kraatz-club.de)'}
@@ -1208,7 +1290,7 @@ const InstructorDashboard: React.FC = () => {
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h3 className="text-lg font-semibold text-gray-900">
-                            {caseStudy.legal_area} - {caseStudy.sub_area}
+                            {formatCaseTitle(caseStudy.legal_area, caseStudy.sub_area, caseStudy.federal_state)}
                           </h3>
                           <p className="text-sm text-gray-600 mt-1">
                             {caseStudy.user ? 
@@ -1284,7 +1366,7 @@ const InstructorDashboard: React.FC = () => {
                       <div className="flex flex-col gap-4">
                         <div className="flex items-start justify-between">
                           <div className="flex-1">
-                            <h3 className="text-lg font-semibold text-gray-900">{request.legal_area} - {request.sub_area}</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">{formatCaseTitle(request.legal_area, request.sub_area, request.federal_state)}</h3>
                             <p className="text-sm text-gray-600 mt-1">
                               {request.user ? 
                                 `${[request.user.first_name, request.user.last_name].filter(Boolean).join(' ')} (${request.user.email})` : 
@@ -1447,6 +1529,35 @@ const InstructorDashboard: React.FC = () => {
                                   >
                                     <Eye className="w-3 h-3" />
                                     Ansehen
+                                  </a>
+                                ) : (
+                                  <span className="flex items-center gap-1 px-3 py-2 text-xs bg-gray-100 text-gray-500 rounded flex-1 justify-center">
+                                    <AlertCircle className="w-3 h-3" />
+                                    Nicht verfügbar
+                                  </span>
+                                )}
+                                <button
+                                  onClick={() => openCorrectionModal(request)}
+                                  className="flex items-center gap-1 px-3 py-2 text-xs bg-blue-100 text-blue-700 rounded hover:bg-blue-200"
+                                >
+                                  <Settings className="w-3 h-3" />
+                                  Bearbeiten
+                                </button>
+                              </div>
+                            </div>
+
+                            <div className="space-y-2">
+                              <label className="text-sm font-medium text-gray-700">Klausur-Lösung (PDF)</label>
+                              <div className="flex gap-2">
+                                {request.solution_pdf_url ? (
+                                  <a
+                                    href={request.solution_pdf_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-1 px-3 py-2 text-xs bg-green-100 text-green-700 rounded hover:bg-green-200 flex-1 justify-center"
+                                  >
+                                    <Download className="w-3 h-3" />
+                                    Herunterladen
                                   </a>
                                 ) : (
                                   <span className="flex items-center gap-1 px-3 py-2 text-xs bg-gray-100 text-gray-500 rounded flex-1 justify-center">
@@ -1703,38 +1814,70 @@ const InstructorDashboard: React.FC = () => {
               </div>
               
               <div className="space-y-4">
-                {/* Show existing file if available */}
-                {selectedRequest.additional_materials_url && (
+                {/* Show existing files if available */}
+                {((selectedRequest.additional_materials && selectedRequest.additional_materials.length > 0) || selectedRequest.additional_materials_url) && (
                   <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-                    <h4 className="text-sm font-medium text-green-900 mb-2">Aktuell hochgeladene Datei:</h4>
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                        </svg>
-                        <span className="text-sm text-green-800 font-medium">
-                          {selectedRequest.additional_materials_url.split('/').pop()?.split('zusatzmaterial_')[1]?.split('_')[1] || 'Zusatzmaterial'}.pdf
-                        </span>
-                      </div>
-                      <a
-                        href={selectedRequest.additional_materials_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200"
-                      >
-                        Ansehen
-                      </a>
+                    <h4 className="text-sm font-medium text-green-900 mb-2">
+                      Aktuell hochgeladene Dateien ({selectedRequest.additional_materials?.length || 1}):
+                    </h4>
+                    <div className="space-y-2">
+                      {selectedRequest.additional_materials && selectedRequest.additional_materials.length > 0 ? (
+                        selectedRequest.additional_materials.map((material, index) => (
+                          <div key={material.id} className="flex items-center justify-between bg-white p-2 rounded border">
+                            <div className="flex items-center gap-2">
+                              <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                              </svg>
+                              <span className="text-sm text-green-800 font-medium truncate">
+                                {material.filename}
+                              </span>
+                              {material.size && (
+                                <span className="text-xs text-gray-500">
+                                  ({(material.size / 1024 / 1024).toFixed(2)} MB)
+                                </span>
+                              )}
+                            </div>
+                            <a
+                              href={material.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200"
+                            >
+                              Ansehen
+                            </a>
+                          </div>
+                        ))
+                      ) : selectedRequest.additional_materials_url && (
+                        <div className="flex items-center justify-between bg-white p-2 rounded border">
+                          <div className="flex items-center gap-2">
+                            <svg className="w-4 h-4 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                              <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                            </svg>
+                            <span className="text-sm text-green-800 font-medium">
+                              {selectedRequest.additional_materials_url.split('/').pop()?.split('zusatzmaterial_')[1]?.split('_')[1] || 'Zusatzmaterial'}.pdf
+                            </span>
+                          </div>
+                          <a
+                            href={selectedRequest.additional_materials_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded hover:bg-green-200"
+                          >
+                            Ansehen
+                          </a>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    {selectedRequest.additional_materials_url ? 'Neue PDF-Datei hochladen (ersetzt die aktuelle)' : 'PDF-Datei hochladen'}
+                    {((selectedRequest.additional_materials && selectedRequest.additional_materials.length > 0) || selectedRequest.additional_materials_url) ? 'Weitere PDF-Dateien hinzufügen' : 'PDF-Dateien hochladen'}
                   </label>
                   <div
                     className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                      additionalMaterialFile 
+                      additionalMaterialFiles.length > 0 
                         ? 'border-green-400 bg-green-50' 
                         : 'border-gray-300 hover:border-green-500 hover:bg-gray-50'
                     }`}
@@ -1745,40 +1888,51 @@ const InstructorDashboard: React.FC = () => {
                     onDrop={(e) => {
                       e.preventDefault();
                       e.stopPropagation();
-                      const files = e.dataTransfer.files;
-                      if (files.length > 0 && files[0].type === 'application/pdf') {
-                        setAdditionalMaterialFile(files[0]);
+                      const files = Array.from(e.dataTransfer.files).filter(file => file.type === 'application/pdf');
+                      if (files.length > 0) {
+                        setAdditionalMaterialFiles(files);
                       }
                     }}
                   >
                     <input
                       type="file"
                       accept=".pdf"
-                      onChange={(e) => setAdditionalMaterialFile(e.target.files?.[0] || null)}
+                      multiple
+                      onChange={(e) => {
+                        const files = Array.from(e.target.files || []);
+                        setAdditionalMaterialFiles(files);
+                      }}
                       className="hidden"
                       id="additional-file-input"
                     />
-                    {additionalMaterialFile ? (
+                    {additionalMaterialFiles.length > 0 ? (
                       <div className="text-green-600">
                         <svg className="w-8 h-8 mx-auto mb-2" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                         </svg>
-                        <p className="font-medium">{additionalMaterialFile.name}</p>
-                        <p className="text-sm text-gray-500">{(additionalMaterialFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                        <p className="font-medium">{additionalMaterialFiles.length} Datei{additionalMaterialFiles.length > 1 ? 'en' : ''} ausgewählt</p>
+                        <div className="text-sm text-gray-500 max-h-20 overflow-y-auto">
+                          {additionalMaterialFiles.map((file, index) => (
+                            <div key={index} className="flex justify-between items-center">
+                              <span className="truncate">{file.name}</span>
+                              <span className="ml-2">({(file.size / 1024 / 1024).toFixed(2)} MB)</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ) : (
                       <div className="text-gray-500">
                         <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                         </svg>
-                        <p className="mb-1">PDF hier ablegen oder</p>
+                        <p className="mb-1">PDF-Dateien hier ablegen oder</p>
                         <label htmlFor="additional-file-input" className="text-green-600 cursor-pointer hover:underline">
-                          Datei auswählen
+                          Dateien auswählen
                         </label>
                       </div>
                     )}
                   </div>
-                  <p className="text-xs text-gray-500 mt-1">Nur PDF-Dateien sind erlaubt (max. 10MB)</p>
+                  <p className="text-xs text-gray-500 mt-1">Nur PDF-Dateien sind erlaubt (max. 10MB pro Datei). Mehrere Dateien können gleichzeitig ausgewählt werden.</p>
                 </div>
                 
                 <div className="flex justify-end space-x-3">
@@ -1818,7 +1972,7 @@ const InstructorDashboard: React.FC = () => {
                 {selectedCaseForCorrection && (
                   <div className="mb-4 p-3 bg-gray-50 rounded">
                     <p className="text-sm font-medium text-gray-900">
-                      {selectedCaseForCorrection.legal_area} - {selectedCaseForCorrection.sub_area}
+                      {formatCaseTitle(selectedCaseForCorrection.legal_area, selectedCaseForCorrection.sub_area, selectedCaseForCorrection.federal_state)}
                     </p>
                     <p className="text-xs text-gray-600">
                       {selectedCaseForCorrection.user ? 
@@ -1914,6 +2068,38 @@ const InstructorDashboard: React.FC = () => {
                   </div>
                   <p className="text-xs text-gray-500 mt-1">Nur Excel- oder CSV-Dateien (.xlsx, .xls, .csv) bis 5MB</p>
                 </div>
+
+                {/* Solution PDF Upload Section */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Klausur-Lösung (PDF) (optional)
+                  </label>
+                  <input
+                    type="file"
+                    accept=".pdf"
+                    onChange={(e) => setSolutionPdfFile(e.target.files?.[0] || null)}
+                    className="hidden"
+                    id="solution-pdf-input"
+                  />
+                  <div
+                    className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center cursor-pointer hover:border-gray-400 transition-colors"
+                    onClick={() => document.getElementById('solution-pdf-input')?.click()}
+                  >
+                    {solutionPdfFile ? (
+                      <div className="text-green-600">
+                        <FileText className="w-8 h-8 mx-auto mb-2" />
+                        <p className="font-medium">{solutionPdfFile.name}</p>
+                        <p className="text-sm text-gray-500">{(solutionPdfFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                      </div>
+                    ) : (
+                      <div className="text-gray-500">
+                        <FileText className="w-8 h-8 mx-auto mb-2" />
+                        <p className="mb-1">Lösungs-PDF hier ablegen oder</p>
+                        <span className="text-blue-600 hover:underline">Datei auswählen</span>
+                      </div>
+                    )}
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Nur PDF-Dateien bis 10MB</p>                </div>
                 
                 <div className="flex justify-end space-x-3">
                   <button
@@ -1924,7 +2110,7 @@ const InstructorDashboard: React.FC = () => {
                   </button>
                   <button
                     onClick={handleCorrectionUpload}
-                    disabled={!videoLoomUrl && !correctionPdfFile && !scoringSheetFile}
+                    disabled={!videoLoomUrl && !correctionPdfFile && !scoringSheetFile && !solutionPdfFile}
                     className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 disabled:bg-gray-300 disabled:cursor-not-allowed"
                   >
                     Korrektur hochladen

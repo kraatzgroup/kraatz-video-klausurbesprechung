@@ -15,7 +15,7 @@ import {
 } from 'lucide-react'
 
 
-type StatusKey = 'requested' | 'submitted' | 'in_bearbeitung' | 'corrected' | 'completed' | 'video_angefordert' | 'video_hochgeladen'
+type StatusKey = 'requested' | 'submitted' | 'in_bearbeitung' | 'under_review' | 'corrected' | 'completed' | 'video_angefordert' | 'video_hochgeladen'
 
 interface CaseStudyRequest {
   id: string
@@ -60,12 +60,16 @@ const AdminCasesOverview: React.FC = () => {
     'requested',
     'submitted', 
     'in_bearbeitung',
+    'under_review',
     'corrected',
     'completed',
     'video_angefordert',
     'video_hochgeladen'
   ]
 
+  const getStatusConfig = (status: string) => {
+    return statusConfig[status as StatusKey] || statusConfig.completed
+  }
   const statusConfig: Record<StatusKey, {
     label: string;
     color: string;
@@ -89,6 +93,12 @@ const AdminCasesOverview: React.FC = () => {
       color: 'bg-purple-100 text-purple-800 border-purple-200',
       icon: AlertCircle,
       description: 'Dozent arbeitet an der Korrektur'
+    },
+    under_review: {
+      label: 'Wird überprüft',
+      color: 'bg-orange-100 text-orange-800 border-orange-200',
+      icon: Eye,
+      description: 'Klausur wird überprüft'
     },
     corrected: {
       label: 'Korrigiert',
@@ -335,7 +345,7 @@ const AdminCasesOverview: React.FC = () => {
         <h3 className="text-lg font-medium text-gray-900 mb-4">Status-Verteilung</h3>
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
           {statuses.map(status => {
-            const config = statusConfig[status as StatusKey]
+            const config = getStatusConfig(status)
             const Icon = config.icon
             return (
               <div key={status} className="text-center">
@@ -443,7 +453,7 @@ const AdminCasesOverview: React.FC = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {filteredCases.map((caseItem) => {
-                const config = statusConfig[caseItem.status as StatusKey]
+                const config = getStatusConfig(caseItem.status)
                 const Icon = config.icon
                 
                 return (
@@ -609,11 +619,11 @@ const AdminCasesOverview: React.FC = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700">Status</label>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusConfig[selectedCase.status as StatusKey].color}`}>
-                  {statusConfig[selectedCase.status as StatusKey].label}
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusConfig(selectedCase.status).color}`}>
+                  {getStatusConfig(selectedCase.status).label}
                 </span>
                 <p className="text-sm text-gray-500 mt-1">
-                  {statusConfig[selectedCase.status as StatusKey].description}
+                  {getStatusConfig(selectedCase.status).description}
                 </p>
               </div>
               

@@ -12,7 +12,11 @@ export interface Message {
   created_at: string;
   edited_at: string | null;
   is_deleted?: boolean;
-  message_type: 'text' | 'system';
+  message_type: 'text' | 'system' | 'file' | 'image';
+  attachment_url?: string | null;
+  attachment_name?: string | null;
+  attachment_size?: number | null;
+  attachment_type?: string | null;
   sender?: ChatUser;
 }
 
@@ -40,10 +44,22 @@ export const useMessages = (conversationId: string | null) => {
       const startIndex = reset ? 0 : page * MESSAGES_PER_PAGE;
       const endIndex = startIndex + MESSAGES_PER_PAGE - 1;
 
-      // First get messages
+      // First get messages with attachment fields
       const { data: messagesData, error: fetchError } = await supabase
         .from('messages')
-        .select('*')
+        .select(`
+          id,
+          conversation_id,
+          sender_id,
+          content,
+          created_at,
+          edited_at,
+          message_type,
+          attachment_url,
+          attachment_name,
+          attachment_size,
+          attachment_type
+        `)
         .eq('conversation_id', conversationId)
         .order('created_at', { ascending: false })
         .range(startIndex, endIndex);
@@ -159,20 +175,38 @@ export const useMessages = (conversationId: string | null) => {
   }, [conversationId, user, lastMessageId, messages]);
 
   // Nachricht senden
-  const sendMessage = useCallback(async (content: string): Promise<boolean> => {
-    if (!conversationId || !user || !content.trim()) return false;
+  const sendMessage = useCallback(async (content: string, attachment?: any): Promise<boolean> => {
+    if (!conversationId || !user || (!content.trim() && !attachment)) return false;
 
     try {
       console.log('📤 Sending message:', { conversationId, content: content.trim() });
       
+      // Determine message type and prepare message data
+      let messageType: 'text' | 'file' | 'image' = 'text';
+      if (attachment) {
+        messageType = attachment.fileType?.startsWith('image/') ? 'image' : 'file';
+      }
+
+      const messageData: any = {
+        conversation_id: conversationId,
+        sender_id: user.id,
+        content: content.trim() || (attachment ? `📎 ${attachment.fileName}` : ''),
+        message_type: messageType
+      };
+
+      // Add attachment data if present
+      if (attachment) {
+        messageData.attachment_url = attachment.fileUrl;
+        messageData.attachment_name = attachment.fileName;
+        messageData.attachment_size = attachment.fileSize;
+        messageData.attachment_type = attachment.fileType;
+      }
+
+      console.log('📤 Sending message with data:', messageData);
+
       const { data, error } = await supabase
         .from('messages')
-        .insert({
-          conversation_id: conversationId,
-          sender_id: user.id,
-          content: content.trim(),
-          message_type: 'text'
-        })
+        .insert(messageData)
         .select()
         .single();
 
@@ -180,21 +214,47 @@ export const useMessages = (conversationId: string | null) => {
 
       console.log('✅ Message sent successfully:', data);
       
+      // Immediately add the message to local state for instant UI update
+      const { data: senderData } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name, role')
+        .eq('id', user.id)
+        .single();
+
+      const messageWithSender = {
+        ...data,
+        sender: senderData || {
+          id: user.id,
+          email: user.email || 'Unknown',
+          first_name: 'Unknown',
+          last_name: 'User',
+          role: 'student'
+        }
+      };
+
+      console.log('📨 Adding message to local state immediately:', messageWithSender);
+      
+      // Add to local state immediately for instant feedback
+      setMessages(prev => {
+        const exists = prev.some(msg => msg.id === messageWithSender.id);
+        if (exists) {
+          console.log('⚠️ Message already exists in local state');
+          return prev;
+        }
+        return [...prev, messageWithSender];
+      });
+      
+      setLastMessageId(data.id);
+      
       // Create notifications for other participants immediately after sending
       try {
         console.log('🔔 Starting notification creation process...');
         console.log('🔔 Sender ID:', user.id);
         console.log('🔔 Conversation ID:', conversationId);
         
-        // Get current user info
-        const { data: senderData, error: senderError } = await supabase
-          .from('users')
-          .select('first_name, last_name, email')
-          .eq('id', user.id)
-          .single();
-
-        if (senderError) {
-          console.error('❌ Error fetching sender data:', senderError);
+        // Use already fetched sender data
+        if (!senderData) {
+          console.error('❌ No sender data available for notifications');
           return true; // Don't fail message send
         }
 
@@ -450,9 +510,17 @@ export const useMessages = (conversationId: string | null) => {
             setMessages(prev => {
               const exists = prev.some(msg => msg.id === messageWithSender.id);
               if (exists) {
-                console.log('⚠️ Message already exists, skipping');
+                console.log('⚠️ Message already exists, skipping real-time update');
                 return prev;
               }
+              
+              // Only add if it's not from the current user (to avoid duplicates from sendMessage)
+              if (messageWithSender.sender_id === user.id) {
+                console.log('⚠️ Skipping own message from real-time (already added locally)');
+                return prev;
+              }
+              
+              console.log('📨 Adding message from other user via real-time');
               setLastMessageId(messageWithSender.id);
               return [...prev, messageWithSender];
             });

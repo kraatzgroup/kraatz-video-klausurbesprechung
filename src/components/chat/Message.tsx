@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { de } from 'date-fns/locale';
-import { Edit2, Trash2 } from 'lucide-react';
+import { Edit2, Trash2, Download, Eye } from 'lucide-react';
 import { Message as MessageType } from '../../hooks/useMessages';
 import { useAuth } from '../../contexts/AuthContext';
 import { canDeleteMessage, canEditMessage, formatUserRole, getRoleColor } from '../../utils/chatPermissions';
+import { useFileUpload } from '../../hooks/useFileUpload';
 
 interface MessageProps {
   message: MessageType;
@@ -18,9 +19,13 @@ export const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) =
   const [editContent, setEditContent] = useState(message.content);
   const [showActions, setShowActions] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  
+  const { getFileIcon, formatFileSize } = useFileUpload();
 
   const isOwnMessage = user?.id === message.sender_id;
   const isSystemMessage = message.message_type === 'system';
+  const isFileMessage = message.message_type === 'file' || message.message_type === 'image';
+  const hasAttachment = message.attachment_url && message.attachment_name;
 
   const handleEdit = async () => {
     if (!onEdit || !editContent.trim()) return;
@@ -49,6 +54,28 @@ export const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) =
       setIsEditing(false);
       setEditContent(message.content);
     }
+  };
+
+  const handleFileDownload = () => {
+    if (message.attachment_url && message.attachment_name) {
+      const link = document.createElement('a');
+      link.href = message.attachment_url;
+      link.download = message.attachment_name;
+      link.target = '_blank';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
+  const handleFilePreview = () => {
+    if (message.attachment_url) {
+      window.open(message.attachment_url, '_blank');
+    }
+  };
+
+  const isImageFile = (fileType?: string | null) => {
+    return fileType?.startsWith('image/') || false;
   };
 
   if (isSystemMessage) {
@@ -121,12 +148,104 @@ export const Message: React.FC<MessageProps> = ({ message, onEdit, onDelete }) =
               </div>
             </div>
           ) : (
-            <div className="whitespace-pre-wrap break-words">
-              {message.content}
-              {message.edited_at && (
-                <span className={`text-xs ml-2 ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'}`}>
-                  (bearbeitet)
-                </span>
+            <div>
+              {/* Text Content */}
+              {message.content && (
+                <div className="whitespace-pre-wrap break-words mb-2">
+                  {message.content}
+                  {message.edited_at && (
+                    <span className={`text-xs ml-2 ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'}`}>
+                      (bearbeitet)
+                    </span>
+                  )}
+                </div>
+              )}
+
+              {/* File Attachment */}
+              {hasAttachment && (
+                <div className={`mt-2 p-3 rounded-lg border ${
+                  isOwnMessage 
+                    ? 'bg-white/10 border-white/20' 
+                    : 'bg-gray-50 border-gray-200'
+                }`}>
+                  {isImageFile(message.attachment_type) ? (
+                    /* Image Preview */
+                    <div className="space-y-2">
+                      <img
+                        src={message.attachment_url!}
+                        alt={message.attachment_name!}
+                        className="max-w-full max-h-64 rounded cursor-pointer hover:opacity-90 transition-opacity"
+                        onClick={handleFilePreview}
+                      />
+                      <div className="flex items-center justify-between text-xs">
+                        <span className={isOwnMessage ? 'text-white/80' : 'text-gray-600'}>
+                          {message.attachment_name}
+                        </span>
+                        <div className="flex gap-1">
+                          <button
+                            onClick={handleFilePreview}
+                            className={`p-1 rounded hover:bg-black/10 ${
+                              isOwnMessage ? 'text-white/80 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                            title="Vollbild anzeigen"
+                          >
+                            <Eye className="w-3 h-3" />
+                          </button>
+                          <button
+                            onClick={handleFileDownload}
+                            className={`p-1 rounded hover:bg-black/10 ${
+                              isOwnMessage ? 'text-white/80 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                            }`}
+                            title="Herunterladen"
+                          >
+                            <Download className="w-3 h-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    /* File Attachment */
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span className="text-lg">
+                          {getFileIcon(message.attachment_type || '')}
+                        </span>
+                        <div>
+                          <div className={`text-sm font-medium ${
+                            isOwnMessage ? 'text-white' : 'text-gray-900'
+                          }`}>
+                            {message.attachment_name}
+                          </div>
+                          <div className={`text-xs ${
+                            isOwnMessage ? 'text-white/70' : 'text-gray-500'
+                          }`}>
+                            {formatFileSize(message.attachment_size || 0)}
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={handleFilePreview}
+                          className={`p-1 rounded hover:bg-black/10 ${
+                            isOwnMessage ? 'text-white/80 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                          title="Öffnen"
+                        >
+                          <Eye className="w-3 h-3" />
+                        </button>
+                        <button
+                          onClick={handleFileDownload}
+                          className={`p-1 rounded hover:bg-black/10 ${
+                            isOwnMessage ? 'text-white/80 hover:text-white' : 'text-gray-500 hover:text-gray-700'
+                          }`}
+                          title="Herunterladen"
+                        >
+                          <Download className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           )}

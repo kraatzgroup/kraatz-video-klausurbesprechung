@@ -143,40 +143,40 @@ export const ResultsPage: React.FC = () => {
   }
 
   const prepareChartData = (results: SubmissionResult[]) => {
-    // Sort results by correction date
-    const sortedResults = [...results].sort((a, b) => 
-      new Date(a.corrected_at).getTime() - new Date(b.corrected_at).getTime()
-    )
-
-    // Create chart data with cumulative averages and per legal area
-    const chartPoints = sortedResults.map((result, index) => {
-      const resultsUpToNow = sortedResults.slice(0, index + 1)
-      const overallAvg = resultsUpToNow.reduce((sum, r) => sum + r.grade, 0) / resultsUpToNow.length
-
-      // Calculate averages per legal area up to this point
-      const areaAverages: Record<string, number> = {}
-      const areaCounts: Record<string, number> = {}
+    // Sort results by correction date, then by legal area for consistent ordering
+    const sortedResults = [...results].sort((a, b) => {
+      const dateA = new Date(a.corrected_at).getTime()
+      const dateB = new Date(b.corrected_at).getTime()
       
-      resultsUpToNow.forEach(r => {
-        if (!areaAverages[r.legal_area]) {
-          areaAverages[r.legal_area] = 0
-          areaCounts[r.legal_area] = 0
-        }
-        areaAverages[r.legal_area] += r.grade
-        areaCounts[r.legal_area] += 1
-      })
-
-      Object.keys(areaAverages).forEach(area => {
-        areaAverages[area] = areaAverages[area] / areaCounts[area]
-      })
-
-      return {
-        date: formatDate(result.corrected_at),
-        overall: parseFloat(overallAvg.toFixed(2)),
-        Zivilrecht: areaAverages['Zivilrecht'] ? parseFloat(areaAverages['Zivilrecht'].toFixed(2)) : null,
-        Strafrecht: areaAverages['Strafrecht'] ? parseFloat(areaAverages['Strafrecht'].toFixed(2)) : null,
-        'Öffentliches Recht': areaAverages['Öffentliches Recht'] ? parseFloat(areaAverages['Öffentliches Recht'].toFixed(2)) : null
+      // If same date, sort by legal area to ensure consistent ordering
+      if (dateA === dateB) {
+        return a.legal_area.localeCompare(b.legal_area)
       }
+      return dateA - dateB
+    })
+
+    // Create individual data points for each exam - this allows multiple exams per legal area per date
+    const chartPoints = sortedResults.map((result, index) => {
+      const dataPoint: any = {
+        date: formatDate(result.corrected_at),
+        examNumber: index + 1,
+        legalArea: result.legal_area,
+        subArea: result.sub_area,
+        grade: result.grade
+      }
+
+      // Set the grade value for the specific legal area, null for others
+      dataPoint[result.legal_area] = result.grade
+      
+      // Set null for other legal areas to avoid connecting unrelated points
+      const allLegalAreas = ['Zivilrecht', 'Strafrecht', 'Öffentliches Recht']
+      allLegalAreas.forEach(area => {
+        if (area !== result.legal_area) {
+          dataPoint[area] = null
+        }
+      })
+
+      return dataPoint
     })
 
     setChartData(chartPoints)
@@ -255,7 +255,11 @@ export const ResultsPage: React.FC = () => {
         <h2 className="text-xl font-semibold text-text-primary mb-6">
           Deine Ergebnisse
         </h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className={`grid gap-6 ${
+          legalAreaStats.length === 1 ? 'md:grid-cols-2' : 
+          legalAreaStats.length === 2 ? 'md:grid-cols-3' : 
+          'md:grid-cols-2 lg:grid-cols-4'
+        }`}>
           <div className="text-center">
             <div className="flex items-center justify-center mb-2">
               <BookOpen className="w-6 h-6 text-primary mr-2" />
@@ -264,44 +268,42 @@ export const ResultsPage: React.FC = () => {
             <p className="text-2xl font-bold text-text-primary">{totalSubmissions}</p>
           </div>
 
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Award className="w-6 h-6 text-blue-600 mr-2" />
-              <span className="text-sm text-text-secondary">Durchschnittliches Ergebnis Zivilrecht</span>
+          {/* Only show cards for legal areas where the student has results */}
+          {legalAreaStats.find(s => s.area === 'Zivilrecht') && (
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Award className="w-6 h-6 text-blue-600 mr-2" />
+                <span className="text-sm text-text-secondary">Durchschnittliches Ergebnis Zivilrecht</span>
+              </div>
+              <p className={`text-2xl font-bold ${getGradeColor(legalAreaStats.find(s => s.area === 'Zivilrecht')!.average_grade)}`}>
+                {formatGrade(legalAreaStats.find(s => s.area === 'Zivilrecht')!.average_grade)} Punkte
+              </p>
             </div>
-            <p className={`text-2xl font-bold ${getGradeColor(legalAreaStats.find(s => s.area === 'Zivilrecht')?.average_grade || 0)}`}>
-              {legalAreaStats.find(s => s.area === 'Zivilrecht') 
-                ? formatGrade(legalAreaStats.find(s => s.area === 'Zivilrecht')!.average_grade) + ' Punkte'
-                : 'Keine Daten'
-              }
-            </p>
-          </div>
+          )}
 
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Award className="w-6 h-6 text-green-600 mr-2" />
-              <span className="text-sm text-text-secondary">Durchschnittliches Ergebnis Öffentliches Recht</span>
+          {legalAreaStats.find(s => s.area === 'Öffentliches Recht') && (
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Award className="w-6 h-6 text-green-600 mr-2" />
+                <span className="text-sm text-text-secondary">Durchschnittliches Ergebnis Öffentliches Recht</span>
+              </div>
+              <p className={`text-2xl font-bold ${getGradeColor(legalAreaStats.find(s => s.area === 'Öffentliches Recht')!.average_grade)}`}>
+                {formatGrade(legalAreaStats.find(s => s.area === 'Öffentliches Recht')!.average_grade)} Punkte
+              </p>
             </div>
-            <p className={`text-2xl font-bold ${getGradeColor(legalAreaStats.find(s => s.area === 'Öffentliches Recht')?.average_grade || 0)}`}>
-              {legalAreaStats.find(s => s.area === 'Öffentliches Recht') 
-                ? formatGrade(legalAreaStats.find(s => s.area === 'Öffentliches Recht')!.average_grade) + ' Punkte'
-                : 'Keine Daten'
-              }
-            </p>
-          </div>
+          )}
 
-          <div className="text-center">
-            <div className="flex items-center justify-center mb-2">
-              <Award className="w-6 h-6 text-red-600 mr-2" />
-              <span className="text-sm text-text-secondary">Durchschnittliches Ergebnis Strafrecht</span>
+          {legalAreaStats.find(s => s.area === 'Strafrecht') && (
+            <div className="text-center">
+              <div className="flex items-center justify-center mb-2">
+                <Award className="w-6 h-6 text-red-600 mr-2" />
+                <span className="text-sm text-text-secondary">Durchschnittliches Ergebnis Strafrecht</span>
+              </div>
+              <p className={`text-2xl font-bold ${getGradeColor(legalAreaStats.find(s => s.area === 'Strafrecht')!.average_grade)}`}>
+                {formatGrade(legalAreaStats.find(s => s.area === 'Strafrecht')!.average_grade)} Punkte
+              </p>
             </div>
-            <p className={`text-2xl font-bold ${getGradeColor(legalAreaStats.find(s => s.area === 'Strafrecht')?.average_grade || 0)}`}>
-              {legalAreaStats.find(s => s.area === 'Strafrecht') 
-                ? formatGrade(legalAreaStats.find(s => s.area === 'Strafrecht')!.average_grade) + ' Punkte'
-                : 'Keine Daten'
-              }
-            </p>
-          </div>
+          )}
         </div>
       </div>
 
@@ -332,33 +334,46 @@ export const ResultsPage: React.FC = () => {
                     value ? `${value.toString().replace('.', ',')} Punkte` : 'Keine Daten', 
                     name
                   ]}
-                  labelFormatter={(label: string) => `Datum: ${label}`}
+                  labelFormatter={(label: string, payload: any) => {
+                    if (payload && payload.length > 0) {
+                      const data = payload[0].payload;
+                      return `Klausur ${data.examNumber} - ${data.subArea} (${label})`;
+                    }
+                    return `Datum: ${label}`;
+                  }}
                 />
                 <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="Zivilrecht" 
-                  stroke="#3B82F6" 
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  connectNulls={false}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="Strafrecht" 
-                  stroke="#EF4444" 
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  connectNulls={false}
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="Öffentliches Recht" 
-                  stroke="#10B981" 
-                  strokeWidth={2}
-                  dot={{ r: 4 }}
-                  connectNulls={false}
-                />
+                {/* Only show lines for legal areas where the student has results */}
+                {results.some(r => r.legal_area === 'Zivilrecht') && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="Zivilrecht" 
+                    stroke="#3B82F6" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    connectNulls={false}
+                  />
+                )}
+                {results.some(r => r.legal_area === 'Strafrecht') && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="Strafrecht" 
+                    stroke="#EF4444" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    connectNulls={false}
+                  />
+                )}
+                {results.some(r => r.legal_area === 'Öffentliches Recht') && (
+                  <Line 
+                    type="monotone" 
+                    dataKey="Öffentliches Recht" 
+                    stroke="#10B981" 
+                    strokeWidth={2}
+                    dot={{ r: 4 }}
+                    connectNulls={false}
+                  />
+                )}
               </LineChart>
             </ResponsiveContainer>
           </div>

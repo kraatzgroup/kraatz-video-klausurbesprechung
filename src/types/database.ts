@@ -1,6 +1,15 @@
 // Vollständige Database-Typen für TypeScript
 // Löst alle "never" Type-Probleme
 
+// Type for individual additional material objects
+export interface AdditionalMaterial {
+  id: string
+  filename: string
+  url: string
+  uploaded_at: string
+  size: number | null
+}
+
 export interface Database {
   public: {
     Tables: {
@@ -58,6 +67,7 @@ export interface Database {
           pdf_url: string | null
           case_study_material_url: string | null
           additional_materials_url: string | null
+          additional_materials: AdditionalMaterial[]
           submission_url: string | null
           submission_downloaded_at: string | null
           video_correction_url: string | null
@@ -82,6 +92,7 @@ export interface Database {
           pdf_url?: string | null
           case_study_material_url?: string | null
           additional_materials_url?: string | null
+          additional_materials?: AdditionalMaterial[]
           submission_url?: string | null
           submission_downloaded_at?: string | null
           video_correction_url?: string | null
@@ -106,6 +117,7 @@ export interface Database {
           pdf_url?: string | null
           case_study_material_url?: string | null
           additional_materials_url?: string | null
+          additional_materials?: AdditionalMaterial[]
           submission_url?: string | null
           submission_downloaded_at?: string | null
           video_correction_url?: string | null

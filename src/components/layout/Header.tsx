@@ -250,11 +250,19 @@ export const Header: React.FC = () => {
               </>
             ) : (
               <div className="flex items-center space-x-4">
+                <div className="relative group">
+                  <Link
+                    to="/login"
+                    className="text-text-secondary hover:text-primary transition-colors"
+                  >
+                    Studenten Login
+                  </Link>
+                </div>
                 <Link
-                  to="/login"
-                  className="text-text-secondary hover:text-primary transition-colors"
+                  to="/admin"
+                  className="text-text-secondary hover:text-primary transition-colors text-sm"
                 >
-                  Anmelden
+                  Dozenten/Admin
                 </Link>
                 <Link
                   to="/register"

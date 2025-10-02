@@ -10,7 +10,13 @@ export const getRoleBasedRedirect = async (userId: string): Promise<string> => {
     
     if (data && !error) {
       const role = data.role || 'student';
-      return role === 'instructor' ? '/instructor' : '/dashboard';
+      if (role === 'instructor' || role === 'springer') {
+        return '/instructor';
+      } else if (role === 'admin') {
+        return '/admin/dashboard';
+      } else {
+        return '/dashboard';
+      }
     }
   } catch (error) {
     console.error('Error fetching user role:', error);

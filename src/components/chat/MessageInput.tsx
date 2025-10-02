@@ -1,9 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Paperclip, Smile } from 'lucide-react';
+import { Send, Paperclip, Smile, X, Upload } from 'lucide-react';
 import EmojiPicker, { EmojiClickData } from 'emoji-picker-react';
+import { useFileUpload, FileUploadResult } from '../../hooks/useFileUpload';
 
 interface MessageInputProps {
-  onSendMessage: (content: string) => Promise<boolean>;
+  onSendMessage: (content: string, attachment?: FileUploadResult) => Promise<boolean>;
   disabled?: boolean;
   placeholder?: string;
 }
@@ -16,8 +17,19 @@ export const MessageInput: React.FC<MessageInputProps> = ({
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<FileUploadResult | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const emojiPickerRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
+  const { 
+    uploadFile, 
+    isUploading, 
+    uploadProgress, 
+    getFileIcon, 
+    formatFileSize,
+    validateFile 
+  } = useFileUpload();
 
   // Auto-resize textarea
   useEffect(() => {
@@ -59,14 +71,51 @@ export const MessageInput: React.FC<MessageInputProps> = ({
     setShowEmojiPicker(false);
   };
 
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    // Validate file
+    const validation = validateFile(file);
+    if (!validation.valid) {
+      alert(validation.error);
+      return;
+    }
+
+    try {
+      console.log('📤 Starting file upload:', file.name);
+      const result = await uploadFile(file);
+      
+      if (result.success) {
+        setSelectedFile(result);
+        console.log('✅ File uploaded successfully:', result);
+      } else {
+        alert(result.error || 'Fehler beim Hochladen der Datei');
+      }
+    } catch (error) {
+      console.error('❌ File upload error:', error);
+      alert('Fehler beim Hochladen der Datei');
+    }
+
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+  };
+
+  const handleRemoveFile = () => {
+    setSelectedFile(null);
+  };
+
   const handleSend = async () => {
-    if (!message.trim() || isSending || disabled) return;
+    if ((!message.trim() && !selectedFile) || isSending || disabled) return;
 
     setIsSending(true);
     try {
-      const success = await onSendMessage(message.trim());
+      const success = await onSendMessage(message.trim() || '', selectedFile || undefined);
       if (success) {
         setMessage('');
+        setSelectedFile(null);
       }
     } catch (error) {
       console.error('❌ Error sending message:', error);
@@ -89,13 +138,66 @@ export const MessageInput: React.FC<MessageInputProps> = ({
 
   return (
     <div className="border-t border-gray-200 bg-white p-4">
+      {/* File Preview */}
+      {selectedFile && (
+        <div className="mb-3 p-3 bg-gray-50 rounded-lg border">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-lg">{getFileIcon(selectedFile.fileType || '')}</span>
+              <div>
+                <div className="text-sm font-medium text-gray-900">
+                  {selectedFile.fileName}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {formatFileSize(selectedFile.fileSize || 0)}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={handleRemoveFile}
+              className="p-1 text-gray-400 hover:text-red-500 rounded"
+              title="Datei entfernen"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Progress */}
+      {isUploading && uploadProgress && (
+        <div className="mb-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
+          <div className="flex items-center gap-2 mb-2">
+            <Upload className="w-4 h-4 text-blue-600" />
+            <span className="text-sm text-blue-800">Datei wird hochgeladen...</span>
+          </div>
+          <div className="w-full bg-blue-200 rounded-full h-2">
+            <div 
+              className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+              style={{ width: `${uploadProgress.percentage}%` }}
+            />
+          </div>
+          <div className="text-xs text-blue-600 mt-1">
+            {Math.round(uploadProgress.percentage)}% - {formatFileSize(uploadProgress.loaded)} / {formatFileSize(uploadProgress.total)}
+          </div>
+        </div>
+      )}
+
       <div className="flex items-end gap-3">
-        {/* File Upload Button (für zukünftige Erweiterung) */}
+        {/* File Upload Button */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          onChange={handleFileSelect}
+          className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.txt,.zip,.rar"
+        />
         <button
           type="button"
-          disabled={disabled}
+          onClick={() => fileInputRef.current?.click()}
+          disabled={disabled || isUploading}
           className="flex-shrink-0 p-2 text-gray-400 hover:text-gray-600 disabled:opacity-50 disabled:cursor-not-allowed"
-          title="Datei anhängen (bald verfügbar)"
+          title="Datei anhängen"
         >
           <Paperclip className="w-5 h-5" />
         </button>
@@ -156,9 +258,9 @@ export const MessageInput: React.FC<MessageInputProps> = ({
         <button
           type="button"
           onClick={handleSend}
-          disabled={!message.trim() || isSending || disabled}
+          disabled={(!message.trim() && !selectedFile) || isSending || disabled || isUploading}
           className={`flex-shrink-0 p-2 rounded-lg transition-colors ${
-            message.trim() && !isSending && !disabled
+            (message.trim() || selectedFile) && !isSending && !disabled && !isUploading
               ? 'bg-kraatz-primary text-white hover:bg-kraatz-primary/90'
               : 'bg-gray-100 text-gray-400 cursor-not-allowed'
           }`}

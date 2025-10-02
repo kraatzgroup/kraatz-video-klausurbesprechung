@@ -12,7 +12,17 @@ export const ChatLayout: React.FC = () => {
   const {
     conversations,
     activeConversation,
+    selectConversation,
+    startConversation,
+    leaveConversation,
     getConversationParticipants,
+    getFilteredChatPartners,
+    messages,
+    sendMessage,
+    editMessage,
+    deleteMessage,
+    loadMoreMessages,
+    hasMoreMessages,
     loading,
     error
     // totalUnreadCount - unused for now
@@ -34,20 +44,64 @@ export const ChatLayout: React.FC = () => {
 
   // Handle conversation selection
   const handleSelectConversation = async (conversationId: string) => {
-    // TODO: Implement conversation selection
-    console.log('Select conversation:', conversationId);
+    try {
+      await selectConversation(conversationId);
+      console.log('✅ Conversation selected:', conversationId);
+    } catch (error) {
+      console.error('❌ Error selecting conversation:', error);
+    }
   };
 
   // Handle starting new conversation
   const handleStartConversation = async (userIds: string[]) => {
-    // TODO: Implement conversation creation
-    console.log('Start conversation with:', userIds);
+    try {
+      console.log('🚀 Starting conversation with users:', userIds);
+      
+      // Get user data for the selected user IDs
+      const chatPartners = await getFilteredChatPartners();
+      const selectedUsers = chatPartners.filter(user => userIds.includes(user.id));
+      
+      console.log('👥 Selected chat partners:', selectedUsers);
+      
+      if (selectedUsers.length > 0) {
+        const conversationId = await startConversation(selectedUsers);
+        if (conversationId) {
+          console.log('✅ Conversation created successfully:', conversationId);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error creating conversation:', error);
+    }
   };
 
   // Handle leaving conversation
   const handleLeaveConversation = async () => {
-    // TODO: Implement leave conversation
-    console.log('Leave conversation');
+    if (!activeConversation) return;
+    
+    try {
+      console.log('🚪 Leaving conversation:', activeConversation.id);
+      
+      // Show confirmation dialog
+      const confirmed = window.confirm(
+        'Möchtest du diese Unterhaltung wirklich verlassen? Du kannst sie später nicht mehr einsehen.'
+      );
+      
+      if (!confirmed) return;
+      
+      const success = await leaveConversation(activeConversation.id);
+      
+      if (success) {
+        console.log('✅ Successfully left conversation');
+        // The conversation list will be automatically updated via the hook
+        // No need to manually clear activeConversation as it will be removed from the list
+      } else {
+        console.error('❌ Failed to leave conversation');
+        alert('Fehler beim Verlassen der Unterhaltung. Bitte versuche es erneut.');
+      }
+    } catch (error) {
+      console.error('❌ Error leaving conversation:', error);
+      alert('Fehler beim Verlassen der Unterhaltung. Bitte versuche es erneut.');
+    }
   };
 
   // Show error state
@@ -87,14 +141,14 @@ export const ChatLayout: React.FC = () => {
       {/* Main Chat Area */}
       <ChatWindow
         conversation={activeConversation}
-        messages={[]}
+        messages={messages}
         participants={participants}
         loading={loading}
-        hasMoreMessages={false}
-        onSendMessage={async () => false}
-        onEditMessage={async () => false}
-        onDeleteMessage={async () => false}
-        onLoadMoreMessages={async () => {}}
+        hasMoreMessages={hasMoreMessages}
+        onSendMessage={sendMessage}
+        onEditMessage={editMessage}
+        onDeleteMessage={deleteMessage}
+        onLoadMoreMessages={loadMoreMessages}
         onLeaveConversation={handleLeaveConversation}
       />
 
