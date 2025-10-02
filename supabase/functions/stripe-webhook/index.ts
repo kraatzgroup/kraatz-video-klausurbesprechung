@@ -69,6 +69,16 @@ serve(async (req) => {
         await handleCheckoutSessionCompleted(supabaseClient, checkoutSession)
         break
       
+      case 'customer.created':
+        const createdCustomer = event.data.object as any
+        await handleCustomerCreated(supabaseClient, createdCustomer)
+        break
+      
+      case 'customer.updated':
+        const updatedCustomer = event.data.object as any
+        await handleCustomerUpdated(supabaseClient, updatedCustomer)
+        break
+      
       default:
         console.log(`Unhandled event type: ${event.type}`)
     }
@@ -265,9 +275,23 @@ async function handleCheckoutSessionCompleted(supabaseClient: any, checkoutSessi
     // Extract metadata from checkout session
     const packageId = checkoutSession.metadata?.packageId
     const userId = checkoutSession.metadata?.userId
+    const isGuestCheckout = checkoutSession.metadata?.guestCheckout === 'true'
     
-    if (!packageId || !userId) {
-      console.error('Missing metadata in checkout session:', checkoutSession.id)
+    if (!packageId) {
+      console.error('Missing packageId in checkout session:', checkoutSession.id)
+      return
+    }
+
+    // Handle guest checkout
+    if (isGuestCheckout) {
+      console.log('🎯 Processing guest checkout session')
+      await handleGuestCheckoutSession(supabaseClient, checkoutSession, packageId)
+      return
+    }
+
+    // Regular user checkout
+    if (!userId) {
+      console.error('Missing userId in checkout session:', checkoutSession.id)
       return
     }
 
@@ -447,6 +471,316 @@ async function handleCheckoutSessionCompleted(supabaseClient: any, checkoutSessi
 
   } catch (error) {
     console.error('Error processing checkout session:', error)
+  }
+}
+
+async function handleCustomerCreated(supabaseClient: any, customer: any) {
+  try {
+    console.log('👤 Processing customer.created event:', {
+      customerId: customer.id,
+      email: customer.email,
+      name: customer.name
+    })
+
+    if (!customer.email) {
+      console.error('❌ Customer has no email address')
+      return
+    }
+
+    // Parse name into first_name and last_name
+    let firstName: string | null = null
+    let lastName: string | null = null
+
+    if (customer.name) {
+      const nameParts = customer.name.trim().split(' ')
+      firstName = nameParts[0] || null
+      lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null
+    }
+
+    // Check if user already exists with this email
+    const { data: existingUser, error: checkError } = await supabaseClient
+      .from('users')
+      .select('id, stripe_customer_id')
+      .eq('email', customer.email)
+      .single()
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('❌ Error checking existing user:', checkError)
+      return
+    }
+
+    if (existingUser) {
+      // User exists - update with Stripe customer ID if not already set
+      if (!existingUser.stripe_customer_id) {
+        console.log('🔄 Updating existing user with Stripe customer ID:', existingUser.id)
+        
+        const { error: updateError } = await supabaseClient
+          .from('users')
+          .update({ stripe_customer_id: customer.id })
+          .eq('id', existingUser.id)
+
+        if (updateError) {
+          console.error('❌ Error updating user with Stripe customer ID:', updateError)
+          return
+        }
+
+        console.log('✅ Successfully updated existing user with Stripe customer ID')
+      } else {
+        console.log('ℹ️ User already has Stripe customer ID:', existingUser.stripe_customer_id)
+      }
+    } else {
+      // User doesn't exist - create new user
+      console.log('👤 Creating new user from Stripe customer')
+      
+      const { data: newUser, error: createError } = await supabaseClient
+        .from('users')
+        .insert({
+          email: customer.email,
+          first_name: firstName,
+          last_name: lastName,
+          role: 'student', // Default role for new customers
+          account_credits: 0, // Start with 0 credits
+          stripe_customer_id: customer.id,
+          email_notifications_enabled: true // Default to enabled
+        })
+        .select()
+        .single()
+
+      if (createError) {
+        console.error('❌ Error creating new user:', createError)
+        return
+      }
+
+      console.log('✅ Successfully created new user:', {
+        userId: newUser.id,
+        email: newUser.email,
+        stripeCustomerId: newUser.stripe_customer_id
+      })
+    }
+
+  } catch (error) {
+    console.error('❌ Error processing customer.created:', error)
+  }
+}
+
+async function handleCustomerUpdated(supabaseClient: any, customer: any) {
+  try {
+    console.log('🔄 Processing customer.updated event:', {
+      customerId: customer.id,
+      email: customer.email,
+      name: customer.name
+    })
+
+    if (!customer.email) {
+      console.log('⚠️ Customer update has no email, skipping')
+      return
+    }
+
+    // Find user by Stripe customer ID
+    const { data: existingUser, error: findError } = await supabaseClient
+      .from('users')
+      .select('id, email, first_name, last_name')
+      .eq('stripe_customer_id', customer.id)
+      .single()
+
+    if (findError) {
+      console.log('⚠️ User not found for Stripe customer ID:', customer.id)
+      return
+    }
+
+    // Parse updated name
+    let firstName: string | null = null
+    let lastName: string | null = null
+
+    if (customer.name) {
+      const nameParts = customer.name.trim().split(' ')
+      firstName = nameParts[0] || null
+      lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null
+    }
+
+    // Update user with new information
+    const { error: updateError } = await supabaseClient
+      .from('users')
+      .update({
+        email: customer.email,
+        first_name: firstName,
+        last_name: lastName
+      })
+      .eq('id', existingUser.id)
+
+    if (updateError) {
+      console.error('❌ Error updating user from Stripe customer:', updateError)
+      return
+    }
+
+    console.log('✅ Successfully updated user from Stripe customer')
+    
+  } catch (error) {
+    console.error('❌ Error processing customer.updated:', error)
+  }
+}
+
+async function handleGuestCheckoutSession(supabaseClient: any, checkoutSession: any, packageId: string) {
+  try {
+    console.log('👤 Processing guest checkout session:', {
+      sessionId: checkoutSession.id,
+      customerEmail: checkoutSession.customer_details?.email,
+      customerId: checkoutSession.customer
+    })
+
+    // Get customer email from checkout session
+    const customerEmail = checkoutSession.customer_details?.email
+    if (!customerEmail) {
+      console.error('❌ No customer email in guest checkout session')
+      return
+    }
+
+    // Get Stripe customer ID
+    const stripeCustomerId = checkoutSession.customer
+    if (!stripeCustomerId) {
+      console.error('❌ No customer ID in guest checkout session')
+      return
+    }
+
+    // Get package data
+    const { data: packageData, error: packageError } = await supabaseClient
+      .from('packages')
+      .select('*')
+      .eq('id', packageId)
+      .single()
+
+    if (packageError || !packageData) {
+      console.error('❌ Package not found:', packageId)
+      return
+    }
+
+    // Parse customer name from Stripe
+    let firstName: string | null = null
+    let lastName: string | null = null
+    
+    if (checkoutSession.customer_details?.name) {
+      const nameParts = checkoutSession.customer_details.name.trim().split(' ')
+      firstName = nameParts[0] || null
+      lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : null
+    }
+
+    // Check if user already exists by email
+    const { data: existingUser, error: userCheckError } = await supabaseClient
+      .from('users')
+      .select('*')
+      .eq('email', customerEmail)
+      .single()
+
+    let userId: string
+
+    if (existingUser && !userCheckError) {
+      // User exists - update with Stripe customer ID if missing
+      console.log('✅ Found existing user:', existingUser.id)
+      userId = existingUser.id
+
+      if (!existingUser.stripe_customer_id) {
+        console.log('🔄 Updating existing user with Stripe customer ID')
+        await supabaseClient
+          .from('users')
+          .update({ stripe_customer_id: stripeCustomerId })
+          .eq('id', userId)
+      }
+    } else {
+      // Create new user from guest checkout
+      console.log('👤 Creating new user from guest checkout')
+      
+      const { data: newUser, error: createError } = await supabaseClient
+        .from('users')
+        .insert({
+          email: customerEmail,
+          first_name: firstName,
+          last_name: lastName,
+          role: 'student',
+          account_credits: 0,
+          stripe_customer_id: stripeCustomerId,
+          email_notifications_enabled: true
+        })
+        .select()
+        .single()
+
+      if (createError) {
+        console.error('❌ Error creating user from guest checkout:', createError)
+        return
+      }
+
+      userId = newUser.id
+      console.log('✅ Created new user:', userId)
+    }
+
+    // Create order
+    const { data: newOrder, error: createOrderError } = await supabaseClient
+      .from('orders')
+      .insert({
+        user_id: userId,
+        package_id: packageId,
+        stripe_payment_intent_id: checkoutSession.id,
+        status: 'completed',
+        total_cents: checkoutSession.amount_total || 0
+      })
+      .select('*, packages(*)')
+      .single()
+
+    if (createOrderError) {
+      console.error('❌ Error creating order from guest checkout:', createOrderError)
+      return
+    }
+
+    console.log('✅ Order created from guest checkout:', newOrder.id)
+
+    // Add credits to user account
+    const { data: userData, error: userError } = await supabaseClient
+      .from('users')
+      .select('account_credits')
+      .eq('id', userId)
+      .single()
+
+    if (userError || !userData) {
+      console.error('❌ User not found for credit update:', userId)
+      return
+    }
+
+    const newCredits = userData.account_credits + packageData.case_study_count
+
+    const { error: updateUserError } = await supabaseClient
+      .from('users')
+      .update({ account_credits: newCredits })
+      .eq('id', userId)
+
+    if (updateUserError) {
+      console.error('❌ Error updating user credits:', updateUserError)
+      return
+    }
+
+    // Create notification for user
+    const { error: notificationError } = await supabaseClient
+      .from('notifications')
+      .insert({
+        user_id: userId,
+        title: 'Willkommen bei Kraatz Club!',
+        message: `Ihre Bestellung für ${packageData.name} wurde erfolgreich abgeschlossen. ${packageData.case_study_count} Credits wurden Ihrem Konto gutgeschrieben. Sie können sich jetzt mit Ihrer E-Mail-Adresse einloggen.`,
+        type: 'success'
+      })
+
+    if (notificationError) {
+      console.error('❌ Error creating guest checkout notification:', notificationError)
+    }
+
+    console.log('🎉 Guest checkout processed successfully:', {
+      sessionId: checkoutSession.id,
+      orderId: newOrder.id,
+      userId: userId,
+      email: customerEmail,
+      creditsAdded: packageData.case_study_count,
+      newTotalCredits: newCredits
+    })
+
+  } catch (error) {
+    console.error('❌ Error processing guest checkout session:', error)
   }
 }
 

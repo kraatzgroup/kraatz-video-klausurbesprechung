@@ -10,6 +10,45 @@ export interface CreatePaymentIntentResponse {
   paymentIntentId: string
 }
 
+export const createGuestCheckoutSession = async (
+  request: { packageId: string }
+): Promise<{ url: string }> => {
+  try {
+    // Get package details from the database
+    const { data: packageData, error: packageError } = await supabase
+      .from('packages')
+      .select('*')
+      .eq('id', request.packageId)
+      .eq('active', true)
+      .single()
+
+    if (packageError || !packageData) {
+      throw new Error('Package not found or inactive')
+    }
+
+    // Call the Supabase Edge Function for guest checkout
+    const { data, error } = await supabase.functions.invoke('create-guest-checkout-session', {
+      body: {
+        packageId: request.packageId,
+        priceId: packageData.stripe_price_id,
+        successUrl: `${window.location.origin}/checkout-success?session_id={CHECKOUT_SESSION_ID}`,
+        cancelUrl: `${window.location.origin}/packages`
+      }
+    })
+
+    if (error) {
+      throw new Error(`Guest checkout session creation failed: ${error.message}`)
+    }
+
+    return {
+      url: data.url
+    }
+  } catch (error) {
+    console.error('Error creating guest checkout session:', error)
+    throw error
+  }
+}
+
 export const createCheckoutSession = async (
   request: CreatePaymentIntentRequest
 ): Promise<{ url: string }> => {

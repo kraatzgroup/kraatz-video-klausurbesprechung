@@ -24,6 +24,7 @@ export interface Database {
           instructor_legal_area: string | null
           email_notifications_enabled: boolean
           profile_image_url: string | null
+          stripe_customer_id: string | null
           created_at: string
           updated_at: string | null
         }
@@ -37,6 +38,7 @@ export interface Database {
           instructor_legal_area?: string | null
           email_notifications_enabled?: boolean
           profile_image_url?: string | null
+          stripe_customer_id?: string | null
           created_at?: string
           updated_at?: string | null
         }
@@ -50,6 +52,7 @@ export interface Database {
           instructor_legal_area?: string | null
           email_notifications_enabled?: boolean
           profile_image_url?: string | null
+          stripe_customer_id?: string | null
           created_at?: string
           updated_at?: string | null
         }

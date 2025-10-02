@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { Check, CreditCard, ChevronDown, ChevronUp, Loader2 } from 'lucide-react'
 // import { Link } from 'react-router-dom' // Removed unused import
-import { getPackages, createCheckoutSession } from '../utils/stripeUtils'
+import { getPackages, createCheckoutSession, createGuestCheckoutSession } from '../utils/stripeUtils'
 
 interface Package {
   id: string
@@ -69,29 +69,28 @@ export const PackagesPage: React.FC = () => {
       answer: "Du kannst bei uns mit allen gängigen Zahlungsmethoden bezahlen: Kreditkarte, PayPal, Klarna, Google-Pay, Apple-Pay und Sofort-Überweisung"
     },
     {
-      question: "Verfallen meine Klausuren?",
       answer: "Nein. Dein Klausuren-Kontingent bleibt Dir erhalten."
     }
   ]
 
   const handlePurchase = async (packageId: string) => {
-    if (!user) {
-      // Redirect to register page for non-logged-in users
-      window.location.href = '/register'
-      return
-    }
-
     setProcessingPayment(packageId)
     
     try {
-      // Create checkout session and redirect to Stripe
-      const { url } = await createCheckoutSession({
-        packageId: packageId,
-        userId: user.id
-      })
-      
-      // Redirect to Stripe Checkout
-      window.location.href = url
+      if (user) {
+        // Logged in user - use existing flow
+        const { url } = await createCheckoutSession({
+          packageId: packageId,
+          userId: user.id
+        })
+        window.location.href = url
+      } else {
+        // Guest checkout - no userId required
+        const { url } = await createGuestCheckoutSession({
+          packageId: packageId
+        })
+        window.location.href = url
+      }
     } catch (error) {
       console.error('Error creating checkout session:', error)
       alert('Fehler beim Erstellen der Checkout-Session. Bitte versuchen Sie es erneut.')

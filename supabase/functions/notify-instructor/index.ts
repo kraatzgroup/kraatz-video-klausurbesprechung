@@ -140,7 +140,7 @@ serve(async (req) => {
           
           <!-- Action Button -->
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/instructor-dashboard" 
+            <a href="${Deno.env.get('SITE_URL') || 'https://klausuren.kraatz-club.de'}/instructor" 
                style="display: inline-block; background-color: #2e83c2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
               Zum Dozenten-Dashboard
             </a>

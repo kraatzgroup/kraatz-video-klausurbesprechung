@@ -74,7 +74,7 @@ serve(async (req) => {
       type: 'magiclink',
       email: email,
       options: {
-        redirectTo: `${req.headers.get('origin') || 'https://kraatz-club.netlify.app'}/dashboard`
+        redirectTo: `${req.headers.get('origin') || 'https://klausuren.kraatz-club.de'}/dashboard`
       }
     })
 
@@ -226,7 +226,7 @@ Mit freundlichen Grüßen
 Ihr Kraatz Club Team
 
 🎓 Kraatz Club - Juristische Exzellenz
-https://kraatz-club.de
+https://klausuren.kraatz-club.de
 `
 
     // Send email via Mailgun

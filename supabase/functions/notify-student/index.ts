@@ -106,28 +106,28 @@ serve(async (req) => {
     // Determine the appropriate action based on the notification
     if (notification.message.includes('verfügbar') && !notification.message.includes('Korrektur')) {
       actionButton = `
-        <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/dashboard" 
+        <a href="${Deno.env.get('SITE_URL') || 'https://klausuren.kraatz-club.de'}/dashboard" 
            style="display: inline-block; background-color: #2e83c2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; font-weight: 500;">
           Sachverhalt ansehen
         </a>
       `
     } else if (notification.message.includes('Korrektur') && notification.message.includes('verfügbar')) {
       actionButton = `
-        <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/dashboard" 
+        <a href="${Deno.env.get('SITE_URL') || 'https://klausuren.kraatz-club.de'}/dashboard" 
            style="display: inline-block; background-color: #2e83c2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
           Korrektur ansehen
         </a>
       `
     } else if (notification.message.includes('eingereicht')) {
       actionButton = `
-        <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/dashboard" 
+        <a href="${Deno.env.get('SITE_URL') || 'https://klausuren.kraatz-club.de'}/dashboard" 
            style="display: inline-block; background-color: #2e83c2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
           Zum Dashboard
         </a>
       `
     } else {
       actionButton = `
-        <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/dashboard" 
+        <a href="${Deno.env.get('SITE_URL') || 'https://klausuren.kraatz-club.de'}/dashboard" 
            style="display: inline-block; background-color: #2e83c2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
           Zum Dashboard
         </a>

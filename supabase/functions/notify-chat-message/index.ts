@@ -156,7 +156,7 @@ serve(async (req) => {
             
             <!-- Action Button -->
             <div style="text-align: center; margin: 30px 0;">
-              <a href="${Deno.env.get('SITE_URL') || 'https://kraatz-club.netlify.app'}/chat" 
+              <a href="${Deno.env.get('SITE_URL') || 'https://klausuren.kraatz-club.de'}/chat" 
                  style="display: inline-block; background-color: #2e83c2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: 500;">
                 Zum Chat
               </a>
