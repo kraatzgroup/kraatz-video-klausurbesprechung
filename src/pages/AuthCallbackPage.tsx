@@ -17,9 +17,31 @@ export const AuthCallbackPage: React.FC = () => {
         console.log('🔍 Search params:', window.location.search)
         
         // Get parameters from URL
-        const token = searchParams.get('token')
-        const type = searchParams.get('type')
-        const redirectTo = searchParams.get('redirect_to') || '/dashboard'
+        let token = searchParams.get('token')
+        let type = searchParams.get('type')
+        let redirectTo = searchParams.get('redirect_to') || '/dashboard'
+
+        // Handle malformed URLs where redirect_to might be in the pathname
+        const pathname = window.location.pathname
+        if (pathname.includes('/auth/callback/') && !token) {
+          console.log('🔧 Detected malformed URL, attempting to parse...')
+          
+          // Extract from pathname like /auth/callback/https://klausuren.kraatz-club.de/dashboard
+          const pathParts = pathname.split('/auth/callback/')
+          if (pathParts.length > 1) {
+            redirectTo = '/' + pathParts[1].split('/').slice(-1)[0] // Get last part (dashboard)
+            console.log('🔧 Extracted redirectTo from pathname:', redirectTo)
+          }
+          
+          // Try to get token and type from hash or search params
+          const hash = window.location.hash
+          if (hash) {
+            const hashParams = new URLSearchParams(hash.substring(1))
+            token = hashParams.get('access_token') || hashParams.get('token')
+            type = hashParams.get('type') || 'magiclink'
+            console.log('🔧 Extracted from hash:', { token: !!token, type })
+          }
+        }
 
         console.log('📝 Auth callback params:', { 
           token: !!token, 
@@ -29,6 +51,30 @@ export const AuthCallbackPage: React.FC = () => {
           allParams: Object.fromEntries(searchParams.entries())
         })
 
+        // If we still don't have a token, try to handle Supabase's automatic auth
+        if (!token && !type) {
+          console.log('🔧 No token found, checking for automatic Supabase auth...')
+          
+          // Check if user is already authenticated (Supabase might have handled it automatically)
+          const { data: { session } } = await supabase.auth.getSession()
+          
+          if (session?.user) {
+            console.log('✅ User already authenticated via Supabase:', session.user.email)
+            setStatus('success')
+            setMessage('Erfolgreich angemeldet! Sie werden weitergeleitet...')
+            
+            setTimeout(() => {
+              navigate(redirectTo, { replace: true })
+            }, 1000)
+            return
+          } else {
+            console.error('❌ No token and no existing session')
+            setStatus('error')
+            setMessage('Ungültiger Anmelde-Link. Token oder Session fehlt.')
+            return
+          }
+        }
+
         if (!token || !type) {
           console.error('❌ Missing token or type in callback URL')
           setStatus('error')
@@ -37,7 +83,7 @@ export const AuthCallbackPage: React.FC = () => {
         }
 
         // Verify the magic link token with Supabase
-        // For magic links, we need to use the token directly
+        console.log('🔐 Verifying token with Supabase...')
         const { data, error } = await supabase.auth.verifyOtp({
           token_hash: token,
           type: type as any
