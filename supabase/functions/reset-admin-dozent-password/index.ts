@@ -112,10 +112,29 @@ serve(async (req) => {
 
     console.log('📝 Original Supabase reset link:', originalResetLink)
 
-    // Use the original Supabase link as-is to ensure proper token validation
-    const resetLink = originalResetLink
+    // Fix redirect_to parameter to use production domain
+    let resetLink = originalResetLink
+    if (resetLink.includes('redirect_to=http://localhost:3000')) {
+      resetLink = resetLink.replace(
+        'redirect_to=http://localhost:3000',
+        'redirect_to=https://klausuren.kraatz-club.de/auth/callback'
+      )
+      console.log('🔧 Fixed redirect_to parameter to use production domain')
+    } else if (resetLink.includes('redirect_to=')) {
+      // Replace any other redirect_to with production domain
+      resetLink = resetLink.replace(
+        /redirect_to=[^&]+/,
+        'redirect_to=https://klausuren.kraatz-club.de/auth/callback'
+      )
+      console.log('🔧 Replaced redirect_to parameter with production domain')
+    } else {
+      // Add redirect_to parameter if not present
+      const separator = resetLink.includes('?') ? '&' : '?'
+      resetLink = `${resetLink}${separator}redirect_to=https://klausuren.kraatz-club.de/auth/callback`
+      console.log('🔧 Added redirect_to parameter with production domain')
+    }
     
-    console.log('✅ Using original Supabase reset link for proper token validation')
+    console.log('✅ Final reset link:', resetLink)
 
     console.log(`✅ Password reset link generated successfully`)
 
