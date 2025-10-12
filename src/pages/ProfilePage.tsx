@@ -24,26 +24,58 @@ export const ProfilePage: React.FC = () => {
 
   useEffect(() => {
     const fetchUserProfile = async () => {
+      console.log('📋 Fetching user profile...')
+      
       if (user) {
+        console.log('👤 User found, loading profile data:', {
+          id: user.id,
+          email: user.email
+        })
+        
         try {
+          console.log('📡 Querying users table for profile data...')
+          
           const { data, error } = await supabase
             .from('users')
             .select('first_name, last_name, email, role')
-            .eq('id', user.id)
+            .eq('id', user?.id)
             .single()
           
+          console.log('📊 Database query result:', {
+            data: data,
+            error: error,
+            hasData: !!data
+          })
+          
           if (data && !error) {
+            console.log('✅ Profile data loaded successfully:', {
+              firstName: data.first_name,
+              lastName: data.last_name,
+              email: data.email,
+              role: data.role
+            })
+            
             setFirstName(data.first_name || '')
             setLastName(data.last_name || '')
             setEmail(data.email || user.email || '')
             setRole(data.role || 'student')
+            
+            console.log('🔐 User role determined:', data.role)
+            console.log('🎯 Password reset section will be visible:', ['admin', 'instructor'].includes(data.role))
+          } else {
+            console.error('❌ Failed to load profile data:', error)
+            setMessage({ type: 'error', text: 'Fehler beim Laden des Profils' })
           }
         } catch (error) {
-          console.error('Error fetching user profile:', error)
+          console.error('❌ Error fetching user profile:', error)
           setMessage({ type: 'error', text: 'Fehler beim Laden des Profils' })
         } finally {
           setLoading(false)
+          console.log('🏁 Profile loading completed')
         }
+      } else {
+        console.warn('⚠️ No user found, cannot load profile')
+        setLoading(false)
       }
     }
 
@@ -107,50 +139,111 @@ export const ProfilePage: React.FC = () => {
 
   const handlePasswordUpdate = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!user) return
+    console.log('🔐 Password update initiated')
+    
+    if (!user) {
+      console.error('❌ No user found for password update')
+      return
+    }
+
+    console.log('👤 User attempting password change:', {
+      id: user.id,
+      email: user.email,
+      role: role
+    })
 
     setPasswordLoading(true)
     setPasswordMessage(null)
 
     // Validation
+    console.log('🔍 Starting password validation...')
+    
     if (!newPassword) {
+      console.error('❌ Validation failed: Empty password')
       setPasswordMessage({ type: 'error', text: 'Bitte geben Sie ein neues Passwort ein.' })
       setPasswordLoading(false)
       return
     }
 
     const validation = validatePassword(newPassword)
+    console.log('🔍 Password validation result:', {
+      isValid: validation.isValid,
+      minLength: validation.minLength,
+      hasUpperCase: validation.hasUpperCase,
+      hasLowerCase: validation.hasLowerCase,
+      hasNumber: validation.hasNumber,
+      hasSpecialChar: validation.hasSpecialChar,
+      passwordLength: newPassword.length
+    })
+
     if (!validation.isValid) {
+      console.error('❌ Validation failed: Password requirements not met')
       setPasswordMessage({ type: 'error', text: 'Das Passwort erfüllt nicht alle Anforderungen.' })
       setPasswordLoading(false)
       return
     }
 
     if (newPassword !== confirmPassword) {
+      console.error('❌ Validation failed: Passwords do not match')
+      console.log('🔍 Password comparison:', {
+        newPasswordLength: newPassword.length,
+        confirmPasswordLength: confirmPassword.length,
+        match: newPassword === confirmPassword
+      })
       setPasswordMessage({ type: 'error', text: 'Die Passwörter stimmen nicht überein.' })
       setPasswordLoading(false)
       return
     }
 
+    console.log('✅ All validations passed, proceeding with password update...')
+
     try {
+      console.log('🔧 Using Supabase Admin client to update password...')
+      console.log('📡 Calling supabaseAdmin.auth.admin.updateUserById with:', {
+        userId: user.id,
+        hasPassword: !!newPassword,
+        passwordLength: newPassword.length
+      })
+
       // Use admin client to update user password in database
       const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
         password: newPassword
       })
 
       if (error) {
+        console.error('❌ Supabase Admin API returned error:', {
+          message: error.message,
+          status: error.status,
+          code: error.code,
+          details: error
+        })
         throw error
       }
 
-      console.log('✅ Password updated successfully for user:', user.email)
+      console.log('✅ Password updated successfully in Supabase Auth database')
+      console.log('👤 Password change completed for user:', {
+        id: user.id,
+        email: user.email,
+        timestamp: new Date().toISOString()
+      })
+      
       setPasswordMessage({ type: 'success', text: 'Passwort erfolgreich geändert!' })
       setNewPassword('')
       setConfirmPassword('')
+      
+      console.log('🧹 Password form fields cleared')
     } catch (error: any) {
-      console.error('❌ Error updating password:', error)
+      console.error('❌ Password update failed with error:', {
+        message: error.message,
+        name: error.name,
+        stack: error.stack,
+        fullError: error
+      })
+      
       setPasswordMessage({ type: 'error', text: error.message || 'Fehler beim Ändern des Passworts' })
     } finally {
       setPasswordLoading(false)
+      console.log('🏁 Password update process completed')
     }
   }
 
