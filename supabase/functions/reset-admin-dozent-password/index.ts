@@ -76,7 +76,10 @@ serve(async (req) => {
     // Generate password reset link via Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
-      email: email
+      email: email,
+      options: {
+        redirectTo: 'https://klausuren.kraatz-club.de/auth/callback'
+      }
     })
 
     if (authError) {
