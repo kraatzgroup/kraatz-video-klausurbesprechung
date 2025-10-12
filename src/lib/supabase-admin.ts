@@ -23,7 +23,7 @@ const getSupabaseAdmin = () => {
           persistSession: false,
           autoRefreshToken: false,
           detectSessionInUrl: false,
-          storageKey: 'kraatz-club-admin-auth' // Unique storage key
+          storageKey: 'kraatz-club-admin-storage' // Unique storage key
         },
         global: {
           headers: {

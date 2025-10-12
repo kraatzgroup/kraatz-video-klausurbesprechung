@@ -83,8 +83,13 @@ export const NotificationDropdown: React.FC = () => {
       const unreadCount = (data || []).filter((n: any) => !n.read).length
       setHasUnreadNotifications(unreadCount > 0)
       console.log('🔔 Unread notifications:', unreadCount)
-    } catch (error) {
-      console.error('❌ Error fetching notifications:', error)
+    } catch (error: any) {
+      // Check if it's a network error vs actual database error
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('TypeError')) {
+        console.warn('⚠️ Network error fetching notifications:', error.message)
+      } else {
+        console.error('❌ Error fetching notifications:', error)
+      }
     } finally {
       setLoading(false)
     }

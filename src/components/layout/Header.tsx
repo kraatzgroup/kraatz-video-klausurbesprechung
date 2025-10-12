@@ -27,6 +27,13 @@ export const Header: React.FC = () => {
             .single()
 
           if (error) {
+            // Check if it's a network error vs actual database error
+            if (error.message?.includes('Failed to fetch') || error.message?.includes('TypeError')) {
+              console.warn('⚠️ Network error fetching user data:', error.message)
+              // Don't treat network errors as security issues
+              return
+            }
+            
             console.error('🚨 SECURITY: User not found in database:', error)
             console.error('🚨 SECURITY: Unauthorized access attempt by:', user.email)
             // Don't force logout here to prevent loops - let login page handle it
@@ -48,8 +55,13 @@ export const Header: React.FC = () => {
           if (!ordersError && ordersData && ordersData.length > 0) {
             setHasOrders(true)
           }
-        } catch (error) {
-          console.error('🚨 SECURITY: Database error during user validation:', error)
+        } catch (error: any) {
+          // Check if it's a network error vs actual security issue
+          if (error.message?.includes('Failed to fetch') || error.message?.includes('TypeError')) {
+            console.warn('⚠️ Network error during user validation:', error.message)
+          } else {
+            console.error('🚨 SECURITY: Database error during user validation:', error)
+          }
           // Don't force logout here to prevent loops - let login page handle it
         }
       }
