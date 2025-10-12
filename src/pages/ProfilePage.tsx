@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
+import { supabaseAdmin } from '../lib/supabase-admin'
 import { User, Save, AlertCircle, CheckCircle, Lock, Eye, EyeOff } from 'lucide-react'
 
 export const ProfilePage: React.FC = () => {
@@ -132,7 +133,8 @@ export const ProfilePage: React.FC = () => {
     }
 
     try {
-      const { error } = await supabase.auth.updateUser({
+      // Use admin client to update user password in database
+      const { error } = await supabaseAdmin.auth.admin.updateUserById(user.id, {
         password: newPassword
       })
 
@@ -140,11 +142,12 @@ export const ProfilePage: React.FC = () => {
         throw error
       }
 
+      console.log('✅ Password updated successfully for user:', user.email)
       setPasswordMessage({ type: 'success', text: 'Passwort erfolgreich geändert!' })
       setNewPassword('')
       setConfirmPassword('')
     } catch (error: any) {
-      console.error('Error updating password:', error)
+      console.error('❌ Error updating password:', error)
       setPasswordMessage({ type: 'error', text: error.message || 'Fehler beim Ändern des Passworts' })
     } finally {
       setPasswordLoading(false)
