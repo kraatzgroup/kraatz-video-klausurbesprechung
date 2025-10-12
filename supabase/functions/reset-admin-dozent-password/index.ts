@@ -76,10 +76,7 @@ serve(async (req) => {
     // Generate password reset link via Supabase Auth
     const { data: authData, error: authError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
-      email: email,
-      options: {
-        redirectTo: 'https://klausuren.kraatz-club.de/auth/callback'
-      }
+      email: email
     })
 
     if (authError) {
@@ -112,30 +109,10 @@ serve(async (req) => {
 
     console.log('📝 Original Supabase reset link:', originalResetLink)
 
-    // Create custom reset link with our domain and callback
-    let resetLink = originalResetLink
+    // Use the original Supabase link as-is to ensure proper token validation
+    const resetLink = originalResetLink
     
-    // Extract token and type from Supabase link
-    const tokenMatch = originalResetLink.match(/[?&]token=([^&]+)/)
-    const typeMatch = originalResetLink.match(/[?&]type=([^&]+)/)
-    
-    if (tokenMatch && typeMatch) {
-      const token = tokenMatch[1]
-      const type = typeMatch[1]
-      
-      // Create our custom reset link that points to our callback
-      resetLink = `https://klausuren.kraatz-club.de/auth/callback?token=${token}&type=${type}`
-      
-      console.log('✅ Created custom reset link:', resetLink)
-    } else {
-      console.error('❌ Could not extract token from Supabase reset link')
-      // Fallback: try to replace URLs in original link
-      resetLink = originalResetLink
-        .replace(/https?:\/\/rpgbyockvpannrupicno\.supabase\.co/g, 'https://klausuren.kraatz-club.de')
-        .replace(/\/auth\/v1\/verify/g, '/auth/callback')
-      
-      console.log('⚠️ Using fallback reset link:', resetLink)
-    }
+    console.log('✅ Using original Supabase reset link for proper token validation')
 
     console.log(`✅ Password reset link generated successfully`)
 
