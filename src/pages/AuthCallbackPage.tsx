@@ -77,8 +77,18 @@ export const AuthCallbackPage: React.FC = () => {
           return
         }
 
-        // Verify the magic link token with Supabase
-        console.log('🔐 Verifying token with Supabase...')
+        console.log('🔐 Processing auth token...', { type, tokenLength: token.length })
+        
+        // Handle password recovery differently - show form immediately without auto-login
+        if (type === 'recovery') {
+          console.log('🔐 Password reset mode - showing reset form without auto-login')
+          setStatus('password_reset')
+          setMessage('Bitte geben Sie Ihr neues Passwort ein.')
+          return
+        }
+
+        // For magic links, verify and login
+        console.log('🔐 Verifying magic link token with Supabase...')
         const { data, error } = await supabase.auth.verifyOtp({
           token_hash: token,
           type: type as any
@@ -93,22 +103,14 @@ export const AuthCallbackPage: React.FC = () => {
 
         if (data.user) {
           console.log('✅ User authenticated successfully:', data.user.email)
+          console.log('🔗 Magic link login - redirecting to dashboard')
+          setStatus('success')
+          setMessage('Erfolgreich angemeldet! Sie werden weitergeleitet...')
           
-          // Handle different auth types
-          if (type === 'recovery') {
-            console.log('🔐 Password reset mode - showing reset form')
-            setStatus('password_reset')
-            setMessage('Bitte geben Sie Ihr neues Passwort ein.')
-          } else {
-            console.log('🔗 Magic link login - redirecting to dashboard')
-            setStatus('success')
-            setMessage('Erfolgreich angemeldet! Sie werden weitergeleitet...')
-            
-            // Wait a moment to show success message, then redirect
-            setTimeout(() => {
-              navigate(redirectTo, { replace: true })
-            }, 2000)
-          }
+          // Wait a moment to show success message, then redirect
+          setTimeout(() => {
+            navigate(redirectTo, { replace: true })
+          }, 2000)
         } else {
           console.error('❌ No user data received')
           setStatus('error')
