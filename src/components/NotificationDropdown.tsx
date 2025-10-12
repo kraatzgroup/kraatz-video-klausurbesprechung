@@ -85,8 +85,14 @@ export const NotificationDropdown: React.FC = () => {
       console.log('🔔 Unread notifications:', unreadCount)
     } catch (error: any) {
       // Check if it's a network error vs actual database error
-      if (error.message?.includes('Failed to fetch') || error.message?.includes('TypeError')) {
-        console.warn('⚠️ Network error fetching notifications:', error.message)
+      const errorMessage = error.message || error.details || JSON.stringify(error)
+      const isNetworkError = errorMessage.includes('Failed to fetch') || 
+                            errorMessage.includes('TypeError') ||
+                            errorMessage.includes('fetch') ||
+                            error.code === 'NETWORK_ERROR'
+      
+      if (isNetworkError) {
+        console.warn('⚠️ Network error fetching notifications:', errorMessage)
       } else {
         console.error('❌ Error fetching notifications:', error)
       }
