@@ -417,54 +417,64 @@ const AdminDashboard: React.FC = () => {
             {activeTab === 'overview' && (
               <div className="space-y-8">
                 {/* Statistics Cards */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
-                  <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-lg p-6 text-white">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-blue-100">Studenten</p>
-                        <p className="text-3xl font-bold">{students.length}</p>
+                <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-6 sm:mb-8">
+                  <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-blue-100 rounded-lg">
+                        <Users className="w-4 h-4 sm:w-6 sm:h-6 text-blue-600" />
                       </div>
-                      <Users className="h-8 w-8 text-blue-200" />
+                      <div className="ml-3 sm:ml-4">
+                        <p className="text-xs sm:text-sm font-medium text-gray-600">Studenten</p>
+                        <p className="text-lg sm:text-2xl font-semibold text-gray-900">{students.length}</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-purple-500 to-purple-600 rounded-lg p-6 text-white">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-purple-100">Dozenten</p>
-                        <p className="text-3xl font-bold">{instructors.length}</p>
+                  <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-purple-100 rounded-lg">
+                        <Shield className="w-4 h-4 sm:w-6 sm:h-6 text-purple-600" />
                       </div>
-                      <Shield className="h-8 w-8 text-purple-200" />
+                      <div className="ml-3 sm:ml-4">
+                        <p className="text-xs sm:text-sm font-medium text-gray-600">Dozenten</p>
+                        <p className="text-lg sm:text-2xl font-semibold text-gray-900">{instructors.length}</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 rounded-lg p-6 text-white">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-indigo-100">Springer</p>
-                        <p className="text-3xl font-bold">{springer.length}</p>
+                  <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-indigo-100 rounded-lg">
+                        <UserPlus className="w-4 h-4 sm:w-6 sm:h-6 text-indigo-600" />
                       </div>
-                      <UserPlus className="h-8 w-8 text-indigo-200" />
+                      <div className="ml-3 sm:ml-4">
+                        <p className="text-xs sm:text-sm font-medium text-gray-600">Springer</p>
+                        <p className="text-lg sm:text-2xl font-semibold text-gray-900">{springer.length}</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-red-500 to-red-600 rounded-lg p-6 text-white">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-red-100">Admins</p>
-                        <p className="text-3xl font-bold">{admins.length}</p>
+                  <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-red-100 rounded-lg">
+                        <Crown className="w-4 h-4 sm:w-6 sm:h-6 text-red-600" />
                       </div>
-                      <Crown className="h-8 w-8 text-red-200" />
+                      <div className="ml-3 sm:ml-4">
+                        <p className="text-xs sm:text-sm font-medium text-gray-600">Admins</p>
+                        <p className="text-lg sm:text-2xl font-semibold text-gray-900">{admins.length}</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="bg-gradient-to-r from-green-500 to-green-600 rounded-lg p-6 text-white">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <p className="text-green-100">Gesamt</p>
-                        <p className="text-3xl font-bold">{users.length}</p>
+                  <div className="bg-white rounded-lg shadow p-4 sm:p-6">
+                    <div className="flex items-center">
+                      <div className="p-2 bg-green-100 rounded-lg">
+                        <TrendingUp className="w-4 h-4 sm:w-6 sm:h-6 text-green-600" />
                       </div>
-                      <TrendingUp className="h-8 w-8 text-green-200" />
+                      <div className="ml-3 sm:ml-4">
+                        <p className="text-xs sm:text-sm font-medium text-gray-600">Gesamt</p>
+                        <p className="text-lg sm:text-2xl font-semibold text-gray-900">{users.length}</p>
+                      </div>
                     </div>
                   </div>
                 </div>

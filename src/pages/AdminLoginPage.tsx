@@ -88,19 +88,6 @@ export const AdminLoginPage: React.FC = () => {
         )}
         
         <LoginForm onSuccess={handleLoginSuccess} />
-        <div className="mt-6 text-center space-y-2">
-          <p className="text-sm text-text-secondary">
-            <a href="/forgot-password" className="text-primary hover:text-blue-700">
-              Passwort vergessen?
-            </a>
-          </p>
-          <p className="text-sm text-text-secondary">
-            Student?{' '}
-            <a href="/login" className="text-primary hover:text-blue-700">
-              Hier zur Studenten-Anmeldung
-            </a>
-          </p>
-        </div>
       </div>
     </div>
   )
