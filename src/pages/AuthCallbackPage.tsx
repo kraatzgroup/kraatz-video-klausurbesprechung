@@ -43,7 +43,9 @@ export const AuthCallbackPage: React.FC = () => {
           tokenLength: token?.length, 
           type, 
           redirectTo,
-          allParams: Object.fromEntries(searchParams.entries())
+          allParams: Object.fromEntries(searchParams.entries()),
+          hash: window.location.hash,
+          fullUrl: window.location.href
         })
 
         // If we still don't have a token, try to handle Supabase's automatic auth
@@ -55,6 +57,21 @@ export const AuthCallbackPage: React.FC = () => {
           
           if (session?.user) {
             console.log('✅ User already authenticated via Supabase:', session.user.email)
+            
+            // Check if this might be a password recovery session
+            // Look for recovery indicators in URL or referrer
+            const urlParams = new URLSearchParams(window.location.search)
+            const isRecovery = urlParams.has('type') && urlParams.get('type') === 'recovery' ||
+                              window.location.href.includes('recovery') ||
+                              document.referrer.includes('recovery')
+            
+            if (isRecovery) {
+              console.log('🔐 Detected password recovery context - showing reset form')
+              setStatus('password_reset')
+              setMessage('Bitte geben Sie Ihr neues Passwort ein.')
+              return
+            }
+            
             setStatus('success')
             setMessage('Erfolgreich angemeldet! Sie werden weitergeleitet...')
             
