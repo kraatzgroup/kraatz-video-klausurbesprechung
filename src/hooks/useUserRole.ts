@@ -37,13 +37,25 @@ export const useUserRole = () => {
         .single()
 
       if (error) {
-        console.error('Error fetching user profile:', error)
+        console.error('🚨 SECURITY: User not found in database:', error)
+        console.error('🚨 SECURITY: Unauthorized access attempt by:', user.email)
+        
+        // Don't force logout here to prevent loops - let login page handle it
+        setUserProfile(null)
+        setLoading(false)
         return
       }
 
-      setUserProfile(data)
+      // Only set profile if user exists in database
+      if (data) {
+        setUserProfile(data)
+      } else {
+        console.error('🚨 SECURITY: No user data returned for authenticated user')
+        setUserProfile(null)
+      }
     } catch (error) {
-      console.error('Error:', error)
+      console.error('🚨 SECURITY: Database error during user validation:', error)
+      setUserProfile(null)
     } finally {
       setLoading(false)
     }

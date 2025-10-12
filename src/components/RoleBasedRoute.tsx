@@ -28,12 +28,25 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
             .eq('id', user.id)
             .single();
           
-          if (data && !error) {
-            setUserRole(data.role || 'student');
+          if (error) {
+            console.error('🚨 SECURITY: User not found in database:', error);
+            console.error('🚨 SECURITY: Unauthorized access attempt by:', user.email);
+            
+            // Don't force logout here to prevent loops - let login page handle it
+            setUserRole(null);
+            setLoading(false);
+            return;
+          }
+          
+          if (data && data.role) {
+            setUserRole(data.role);
+          } else {
+            console.error('🚨 SECURITY: No role data returned for authenticated user');
+            setUserRole(null);
           }
         } catch (error) {
-          console.error('Error fetching user role:', error);
-          setUserRole('student');
+          console.error('🚨 SECURITY: Database error during user validation:', error);
+          setUserRole(null);
         }
       }
       setLoading(false);
@@ -50,11 +63,11 @@ export const RoleBasedRoute: React.FC<RoleBasedRouteProps> = ({
     );
   }
 
-  if (!user) {
+  if (!user || !userRole) {
     return <Navigate to={redirectTo} replace />;
   }
 
-  if (userRole && !allowedRoles.includes(userRole)) {
+  if (!allowedRoles.includes(userRole)) {
     // Redirect instructors to instructor dashboard if they try to access student routes
     if (userRole === 'instructor' && allowedRoles.includes('student')) {
       return <Navigate to="/instructor" replace />;

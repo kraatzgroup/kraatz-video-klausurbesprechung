@@ -2,12 +2,14 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { Loader2 } from 'lucide-react'
+import { PasswordResetForm } from '../components/auth/PasswordResetForm'
 
 export const AuthCallbackPage: React.FC = () => {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading')
+  const [status, setStatus] = useState<'loading' | 'success' | 'error' | 'password_reset'>('loading')
   const [message, setMessage] = useState('')
+  const [authType, setAuthType] = useState<string>('')
 
   useEffect(() => {
     const handleAuthCallback = async () => {
@@ -16,13 +18,14 @@ export const AuthCallbackPage: React.FC = () => {
         console.log('🌐 Current URL:', window.location.href)
         console.log('🔍 Search params:', window.location.search)
         
-        // SIMPLE SOLUTION: Always redirect to /dashboard
-        // Magic links are for student login, so always go to dashboard
-        const redirectTo = '/dashboard'
-        
         // Get parameters from URL
         let token = searchParams.get('token')
         let type = searchParams.get('type')
+        
+        setAuthType(type || '')
+        
+        // Different handling based on auth type
+        const redirectTo = type === 'recovery' ? '/admin' : '/dashboard'
 
         // Handle malformed URLs - try to extract token from hash or other sources
         if (!token) {
@@ -90,13 +93,22 @@ export const AuthCallbackPage: React.FC = () => {
 
         if (data.user) {
           console.log('✅ User authenticated successfully:', data.user.email)
-          setStatus('success')
-          setMessage('Erfolgreich angemeldet! Sie werden weitergeleitet...')
           
-          // Wait a moment to show success message, then redirect
-          setTimeout(() => {
-            navigate(redirectTo, { replace: true })
-          }, 2000)
+          // Handle different auth types
+          if (type === 'recovery') {
+            console.log('🔐 Password reset mode - showing reset form')
+            setStatus('password_reset')
+            setMessage('Bitte geben Sie Ihr neues Passwort ein.')
+          } else {
+            console.log('🔗 Magic link login - redirecting to dashboard')
+            setStatus('success')
+            setMessage('Erfolgreich angemeldet! Sie werden weitergeleitet...')
+            
+            // Wait a moment to show success message, then redirect
+            setTimeout(() => {
+              navigate(redirectTo, { replace: true })
+            }, 2000)
+          }
         } else {
           console.error('❌ No user data received')
           setStatus('error')
@@ -145,6 +157,31 @@ export const AuthCallbackPage: React.FC = () => {
             </>
           )}
 
+          {status === 'password_reset' && (
+            <>
+              <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-semibold text-gray-900 mb-4">
+                Neues Passwort festlegen
+              </h2>
+              <div className="text-left">
+                <PasswordResetForm
+                  onSuccess={() => {
+                    setStatus('success')
+                    setMessage('Passwort erfolgreich zurückgesetzt! Sie werden zur Anmeldung weitergeleitet...')
+                  }}
+                  onError={(error) => {
+                    setStatus('error')
+                    setMessage(error)
+                  }}
+                />
+              </div>
+            </>
+          )}
+
           {status === 'error' && (
             <>
               <div className="w-12 h-12 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
@@ -153,16 +190,16 @@ export const AuthCallbackPage: React.FC = () => {
                 </svg>
               </div>
               <h2 className="text-xl font-semibold text-gray-900 mb-2">
-                Anmeldung fehlgeschlagen
+                {authType === 'recovery' ? 'Passwort-Reset fehlgeschlagen' : 'Anmeldung fehlgeschlagen'}
               </h2>
               <p className="text-gray-600 mb-4">
                 {message}
               </p>
               <button
-                onClick={() => navigate('/login')}
+                onClick={() => navigate(authType === 'recovery' ? '/forgot-password' : '/login')}
                 className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
               >
-                Zur Anmeldung
+                {authType === 'recovery' ? 'Neuen Reset-Link anfordern' : 'Zur Anmeldung'}
               </button>
             </>
           )}

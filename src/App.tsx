@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import { AuthProvider } from './contexts/AuthContext'
 import { ToastProvider } from './contexts/ToastContext'
 import { Layout } from './components/layout/Layout'
+import { SecurityGate } from './components/SecurityGate'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { RoleBasedRoute } from './components/RoleBasedRoute'
 import { HomePage } from './pages/HomePage'
@@ -25,6 +26,7 @@ import { ChatPage } from './pages/ChatPage'
 import ToastTestPage from './pages/ToastTestPage'
 import { CheckoutSuccessPage } from './pages/CheckoutSuccessPage'
 import { AuthCallbackPage } from './pages/AuthCallbackPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
 
 function App() {
   try {
@@ -32,11 +34,13 @@ function App() {
       <AuthProvider>
         <ToastProvider>
           <Router>
-          <Layout>
-            <Routes>
+            <SecurityGate>
+              <Layout>
+                <Routes>
             <Route path="/" element={<HomePage />} />
             <Route path="/login" element={<LoginPage />} />
             <Route path="/admin" element={<AdminLoginPage />} />
+            <Route path="/forgot-password" element={<ForgotPasswordPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/packages" element={<PackagesPage />} />
             <Route path="/checkout-success" element={<CheckoutSuccessPage />} />
@@ -157,11 +161,12 @@ function App() {
                 </ProtectedRoute>
               }
             />
-          </Routes>
-        </Layout>
-      </Router>
+                </Routes>
+              </Layout>
+            </SecurityGate>
+          </Router>
         </ToastProvider>
-    </AuthProvider>
+      </AuthProvider>
     );
     
     return appContent;

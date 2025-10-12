@@ -27,7 +27,9 @@ export const Header: React.FC = () => {
             .single()
 
           if (error) {
-            console.error('Error fetching user data:', error)
+            console.error('🚨 SECURITY: User not found in database:', error)
+            console.error('🚨 SECURITY: Unauthorized access attempt by:', user.email)
+            // Don't force logout here to prevent loops - let login page handle it
             return
           }
 
@@ -47,7 +49,8 @@ export const Header: React.FC = () => {
             setHasOrders(true)
           }
         } catch (error) {
-          console.error('Error fetching user data:', error)
+          console.error('🚨 SECURITY: Database error during user validation:', error)
+          // Don't force logout here to prevent loops - let login page handle it
         }
       }
     }

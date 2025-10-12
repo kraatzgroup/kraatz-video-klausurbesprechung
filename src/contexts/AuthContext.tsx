@@ -6,6 +6,7 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   loading: boolean
+  isValidUser: boolean | null
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: AuthError | null }>
   signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
   signOut: () => Promise<{ error: AuthError | null }>
@@ -26,12 +27,46 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isValidUser, setIsValidUser] = useState<boolean | null>(null)
+
+  // Validate user exists in database
+  const validateUser = async (user: User | null) => {
+    if (!user) {
+      setIsValidUser(null)
+      return
+    }
+
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('id', user.id)
+        .single()
+
+      if (error || !data) {
+        console.error('🚨 SECURITY: User not found in database:', error)
+        console.error('🚨 SECURITY: Unauthorized access attempt by:', user.email)
+        
+        // Mark as invalid but don't force logout immediately - let SecurityGate handle it
+        setIsValidUser(false)
+        return
+      }
+
+      setIsValidUser(true)
+    } catch (error) {
+      console.error('🚨 SECURITY: Database validation error:', error)
+      setIsValidUser(false)
+    }
+  }
 
   useEffect(() => {
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }: any) => {
       setSession(session)
       setUser(session?.user ?? null)
+      
+      // Validate user immediately
+      validateUser(session?.user ?? null)
       setLoading(false)
     })
 
@@ -41,6 +76,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     } = supabase.auth.onAuthStateChange((_event: any, session: any) => {
       setSession(session)
       setUser(session?.user ?? null)
+      
+      // Validate user on every auth change
+      validateUser(session?.user ?? null)
       setLoading(false)
     })
 
@@ -104,6 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     user,
     session,
     loading,
+    isValidUser,
     signUp,
     signIn,
     signOut,
