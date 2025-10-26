@@ -35,24 +35,48 @@ export const PasswordResetForm: React.FC<PasswordResetFormProps> = ({ onSuccess,
     setLoading(true)
 
     try {
+      console.log('🔐 Updating password for authenticated user...')
+      
+      // Check if user is authenticated (should be after recovery token verification)
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session?.user) {
+        console.error('❌ No authenticated session found')
+        onError?.('Sitzung abgelaufen. Bitte fordern Sie einen neuen Reset-Link an.')
+        return
+      }
+
+      console.log('✅ Session found for user:', session.user.email)
+
       const { error } = await supabase.auth.updateUser({
         password: password
       })
 
       if (error) {
-        console.error('Password reset error:', error)
-        onError?.(error.message || 'Fehler beim Zurücksetzen des Passworts.')
+        console.error('❌ Password reset error:', error)
+        
+        // Handle specific error cases
+        if (error.message.includes('New password should be different')) {
+          onError?.('Das neue Passwort muss sich vom alten Passwort unterscheiden.')
+        } else if (error.message.includes('Password should be at least')) {
+          onError?.('Das Passwort muss mindestens 6 Zeichen lang sein.')
+        } else {
+          onError?.(error.message || 'Fehler beim Zurücksetzen des Passworts.')
+        }
       } else {
-        console.log('✅ Password reset successful')
+        console.log('✅ Password reset successful for user:', session.user.email)
         onSuccess?.()
+        
+        // Sign out to force fresh login with new password
+        await supabase.auth.signOut()
         
         // Redirect to admin login after successful reset
         setTimeout(() => {
-          navigate('/admin', { replace: true })
+          navigate('/admin-login', { replace: true })
         }, 2000)
       }
     } catch (err) {
-      console.error('Password reset error:', err)
+      console.error('❌ Password reset error:', err)
       onError?.('Ein unerwarteter Fehler ist aufgetreten.')
     } finally {
       setLoading(false)

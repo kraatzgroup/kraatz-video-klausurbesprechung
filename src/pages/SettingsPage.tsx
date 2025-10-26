@@ -41,7 +41,8 @@ const SettingsPage: React.FC = () => {
     first_name: '',
     last_name: '',
     role: 'student',
-    password: ''
+    password: '',
+    instructorLegalArea: ''
   })
   const [currentUserRole, setCurrentUserRole] = useState('')
   const [currentUserProfile, setCurrentUserProfile] = useState<UserData | null>(null)
@@ -189,6 +190,11 @@ const SettingsPage: React.FC = () => {
       return
     }
 
+    if ((newUser.role === 'instructor' || newUser.role === 'springer') && !newUser.instructorLegalArea) {
+      alert('Bitte wählen Sie ein Rechtsgebiet für den Dozenten/Springer aus.')
+      return
+    }
+
     if (newUser.password.length < 6) {
       alert('Das Passwort muss mindestens 6 Zeichen lang sein.')
       return
@@ -200,14 +206,16 @@ const SettingsPage: React.FC = () => {
         password: newUser.password,
         firstName: newUser.first_name,
         lastName: newUser.last_name,
-        role: newUser.role as 'student' | 'instructor' | 'admin'
+        role: newUser.role as 'student' | 'instructor' | 'admin' | 'springer',
+        instructorLegalArea: (newUser.role === 'instructor' || newUser.role === 'springer') && newUser.instructorLegalArea ? 
+          newUser.instructorLegalArea as 'Zivilrecht' | 'Strafrecht' | 'Öffentliches Recht' : undefined
       }
 
       const result = await createUserAsAdmin(userData)
       
       if (result.success) {
-        alert(`${newUser.role === 'instructor' ? 'Dozent' : newUser.role === 'admin' ? 'Administrator' : 'Student'} erfolgreich erstellt!`)
-        setNewUser({ email: '', first_name: '', last_name: '', role: 'student', password: '' })
+        alert(`${newUser.role === 'instructor' ? 'Dozent' : newUser.role === 'springer' ? 'Springer' : newUser.role === 'admin' ? 'Administrator' : 'Student'} erfolgreich erstellt!`)
+        setNewUser({ email: '', first_name: '', last_name: '', role: 'student', password: '', instructorLegalArea: '' })
         fetchUsersWithStats()
       } else {
         alert('Fehler beim Erstellen des Benutzers: ' + result.error)
@@ -892,18 +900,37 @@ const SettingsPage: React.FC = () => {
                   <label className="block text-sm font-medium text-gray-700 mb-2">Benutzerrolle</label>
                   <select
                     value={newUser.role}
-                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value })}
+                    onChange={(e) => setNewUser({ ...newUser, role: e.target.value, instructorLegalArea: (e.target.value !== 'instructor' && e.target.value !== 'springer') ? '' : newUser.instructorLegalArea })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
                   >
                     <option value="student">Student</option>
                     <option value="instructor">Dozent</option>
+                    <option value="springer">Springer</option>
                     <option value="admin">Administrator</option>
                   </select>
                 </div>
 
+                {/* Legal Area Selection - Only show for instructors and springer */}
+                {(newUser.role === 'instructor' || newUser.role === 'springer') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Rechtsgebiet *</label>
+                    <select
+                      value={newUser.instructorLegalArea}
+                      onChange={(e) => setNewUser({ ...newUser, instructorLegalArea: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-primary"
+                      required
+                    >
+                      <option value="">Bitte Rechtsgebiet auswählen</option>
+                      <option value="Zivilrecht">Zivilrecht</option>
+                      <option value="Strafrecht">Strafrecht</option>
+                      <option value="Öffentliches Recht">Öffentliches Recht</option>
+                    </select>
+                  </div>
+                )}
+
                 <div className="flex justify-end space-x-4 pt-6">
                   <button
-                    onClick={() => setNewUser({ email: '', first_name: '', last_name: '', role: 'student', password: '' })}
+                    onClick={() => setNewUser({ email: '', first_name: '', last_name: '', role: 'student', password: '', instructorLegalArea: '' })}
                     className="px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 font-medium"
                   >
                     Zurücksetzen

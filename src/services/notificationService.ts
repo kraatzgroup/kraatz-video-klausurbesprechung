@@ -150,6 +150,33 @@ export class NotificationService {
     })
   }
 
+  static async createWelcomeNotification(
+    userId: string,
+    userName: string,
+    role: string,
+    legalArea?: string
+  ) {
+    const roleDisplayName = role === 'instructor' ? 'Dozent' : 
+                           role === 'springer' ? 'Springer' : 
+                           role === 'admin' ? 'Administrator' : role
+
+    const title = '🎉 Willkommen im Kraatz Club!'
+    let message = `Hallo ${userName}! Ihr ${roleDisplayName}-Account wurde erfolgreich erstellt.`
+    
+    if (legalArea) {
+      message += ` Sie sind für das Rechtsgebiet ${legalArea} zuständig.`
+    }
+    
+    message += ' Bitte prüfen Sie Ihre E-Mails für weitere Anweisungen zur Passwort-Einrichtung.'
+
+    return this.createNotification({
+      userId,
+      title,
+      message,
+      type: 'success'
+    })
+  }
+
   static async createAdminNotification(
     adminId: string,
     action: string,

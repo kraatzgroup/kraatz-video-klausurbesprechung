@@ -2,11 +2,14 @@ import { createClient } from '@supabase/supabase-js'
 import type { Database } from '../types/database'
 
 const supabaseUrl = process.env.REACT_APP_SUPABASE_URL || 'https://rpgbyockvpannrupicno.supabase.co'
+
+// For frontend admin operations, we should use an Edge Function instead of service role key
+// But for now, let's try to get the service key from environment
 const supabaseServiceKey = process.env.REACT_APP_SUPABASE_SERVICE_ROLE_KEY
 
 if (!supabaseServiceKey) {
-  console.error('❌ REACT_APP_SUPABASE_SERVICE_ROLE_KEY environment variable is required')
-  throw new Error('Missing REACT_APP_SUPABASE_SERVICE_ROLE_KEY environment variable')
+  console.warn('⚠️ REACT_APP_SUPABASE_SERVICE_ROLE_KEY not found - admin operations may fail')
+  console.warn('⚠️ Consider moving admin operations to Edge Functions for better security')
 }
 
 // Singleton pattern to avoid multiple instances

@@ -21,22 +21,26 @@ export const ForgotPasswordPage: React.FC = () => {
     setMessage('')
 
     try {
-      // Call our custom edge function for admin/dozent password reset
-      const { data, error: functionError } = await supabase.functions.invoke('reset-admin-dozent-password', {
+      console.log('🔐 Requesting password reset for:', email)
+      
+      // Use our custom Edge Function for styled Mailgun emails
+      const { data, error } = await supabase.functions.invoke('send-password-reset', {
         body: { email }
       })
       
-      if (functionError) {
-        console.error('Edge function error:', functionError)
+      if (error) {
+        console.error('❌ Password reset error:', error)
         setError('Fehler beim Senden der E-Mail. Bitte versuchen Sie es erneut.')
       } else if (data?.error) {
+        console.error('❌ Edge Function error:', data.error)
         setError(data.error)
       } else {
+        console.log('✅ Password reset email sent successfully:', data)
         setMessage(data?.message || 'Eine E-Mail zum Zurücksetzen des Passworts wurde an Ihre E-Mail-Adresse gesendet.')
         setEmail('')
       }
     } catch (err) {
-      console.error('Password reset error:', err)
+      console.error('❌ Password reset error:', err)
       setError('Ein unerwarteter Fehler ist aufgetreten. Bitte versuchen Sie es erneut.')
     } finally {
       setLoading(false)

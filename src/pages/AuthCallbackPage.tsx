@@ -96,12 +96,49 @@ export const AuthCallbackPage: React.FC = () => {
 
         console.log('🔐 Processing auth token...', { type, tokenLength: token.length })
         
-        // Handle password recovery differently - show form immediately without auto-login
+        // Handle password recovery - verify token first, then show form
         if (type === 'recovery') {
-          console.log('🔐 Password reset mode - showing reset form without auto-login')
-          setStatus('password_reset')
-          setMessage('Bitte geben Sie Ihr neues Passwort ein.')
-          return
+          console.log('🔐 Password reset mode - verifying recovery token')
+          
+          try {
+            // Verify the recovery token to establish session
+            const { data: verifyData, error: verifyError } = await supabase.auth.verifyOtp({
+              token_hash: token,
+              type: 'recovery'
+            })
+
+            if (verifyError) {
+              console.error('❌ Recovery token verification failed:', verifyError)
+              
+              // Check if token is expired or invalid
+              if (verifyError.message.includes('expired') || verifyError.message.includes('invalid')) {
+                setStatus('error')
+                setMessage('Der Reset-Link ist abgelaufen oder ungültig. Bitte fordern Sie einen neuen Reset-Link an.')
+                return
+              } else {
+                setStatus('error')
+                setMessage(`Fehler beim Verarbeiten des Reset-Links: ${verifyError.message}`)
+                return
+              }
+            }
+
+            if (verifyData.user) {
+              console.log('✅ Recovery token verified for user:', verifyData.user.email)
+              setStatus('password_reset')
+              setMessage('Bitte geben Sie Ihr neues Passwort ein.')
+              return
+            } else {
+              console.error('❌ No user data from recovery token')
+              setStatus('error')
+              setMessage('Ungültiger Reset-Link. Keine Benutzerdaten erhalten.')
+              return
+            }
+          } catch (recoveryError) {
+            console.error('❌ Recovery token processing error:', recoveryError)
+            setStatus('error')
+            setMessage('Der Reset-Link ist abgelaufen oder ungültig. Bitte fordern Sie einen neuen Reset-Link an.')
+            return
+          }
         }
 
         // For magic links, verify and login
@@ -214,12 +251,22 @@ export const AuthCallbackPage: React.FC = () => {
               <p className="text-gray-600 mb-4">
                 {message}
               </p>
-              <button
-                onClick={() => navigate(authType === 'recovery' ? '/forgot-password' : '/login')}
-                className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
-              >
-                {authType === 'recovery' ? 'Neuen Reset-Link anfordern' : 'Zur Anmeldung'}
-              </button>
+              <div className="space-y-3">
+                <button
+                  onClick={() => navigate(authType === 'recovery' ? '/forgot-password' : '/login')}
+                  className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-blue-700 transition-colors"
+                >
+                  {authType === 'recovery' ? 'Neuen Reset-Link anfordern' : 'Zur Anmeldung'}
+                </button>
+                {authType === 'recovery' && (
+                  <button
+                    onClick={() => navigate('/admin')}
+                    className="w-full bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-600 transition-colors"
+                  >
+                    Zur Admin-Anmeldung
+                  </button>
+                )}
+              </div>
             </>
           )}
         </div>
