@@ -47,22 +47,22 @@ serve(async (req) => {
       }
     })
 
-    console.log(`🔗 Generating password reset link for new user: ${email}`)
+    console.log(`🔗 Generating magic login link for new user: ${email}`)
 
-    // Generate password reset link (valid for 1 hour)
+    // Generate magic link for direct login to profile
     const { data: authData, error: authError } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
+      type: 'magiclink',
       email: email,
       options: {
-        redirectTo: 'https://klausuren.kraatz-club.de/auth/callback'
+        redirectTo: 'https://klausuren.kraatz-club.de/profile'
       }
     })
 
     if (authError) {
-      console.error(`❌ Error generating password reset link: ${authError.message}`)
+      console.error(`❌ Error generating magic login link: ${authError.message}`)
       return new Response(
         JSON.stringify({ 
-          error: 'Fehler beim Generieren des Passwort-Reset-Links',
+          error: 'Fehler beim Generieren des Login-Links',
           details: authError.message 
         }),
         { 
@@ -72,12 +72,12 @@ serve(async (req) => {
       )
     }
 
-    const originalResetLink = authData.properties?.action_link
-    if (!originalResetLink) {
-      console.error(`❌ No password reset link generated`)
+    const originalMagicLink = authData.properties?.action_link
+    if (!originalMagicLink) {
+      console.error(`❌ No magic link generated`)
       return new Response(
         JSON.stringify({ 
-          error: 'Fehler beim Generieren des Passwort-Reset-Links'
+          error: 'Fehler beim Generieren des Login-Links'
         }),
         { 
           status: 500, 
@@ -86,34 +86,14 @@ serve(async (req) => {
       )
     }
 
-    console.log('📝 Original Supabase reset link:', originalResetLink)
+    console.log('📝 Original Supabase magic link:', originalMagicLink)
 
-    // Create custom reset link with our domain
-    let resetLink = originalResetLink
+    // Use the original magic link directly - it will auto-login and redirect to profile
+    const resetLink = originalMagicLink
     
-    // Extract token and type from Supabase link
-    const tokenMatch = originalResetLink.match(/[?&]token=([^&]+)/)
-    const typeMatch = originalResetLink.match(/[?&]type=([^&]+)/)
-    
-    if (tokenMatch && typeMatch) {
-      const token = tokenMatch[1]
-      const type = typeMatch[1]
-      
-      // Create our custom reset link that points to our callback
-      resetLink = `https://klausuren.kraatz-club.de/auth/callback?token=${token}&type=${type}`
-      
-      console.log('✅ Created custom reset link:', resetLink)
-    } else {
-      console.error('❌ Could not extract token from Supabase reset link')
-      // Fallback: try to replace URLs in original link
-      resetLink = originalResetLink
-        .replace(/https?:\/\/rpgbyockvpannrupicno\.supabase\.co/g, 'https://klausuren.kraatz-club.de')
-        .replace(/\/auth\/v1\/verify/g, '/auth/callback')
-      
-      console.log('⚠️ Using fallback reset link:', resetLink)
-    }
+    console.log('✅ Using magic login link:', resetLink)
 
-    console.log(`✅ Password reset link generated successfully`)
+    console.log(`✅ Magic login link generated successfully`)
 
     // Send welcome email via Mailgun
     console.log(`📧 Sending welcome email via Mailgun to: ${email}`)
@@ -181,15 +161,14 @@ serve(async (req) => {
           </div>
           
           <p style="color: #555; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-            <strong>🔐 Wichtig:</strong> Aus Sicherheitsgründen müssen Sie zunächst ein neues Passwort festlegen. 
-            Klicken Sie dazu auf den Button unten:
+            <strong>🔐 Direkt loslegen:</strong> Klicken Sie auf den Button unten, um sich automatisch anzumelden und zu Ihrem Profil zu gelangen:
           </p>
           
           <!-- Action Button -->
           <div style="text-align: center; margin: 30px 0;">
             <a href="${resetLink}" 
                style="display: inline-block; background-color: #2e83c2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
-              🔐 Passwort festlegen
+              🔐 Direkt anmelden
             </a>
           </div>
           
@@ -205,17 +184,17 @@ serve(async (req) => {
           
           <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #2e83c2;">
             <h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">📋 Nächste Schritte:</h4>
-            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Klicken Sie auf den blauen "Passwort festlegen" Button</p>
-            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Wählen Sie ein sicheres neues Passwort</p>
-            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Melden Sie sich mit Ihren neuen Zugangsdaten an</p>
-            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Erkunden Sie Ihr ${roleDisplayName}-Dashboard</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Klicken Sie auf den blauen "Direkt anmelden" Button</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Sie werden automatisch angemeldet</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Sie werden zu Ihrem Profil weitergeleitet</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Dort können Sie Ihr Passwort in den Einstellungen ändern</p>
           </div>
           
           <div style="background-color: #fff3cd; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #ffc107;">
             <p style="margin: 0; color: #856404; font-size: 14px;">
               <strong>🔒 Sicherheitshinweis:</strong><br>
-              Dieser Passwort-Reset-Link ist nur für Sie bestimmt und läuft nach <strong>1 Stunde</strong> ab. 
-              Teilen Sie diesen Link nicht mit anderen Personen. Nach dem ersten Login sollten Sie Ihr Passwort ändern.
+              Dieser Login-Link ist nur für Sie bestimmt und läuft nach <strong>1 Stunde</strong> ab. 
+              Teilen Sie diesen Link nicht mit anderen Personen. Nach dem ersten Login sollten Sie Ihr Passwort in den Einstellungen ändern.
             </p>
           </div>
           

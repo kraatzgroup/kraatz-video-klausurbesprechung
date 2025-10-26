@@ -71,18 +71,22 @@ serve(async (req) => {
 
     console.log(`✅ User found: ${user.email} (${user.role})`)
 
-    // Generate password reset token (recovery type for password reset form)
+    // Generate magic link that logs user in and redirects to profile
+    console.log('🔐 Generating magic link for direct login...')
+    
     const { data: authData, error: authError } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
-      email: email
-      // Note: Don't use redirectTo for recovery links - it can cause magic link behavior
+      type: 'magiclink',
+      email: email,
+      options: {
+        redirectTo: 'https://klausuren.kraatz-club.de/profile'
+      }
     })
 
     if (authError) {
-      console.error(`❌ Error generating reset link: ${authError.message}`)
+      console.error(`❌ Error generating magic link: ${authError.message}`)
       return new Response(
         JSON.stringify({ 
-          error: 'Fehler beim Generieren des Reset-Links',
+          error: 'Fehler beim Generieren des Login-Links',
           details: authError.message 
         }),
         { 
@@ -92,12 +96,12 @@ serve(async (req) => {
       )
     }
 
-    const originalResetLink = authData.properties?.action_link
-    if (!originalResetLink) {
-      console.error(`❌ No reset link generated`)
+    const magicLink = authData.properties?.action_link
+    if (!magicLink) {
+      console.error(`❌ No magic link generated`)
       return new Response(
         JSON.stringify({ 
-          error: 'Fehler beim Generieren des Reset-Links'
+          error: 'Fehler beim Generieren des Login-Links'
         }),
         { 
           status: 500, 
@@ -106,45 +110,10 @@ serve(async (req) => {
       )
     }
 
-    console.log('📝 Original Supabase reset link:', originalResetLink)
-
-    // Create custom reset link with our domain - ensure it's a recovery link
-    let resetLink = originalResetLink
+    // Use the magic link directly - it will auto-login and redirect to profile
+    const resetLink = magicLink
     
-    // Extract token and type from Supabase link
-    const tokenMatch = originalResetLink.match(/[?&]token=([^&]+)/)
-    const typeMatch = originalResetLink.match(/[?&]type=([^&]+)/)
-    
-    if (tokenMatch && typeMatch) {
-      const token = tokenMatch[1]
-      const type = typeMatch[1]
-      
-      // Ensure we're creating a recovery link, not a magic link
-      if (type === 'recovery') {
-        resetLink = `https://klausuren.kraatz-club.de/auth/callback?token=${token}&type=recovery`
-        console.log('✅ Created custom recovery link:', resetLink)
-      } else {
-        console.warn('⚠️ Generated link is not recovery type:', type)
-        // Force it to be recovery type
-        resetLink = `https://klausuren.kraatz-club.de/auth/callback?token=${token}&type=recovery`
-        console.log('🔧 Forced recovery type:', resetLink)
-      }
-    } else {
-      console.error('❌ Could not extract token from Supabase reset link')
-      // Fallback: try to replace URLs in original link and force recovery type
-      resetLink = originalResetLink
-        .replace(/https?:\/\/rpgbyockvpannrupicno\.supabase\.co/g, 'https://klausuren.kraatz-club.de')
-        .replace(/\/auth\/v1\/verify/g, '/auth/callback')
-        .replace(/type=magiclink/g, 'type=recovery')
-        .replace(/type=signup/g, 'type=recovery')
-      
-      // Ensure type=recovery is present
-      if (!resetLink.includes('type=recovery')) {
-        resetLink += resetLink.includes('?') ? '&type=recovery' : '?type=recovery'
-      }
-      
-      console.log('⚠️ Using fallback recovery link:', resetLink)
-    }
+    console.log('✅ Created magic login link:', resetLink)
 
     console.log(`✅ Password reset link generated successfully`)
 
@@ -211,14 +180,15 @@ serve(async (req) => {
           `}
           
           <p style="color: #555; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
-            <strong>Klicken Sie auf den Button unten, um ein neues Passwort festzulegen:</strong>
+            <strong>Klicken Sie auf den Button unten, um sich direkt anzumelden:</strong><br>
+            <em>Sie werden automatisch angemeldet und zu Ihrem Profil weitergeleitet.</em>
           </p>
           
           <!-- Action Button -->
           <div style="text-align: center; margin: 30px 0;">
             <a href="${resetLink}" 
                style="display: inline-block; background-color: #2e83c2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px;">
-              🔐 Neues Passwort festlegen
+              🔐 Direkt anmelden
             </a>
           </div>
           
@@ -234,10 +204,10 @@ serve(async (req) => {
           
           <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px; margin: 25px 0; border-left: 4px solid #2e83c2;">
             <h4 style="margin: 0 0 15px 0; color: #333; font-size: 16px;">📋 Nächste Schritte:</h4>
-            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Klicken Sie auf den blauen "Neues Passwort festlegen" Button</p>
-            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Sie werden zur Passwort-Eingabe weitergeleitet</p>
-            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Geben Sie Ihr neues Passwort ein und bestätigen Sie es</p>
-            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Melden Sie sich anschließend mit dem neuen Passwort an</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Klicken Sie auf den blauen "Direkt anmelden" Button</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Sie werden automatisch angemeldet</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Sie werden zu Ihrem Profil weitergeleitet</p>
+            <p style="margin: 8px 0; color: #555; font-size: 14px;">• Dort können Sie Ihr Passwort in den Einstellungen ändern</p>
           </div>
           
           <div style="background-color: #fff3cd; padding: 15px; border-radius: 6px; margin: 20px 0; border-left: 4px solid #ffc107;">

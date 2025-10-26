@@ -124,10 +124,10 @@ const InstructorDashboard: React.FC = () => {
         `);
 
       // Apply filtering based on user role
-      if ((currentUser?.role === 'instructor' || currentUser?.role === 'springer') && currentUser?.instructor_legal_area) {
-        // Instructors and Springer only see cases from their assigned legal area
-        query = query.eq('legal_area', currentUser.instructor_legal_area);
-        console.log(`🎯 Filtering cases for ${currentUser.role} legal area: ${currentUser.instructor_legal_area}`);
+      if (currentUser?.role === 'instructor' || currentUser?.role === 'springer') {
+        // Instructors and Springer only see cases assigned to them specifically
+        query = query.eq('assigned_instructor_id', currentUser.id);
+        console.log(`🎯 Filtering cases for ${currentUser.role} - showing only assigned cases for user ID: ${currentUser.id}`);
       } else if (currentUser?.role === 'admin') {
         // Admins see all cases (no filtering)
         console.log('👑 Admin user - showing all cases');

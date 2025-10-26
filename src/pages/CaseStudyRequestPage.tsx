@@ -143,6 +143,45 @@ export const CaseStudyRequestPage: React.FC = () => {
 
       if (requestError) throw requestError
 
+      console.log('✅ Case study request created:', caseStudyData.id)
+
+      // Automatically assign an available instructor for this legal area
+      console.log('🎯 Finding available instructor for legal area:', formData.legalArea)
+      
+      const { data: availableInstructors, error: instructorError } = await supabase
+        .from('users')
+        .select('id, email, first_name, last_name')
+        .eq('role', 'instructor')
+        .eq('instructor_legal_area', formData.legalArea)
+        .limit(1)
+
+      if (instructorError) {
+        console.error('⚠️ Error finding instructor:', instructorError)
+        // Continue without assignment - admin can assign manually
+      } else if (availableInstructors && availableInstructors.length > 0) {
+        const assignedInstructor = availableInstructors[0]
+        console.log('👨‍🏫 Assigning to instructor:', assignedInstructor.email)
+
+        // Update the case study request with assigned instructor
+        const { error: assignError } = await supabase
+          .from('case_study_requests')
+          .update({ 
+            assigned_instructor_id: assignedInstructor.id,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', caseStudyData.id)
+
+        if (assignError) {
+          console.error('⚠️ Error assigning instructor:', assignError)
+          // Continue - assignment can be done manually
+        } else {
+          console.log('✅ Successfully assigned instructor:', assignedInstructor.email)
+        }
+      } else {
+        console.warn('⚠️ No available instructor found for legal area:', formData.legalArea)
+        // Continue without assignment - admin can assign manually
+      }
+
       // Deduct credit from user account
       const { error: updateError } = await supabase
         .from('users')

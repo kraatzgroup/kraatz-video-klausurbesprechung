@@ -9,7 +9,8 @@ import { RoleBasedRoute } from './components/RoleBasedRoute'
 import { HomePage } from './pages/HomePage'
 import { LoginPage } from './pages/LoginPage'
 import { AdminLoginPage } from './pages/AdminLoginPage'
-import { RegisterPage } from './pages/RegisterPage'
+import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { ResetPasswordPage } from './pages/ResetPasswordPage'
 import { PackagesPage } from './pages/PackagesPage'
 import { DashboardPage } from './pages/DashboardPage'
 import { CaseStudiesPage } from './pages/CaseStudiesPage'
@@ -26,7 +27,7 @@ import { ChatPage } from './pages/ChatPage'
 import ToastTestPage from './pages/ToastTestPage'
 import { CheckoutSuccessPage } from './pages/CheckoutSuccessPage'
 import { AuthCallbackPage } from './pages/AuthCallbackPage'
-import { ForgotPasswordPage } from './pages/ForgotPasswordPage'
+import { RegisterPage } from './pages/RegisterPage'
 
 function App() {
   try {
@@ -41,6 +42,7 @@ function App() {
             <Route path="/login" element={<LoginPage />} />
             <Route path="/admin" element={<AdminLoginPage />} />
             <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/register" element={<RegisterPage />} />
             <Route path="/packages" element={<PackagesPage />} />
             <Route path="/checkout-success" element={<CheckoutSuccessPage />} />
