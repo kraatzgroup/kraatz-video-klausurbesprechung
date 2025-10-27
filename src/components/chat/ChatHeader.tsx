@@ -41,21 +41,47 @@ export const ChatHeader: React.FC<ChatHeaderProps> = ({
       {/* Left Side - Conversation Info */}
       <div className="flex items-center gap-3">
         {/* Avatar */}
-        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
-          conversation.type === 'support' 
-            ? 'bg-blue-100 text-blue-600' 
-            : 'bg-gray-100 text-gray-600'
-        }`}>
-          {isGroupChat ? (
+        {isGroupChat ? (
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+            conversation.type === 'support' 
+              ? 'bg-blue-100 text-blue-600' 
+              : 'bg-gray-100 text-gray-600'
+          }`}>
             <Users className="w-5 h-5" />
-          ) : otherParticipants[0]?.user ? (
-            <span className="font-medium">
-              {otherParticipants[0].user.first_name[0]?.toUpperCase()}
-            </span>
-          ) : (
-            <Users className="w-5 h-5" />
-          )}
-        </div>
+          </div>
+        ) : otherParticipants[0]?.user?.profile_image_url ? (
+          <img
+            src={otherParticipants[0].user.profile_image_url}
+            alt={`${otherParticipants[0].user.first_name} ${otherParticipants[0].user.last_name}`}
+            className="w-10 h-10 rounded-full object-cover"
+            onError={(e) => {
+              // Fallback to initials if image fails to load
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              if (target.nextElementSibling) {
+                (target.nextElementSibling as HTMLElement).style.display = 'flex';
+              }
+            }}
+          />
+        ) : null}
+        {!isGroupChat && (
+          <div 
+            className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              conversation.type === 'support' 
+                ? 'bg-blue-100 text-blue-600' 
+                : 'bg-gray-100 text-gray-600'
+            } ${otherParticipants[0]?.user?.profile_image_url ? 'hidden' : ''}`}
+            style={{ display: otherParticipants[0]?.user?.profile_image_url ? 'none' : 'flex' }}
+          >
+            {otherParticipants[0]?.user ? (
+              <span className="font-medium">
+                {otherParticipants[0].user.first_name[0]?.toUpperCase()}
+              </span>
+            ) : (
+              <Users className="w-5 h-5" />
+            )}
+          </div>
+        )}
 
         {/* Title and Status */}
         <div className="flex-1 min-w-0">

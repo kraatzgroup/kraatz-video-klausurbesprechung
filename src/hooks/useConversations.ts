@@ -142,7 +142,7 @@ export const useConversations = () => {
         for (const participant of participantsData) {
           const { data: userData } = await supabase
             .from('users')
-            .select('id, email, first_name, last_name, role')
+            .select('id, email, first_name, last_name, role, profile_image_url')
             .eq('id', participant.user_id)
             .single();
 
@@ -199,7 +199,7 @@ export const useConversations = () => {
     try {
       const { data, error } = await supabase
         .from('users')
-        .select('id, email, first_name, last_name, role')
+        .select('id, email, first_name, last_name, role, profile_image_url')
         .neq('id', user.id);
 
       if (error) throw error;

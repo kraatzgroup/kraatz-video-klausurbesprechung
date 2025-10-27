@@ -19,6 +19,8 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
 }) => {
   const { user } = useAuth();
   const [chatPartnerName, setChatPartnerName] = useState<string>('Laden...');
+  const [chatPartnerImage, setChatPartnerImage] = useState<string | null>(null);
+  const [chatPartnerInitial, setChatPartnerInitial] = useState<string>('');
   const hasUnread = conversation.unread_count > 0;
 
   // Load conversation participants and determine chat partner name
@@ -56,7 +58,7 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
         // Now get the user data for the other participant
         const { data: userData, error: userError } = await supabase
           .from('users')
-          .select('id, email, first_name, last_name, role')
+          .select('id, email, first_name, last_name, role, profile_image_url')
           .eq('id', otherParticipantId)
           .single();
 
@@ -70,6 +72,8 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
 
         if (userData) {
           setChatPartnerName(`${userData.first_name} ${userData.last_name}`);
+          setChatPartnerImage(userData.profile_image_url || null);
+          setChatPartnerInitial(userData.first_name[0]?.toUpperCase() || '?');
         } else {
           setChatPartnerName('Benutzerdaten nicht gefunden');
         }
@@ -92,13 +96,33 @@ export const ConversationItem: React.FC<ConversationItemProps> = ({
     >
       <div className="flex items-start gap-3">
         {/* Avatar/Icon */}
-        <div className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
-          conversation.type === 'support' 
-            ? 'bg-blue-100 text-blue-600' 
-            : 'bg-gray-100 text-gray-600'
-        }`}>
+        {chatPartnerImage ? (
+          <img
+            src={chatPartnerImage}
+            alt={chatPartnerName}
+            className="flex-shrink-0 w-12 h-12 rounded-full object-cover"
+            onError={(e) => {
+              // Fallback to initials if image fails to load
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              if (target.nextElementSibling) {
+                (target.nextElementSibling as HTMLElement).style.display = 'flex';
+              }
+            }}
+          />
+        ) : null}
+        <div 
+          className={`flex-shrink-0 w-12 h-12 rounded-full flex items-center justify-center ${
+            conversation.type === 'support' 
+              ? 'bg-blue-100 text-blue-600' 
+              : 'bg-gray-100 text-gray-600'
+          } ${chatPartnerImage ? 'hidden' : ''}`}
+          style={{ display: chatPartnerImage ? 'none' : 'flex' }}
+        >
           {conversation.type === 'support' ? (
             <MessageCircle className="w-6 h-6" />
+          ) : chatPartnerInitial ? (
+            <span className="font-medium text-lg">{chatPartnerInitial}</span>
           ) : (
             <Users className="w-6 h-6" />
           )}

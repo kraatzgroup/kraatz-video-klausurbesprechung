@@ -39,10 +39,17 @@ interface CaseStudyRequest {
   correction_viewed_at?: string;
   created_at: string;
   updated_at: string;
+  assigned_instructor_id?: string;
   user?: {
     first_name: string | null;
     last_name: string | null;
     email: string;
+  } | null;
+  assigned_instructor?: {
+    id: string;
+    first_name: string;
+    last_name: string;
+    profile_image_url?: string;
   } | null;
   // Grade information from submissions table
   grade?: number | null;
@@ -441,7 +448,8 @@ export const DashboardPageNew: React.FC = () => {
     } else {
       return {
         containerClass: "border border-blue-200 rounded-lg p-4 bg-blue-50",
-        badgeClass: "px-2 py-1 bg-blue-600 text-white text-xs rounded-full font-medium",
+        badgeClass: "px-2 py-1 text-white text-xs rounded-full font-medium",
+        badgeStyle: { backgroundColor: '#2e83c2' },
         badgeText: "✓ Abgeschlossen",
         showNewBadge: isNew
       }
@@ -537,10 +545,19 @@ export const DashboardPageNew: React.FC = () => {
       if (profileError) throw profileError
       setProfile(profileData)
 
-      // Fetch case studies
+      // Fetch case studies with instructor information
       const { data: caseStudyData, error: caseStudyError } = await supabase
         .from('case_study_requests')
-        .select('*, case_study_number')
+        .select(`
+          *,
+          case_study_number,
+          assigned_instructor:assigned_instructor_id(
+            id,
+            first_name,
+            last_name,
+            profile_image_url
+          )
+        `)
         .eq('user_id', user?.id)
         .order('created_at', { ascending: true })
 
@@ -870,7 +887,10 @@ export const DashboardPageNew: React.FC = () => {
                         href={caseStudy.case_study_material_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="bg-blue-600 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                        className="text-white px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2"
+                        style={{ backgroundColor: '#2e83c2' }}
+                        onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                        onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
                       >
                         <Download className="w-4 h-4" />
                         <span>Sachverhalt</span>
@@ -1118,7 +1138,38 @@ export const DashboardPageNew: React.FC = () => {
                                 {style.badgeText}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-600">Schwerpunkt: {caseStudy.focus_area}</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm text-gray-600">Schwerpunkt: {caseStudy.focus_area}</p>
+                              {caseStudy.assigned_instructor && (caseStudy.status === 'corrected' || caseStudy.status === 'completed') && (
+                                <div className="flex items-center gap-2">
+                                  {caseStudy.assigned_instructor.profile_image_url ? (
+                                    <img
+                                      src={caseStudy.assigned_instructor.profile_image_url}
+                                      alt={`${caseStudy.assigned_instructor.first_name} ${caseStudy.assigned_instructor.last_name}`}
+                                      className="w-6 h-6 rounded-full object-cover"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        if (target.nextElementSibling) {
+                                          (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                                        }
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div 
+                                    className={`w-6 h-6 rounded-full flex items-center justify-center bg-green-100 text-green-600 text-xs font-medium ${
+                                      caseStudy.assigned_instructor.profile_image_url ? 'hidden' : ''
+                                    }`}
+                                    style={{ display: caseStudy.assigned_instructor.profile_image_url ? 'none' : 'flex' }}
+                                  >
+                                    {caseStudy.assigned_instructor.first_name[0]?.toUpperCase()}
+                                  </div>
+                                  <span className="text-xs text-gray-600">
+                                    Korrigiert von: {caseStudy.assigned_instructor.first_name} {caseStudy.assigned_instructor.last_name}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           
                           {/* Rating Button - Always Visible */}
@@ -1165,7 +1216,10 @@ export const DashboardPageNew: React.FC = () => {
                                       href={caseStudy.case_study_material_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                                      className="px-3 py-2 rounded-lg text-sm text-white transition-colors flex items-center space-x-2"
+                                      style={{ backgroundColor: '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <FileText className="w-4 h-4" />
@@ -1177,7 +1231,10 @@ export const DashboardPageNew: React.FC = () => {
                                       href={caseStudy.additional_materials_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="px-3 py-2 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                                      className="px-3 py-2 rounded-lg text-sm text-white transition-colors flex items-center space-x-2"
+                                      style={{ backgroundColor: '#0a1f44' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <FileText className="w-4 h-4" />
@@ -1231,11 +1288,10 @@ export const DashboardPageNew: React.FC = () => {
                                         e.stopPropagation()
                                         openVideoModal(caseStudy.video_correction_url!, caseStudy.id)
                                       }}
-                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
-                                        caseStudy.video_viewed_at 
-                                          ? 'bg-green-600 text-white hover:bg-green-700' 
-                                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                                      }`}
+                                      className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 text-white"
+                                      style={{ backgroundColor: caseStudy.video_viewed_at ? '#10b981' : '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = caseStudy.video_viewed_at ? '#059669' : '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = caseStudy.video_viewed_at ? '#10b981' : '#2e83c2'}
                                     >
                                       <Video className="w-4 h-4" />
                                       <span>Video ansehen</span>
@@ -1248,7 +1304,10 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
-                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${ caseStudy.solution_pdf_url ? "bg-indigo-600 text-white hover:bg-indigo-700" : "bg-gray-300 text-gray-500 cursor-not-allowed" }`}
+                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${ caseStudy.solution_pdf_url ? "text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed" }`}
+                                      style={caseStudy.solution_pdf_url ? { backgroundColor: '#0a1f44' } : {}}
+                                      onMouseEnter={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#2e83c2' }}
+                                      onMouseLeave={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#0a1f44' }}
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>Klausur-Lösung</span>
@@ -1260,7 +1319,10 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
-                                      className="px-3 py-2 rounded-lg text-sm bg-orange-600 text-white hover:bg-orange-700 transition-colors flex items-center space-x-2"
+                                      className="px-3 py-2 rounded-lg text-sm text-white transition-colors flex items-center space-x-2"
+                                      style={{ backgroundColor: '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
                                     >
                                       <Table className="w-4 h-4" />
                                       <span>Korrekturbogen</span>
@@ -1291,11 +1353,10 @@ export const DashboardPageNew: React.FC = () => {
                                       e.stopPropagation()
                                       openFeedbackModal(caseStudy.id)
                                     }}
-                                    className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
-                                      studentFeedbacks.has(caseStudy.id)
-                                        ? 'bg-green-600 text-white hover:bg-green-700'
-                                        : 'bg-purple-600 text-white hover:bg-purple-700'
-                                    }`}
+                                    className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 text-white"
+                                    style={{ backgroundColor: studentFeedbacks.has(caseStudy.id) ? '#10b981' : '#0a1f44' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = studentFeedbacks.has(caseStudy.id) ? '#059669' : '#2e83c2'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = studentFeedbacks.has(caseStudy.id) ? '#10b981' : '#0a1f44'}
                                   >
                                     <Edit3 className="w-4 h-4" />
                                     <span>
@@ -1309,7 +1370,10 @@ export const DashboardPageNew: React.FC = () => {
                                         e.stopPropagation()
                                         openPDFPreview(caseStudy.id)
                                       }}
-                                      className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 bg-orange-600 text-white hover:bg-orange-700"
+                                      className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 text-white"
+                                      style={{ backgroundColor: '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
                                     >
                                       <Eye className="w-4 h-4" />
                                       <span>Feedbackpapier anzeigen</span>
@@ -1368,7 +1432,38 @@ export const DashboardPageNew: React.FC = () => {
                                 {style.badgeText}
                               </span>
                             </div>
-                            <p className="text-sm text-gray-600">Schwerpunkt: {caseStudy.focus_area}</p>
+                            <div className="flex items-center justify-between">
+                              <p className="text-sm text-gray-600">Schwerpunkt: {caseStudy.focus_area}</p>
+                              {caseStudy.assigned_instructor && (caseStudy.status === 'corrected' || caseStudy.status === 'completed') && (
+                                <div className="flex items-center gap-2">
+                                  {caseStudy.assigned_instructor.profile_image_url ? (
+                                    <img
+                                      src={caseStudy.assigned_instructor.profile_image_url}
+                                      alt={`${caseStudy.assigned_instructor.first_name} ${caseStudy.assigned_instructor.last_name}`}
+                                      className="w-6 h-6 rounded-full object-cover"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        if (target.nextElementSibling) {
+                                          (target.nextElementSibling as HTMLElement).style.display = 'flex';
+                                        }
+                                      }}
+                                    />
+                                  ) : null}
+                                  <div 
+                                    className={`w-6 h-6 rounded-full flex items-center justify-center bg-green-100 text-green-600 text-xs font-medium ${
+                                      caseStudy.assigned_instructor.profile_image_url ? 'hidden' : ''
+                                    }`}
+                                    style={{ display: caseStudy.assigned_instructor.profile_image_url ? 'none' : 'flex' }}
+                                  >
+                                    {caseStudy.assigned_instructor.first_name[0]?.toUpperCase()}
+                                  </div>
+                                  <span className="text-xs text-gray-600">
+                                    Korrigiert von: {caseStudy.assigned_instructor.first_name} {caseStudy.assigned_instructor.last_name}
+                                  </span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                           
                           {/* Rating Button - Always Visible */}
@@ -1415,7 +1510,10 @@ export const DashboardPageNew: React.FC = () => {
                                       href={caseStudy.case_study_material_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="px-3 py-2 rounded-lg text-sm bg-blue-600 text-white hover:bg-blue-700 transition-colors flex items-center space-x-2"
+                                      className="px-3 py-2 rounded-lg text-sm text-white transition-colors flex items-center space-x-2"
+                                      style={{ backgroundColor: '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <FileText className="w-4 h-4" />
@@ -1427,7 +1525,10 @@ export const DashboardPageNew: React.FC = () => {
                                       href={caseStudy.additional_materials_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="px-3 py-2 rounded-lg text-sm bg-purple-600 text-white hover:bg-purple-700 transition-colors flex items-center space-x-2"
+                                      className="px-3 py-2 rounded-lg text-sm text-white transition-colors flex items-center space-x-2"
+                                      style={{ backgroundColor: '#0a1f44' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <FileText className="w-4 h-4" />
@@ -1481,11 +1582,10 @@ export const DashboardPageNew: React.FC = () => {
                                         e.stopPropagation()
                                         openVideoModal(caseStudy.video_correction_url!, caseStudy.id)
                                       }}
-                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
-                                        caseStudy.video_viewed_at 
-                                          ? 'bg-green-600 text-white hover:bg-green-700' 
-                                          : 'bg-blue-600 text-white hover:bg-blue-700'
-                                      }`}
+                                      className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 text-white"
+                                      style={{ backgroundColor: caseStudy.video_viewed_at ? '#10b981' : '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = caseStudy.video_viewed_at ? '#059669' : '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = caseStudy.video_viewed_at ? '#10b981' : '#2e83c2'}
                                     >
                                       <Video className="w-4 h-4" />
                                       <span>Video ansehen</span>
@@ -1498,7 +1598,10 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
-                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${ caseStudy.solution_pdf_url ? "bg-indigo-600 text-white hover:bg-indigo-700" : "bg-gray-300 text-gray-500 cursor-not-allowed" }`}
+                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${ caseStudy.solution_pdf_url ? "text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed" }`}
+                                      style={caseStudy.solution_pdf_url ? { backgroundColor: '#0a1f44' } : {}}
+                                      onMouseEnter={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#2e83c2' }}
+                                      onMouseLeave={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#0a1f44' }}
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>Klausur-Lösung</span>
@@ -1510,7 +1613,10 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
-                                      className="px-3 py-2 rounded-lg text-sm bg-orange-600 text-white hover:bg-orange-700 transition-colors flex items-center space-x-2"
+                                      className="px-3 py-2 rounded-lg text-sm text-white transition-colors flex items-center space-x-2"
+                                      style={{ backgroundColor: '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
                                     >
                                       <Table className="w-4 h-4" />
                                       <span>Korrekturbogen</span>
@@ -1541,11 +1647,10 @@ export const DashboardPageNew: React.FC = () => {
                                       e.stopPropagation()
                                       openFeedbackModal(caseStudy.id)
                                     }}
-                                    className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
-                                      studentFeedbacks.has(caseStudy.id)
-                                        ? 'bg-green-600 text-white hover:bg-green-700'
-                                        : 'bg-purple-600 text-white hover:bg-purple-700'
-                                    }`}
+                                    className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 text-white"
+                                    style={{ backgroundColor: studentFeedbacks.has(caseStudy.id) ? '#10b981' : '#0a1f44' }}
+                                    onMouseEnter={(e) => e.currentTarget.style.backgroundColor = studentFeedbacks.has(caseStudy.id) ? '#059669' : '#2e83c2'}
+                                    onMouseLeave={(e) => e.currentTarget.style.backgroundColor = studentFeedbacks.has(caseStudy.id) ? '#10b981' : '#0a1f44'}
                                   >
                                     <Edit3 className="w-4 h-4" />
                                     <span>
@@ -1559,7 +1664,10 @@ export const DashboardPageNew: React.FC = () => {
                                         e.stopPropagation()
                                         openPDFPreview(caseStudy.id)
                                       }}
-                                      className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 bg-orange-600 text-white hover:bg-orange-700"
+                                      className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 text-white"
+                                      style={{ backgroundColor: '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
                                     >
                                       <Eye className="w-4 h-4" />
                                       <span>Feedbackpapier anzeigen</span>
