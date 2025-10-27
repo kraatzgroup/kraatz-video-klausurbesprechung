@@ -51,6 +51,12 @@ export const MasterclassPage: React.FC = () => {
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
+  // Helper function to extract video number from title
+  const extractVideoNumber = (title: string): number => {
+    const match = title.match(/Video\s+(\d+)/)
+    return match ? parseInt(match[1], 10) : 999 // Default to high number for videos without numbers
+  }
+
   const fetchLessons = useCallback(async () => {
     try {
       console.log('Fetching video lessons...')
@@ -104,8 +110,8 @@ export const MasterclassPage: React.FC = () => {
             // If only one is in the array, prioritize it
             if (aIndex !== -1) return -1
             if (bIndex !== -1) return 1
-            // If neither is in the array, maintain original order
-            return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+            // If neither is in the array, use chronological order by video number
+            return extractVideoNumber(a.title) - extractVideoNumber(b.title)
           })
           
           console.log('Applied saved order to lessons')
@@ -113,20 +119,20 @@ export const MasterclassPage: React.FC = () => {
           // setVideoOrder(sortedLessons.map(lesson => lesson.id))
         } catch (e) {
           console.error('Error parsing saved video order:', e)
-          // Fallback to creation date order
-          const sortedByDate = [...fetchedLessons].sort((a, b) => 
-            new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+          // Fallback to chronological order by video number
+          const sortedByVideoNumber = [...fetchedLessons].sort((a, b) => 
+            extractVideoNumber(a.title) - extractVideoNumber(b.title)
           )
-          setLessons(sortedByDate)
-          // setVideoOrder(sortedByDate.map(lesson => lesson.id))
+          setLessons(sortedByVideoNumber)
+          // setVideoOrder(sortedByVideoNumber.map(lesson => lesson.id))
         }
       } else {
-        // No saved order or not admin - use creation date order
-        const sortedByDate = [...fetchedLessons].sort((a, b) => 
-          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        // No saved order or not admin - use chronological order by video number
+        const sortedByVideoNumber = [...fetchedLessons].sort((a, b) => 
+          extractVideoNumber(a.title) - extractVideoNumber(b.title)
         )
-        setLessons(sortedByDate)
-        // setVideoOrder(sortedByDate.map(lesson => lesson.id))
+        setLessons(sortedByVideoNumber)
+        // setVideoOrder(sortedByVideoNumber.map(lesson => lesson.id))
       }
     } catch (error) {
       console.error('Error fetching lessons:', error)
