@@ -1210,7 +1210,7 @@ export const DashboardPageNew: React.FC = () => {
                             <div className="mt-4 space-y-3 animate-in slide-in-from-top-2 duration-300">
                               <div className="bg-gray-50 p-3 rounded border border-gray-200">
                                 <p className="text-sm text-gray-800 font-medium mb-2">📚 Deine Unterlagen:</p>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-col gap-2">
                                   {caseStudy.case_study_material_url && (
                                     <a
                                       href={caseStudy.case_study_material_url}
@@ -1232,9 +1232,9 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="px-3 py-2 rounded-lg text-sm text-white transition-colors flex items-center space-x-2"
-                                      style={{ backgroundColor: '#0a1f44' }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      style={{ backgroundColor: '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <FileText className="w-4 h-4" />
@@ -1246,7 +1246,10 @@ export const DashboardPageNew: React.FC = () => {
                                       href={caseStudy.submission_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="px-3 py-2 rounded-lg text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                                      className="px-3 py-2 rounded-lg text-sm text-white transition-colors flex items-center space-x-2"
+                                      style={{ backgroundColor: '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <Upload className="w-4 h-4" />
@@ -1281,7 +1284,7 @@ export const DashboardPageNew: React.FC = () => {
                                     )}
                                   </div>
                                 )}
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-col gap-2">
                                   {caseStudy.video_correction_url && (
                                     <button
                                       onClick={(e) => {
@@ -1305,9 +1308,9 @@ export const DashboardPageNew: React.FC = () => {
                                       rel="noopener noreferrer"
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                       className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${ caseStudy.solution_pdf_url ? "text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed" }`}
-                                      style={caseStudy.solution_pdf_url ? { backgroundColor: '#0a1f44' } : {}}
-                                      onMouseEnter={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#2e83c2' }}
-                                      onMouseLeave={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#0a1f44' }}
+                                      style={caseStudy.solution_pdf_url ? { backgroundColor: '#2e83c2' } : {}}
+                                      onMouseEnter={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#0a1f44' }}
+                                      onMouseLeave={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#2e83c2' }}
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>Klausur-Lösung</span>
@@ -1337,11 +1340,10 @@ export const DashboardPageNew: React.FC = () => {
                                         e.stopPropagation()
                                         handlePdfDownload(caseStudy.id)
                                       }}
-                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
-                                        caseStudy.pdf_downloaded_at 
-                                          ? 'bg-green-600 text-white hover:bg-green-700' 
-                                          : 'bg-gray-600 text-white hover:bg-gray-700'
-                                      }`}
+                                      className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 text-white"
+                                      style={{ backgroundColor: caseStudy.pdf_downloaded_at ? '#10b981' : '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = caseStudy.pdf_downloaded_at ? '#059669' : '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = caseStudy.pdf_downloaded_at ? '#10b981' : '#2e83c2'}
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>Schriftliche Korrektur</span>
@@ -1504,7 +1506,7 @@ export const DashboardPageNew: React.FC = () => {
                             <div className="mt-4 space-y-3 animate-in slide-in-from-top-2 duration-300">
                               <div className="bg-gray-50 p-3 rounded border border-gray-200">
                                 <p className="text-sm text-gray-800 font-medium mb-2">📚 Deine Unterlagen:</p>
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-col gap-2">
                                   {caseStudy.case_study_material_url && (
                                     <a
                                       href={caseStudy.case_study_material_url}
@@ -1526,9 +1528,9 @@ export const DashboardPageNew: React.FC = () => {
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="px-3 py-2 rounded-lg text-sm text-white transition-colors flex items-center space-x-2"
-                                      style={{ backgroundColor: '#0a1f44' }}
-                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
-                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      style={{ backgroundColor: '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <FileText className="w-4 h-4" />
@@ -1540,7 +1542,10 @@ export const DashboardPageNew: React.FC = () => {
                                       href={caseStudy.submission_url}
                                       target="_blank"
                                       rel="noopener noreferrer"
-                                      className="px-3 py-2 rounded-lg text-sm bg-gray-600 text-white hover:bg-gray-700 transition-colors flex items-center space-x-2"
+                                      className="px-3 py-2 rounded-lg text-sm text-white transition-colors flex items-center space-x-2"
+                                      style={{ backgroundColor: '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = '#2e83c2'}
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                     >
                                       <Upload className="w-4 h-4" />
@@ -1575,7 +1580,7 @@ export const DashboardPageNew: React.FC = () => {
                                     )}
                                   </div>
                                 )}
-                                <div className="flex flex-wrap gap-2">
+                                <div className="flex flex-col gap-2">
                                   {caseStudy.video_correction_url && (
                                     <button
                                       onClick={(e) => {
@@ -1599,9 +1604,9 @@ export const DashboardPageNew: React.FC = () => {
                                       rel="noopener noreferrer"
                                       onClick={(e) => { e.stopPropagation(); if (!caseStudy.solution_pdf_url) e.preventDefault(); }}
                                       className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${ caseStudy.solution_pdf_url ? "text-white" : "bg-gray-300 text-gray-500 cursor-not-allowed" }`}
-                                      style={caseStudy.solution_pdf_url ? { backgroundColor: '#0a1f44' } : {}}
-                                      onMouseEnter={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#2e83c2' }}
-                                      onMouseLeave={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#0a1f44' }}
+                                      style={caseStudy.solution_pdf_url ? { backgroundColor: '#2e83c2' } : {}}
+                                      onMouseEnter={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#0a1f44' }}
+                                      onMouseLeave={(e) => { if (caseStudy.solution_pdf_url) e.currentTarget.style.backgroundColor = '#2e83c2' }}
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>Klausur-Lösung</span>
@@ -1631,11 +1636,10 @@ export const DashboardPageNew: React.FC = () => {
                                         e.stopPropagation()
                                         handlePdfDownload(caseStudy.id)
                                       }}
-                                      className={`px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 ${
-                                        caseStudy.pdf_downloaded_at 
-                                          ? 'bg-green-600 text-white hover:bg-green-700' 
-                                          : 'bg-gray-600 text-white hover:bg-gray-700'
-                                      }`}
+                                      className="px-3 py-2 rounded-lg text-sm transition-colors flex items-center space-x-2 text-white"
+                                      style={{ backgroundColor: caseStudy.pdf_downloaded_at ? '#10b981' : '#2e83c2' }}
+                                      onMouseEnter={(e) => e.currentTarget.style.backgroundColor = caseStudy.pdf_downloaded_at ? '#059669' : '#0a1f44'}
+                                      onMouseLeave={(e) => e.currentTarget.style.backgroundColor = caseStudy.pdf_downloaded_at ? '#10b981' : '#2e83c2'}
                                     >
                                       <FileText className="w-4 h-4" />
                                       <span>Schriftliche Korrektur</span>
