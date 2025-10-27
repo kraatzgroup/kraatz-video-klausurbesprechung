@@ -1210,7 +1210,7 @@ export const DashboardPageNew: React.FC = () => {
                             <div className="mt-4 space-y-3 animate-in slide-in-from-top-2 duration-300">
                               <div className="bg-gray-50 p-3 rounded border border-gray-200">
                                 <p className="text-sm text-gray-800 font-medium mb-2">📚 Deine Unterlagen:</p>
-                                <div className="flex flex-col gap-2">
+                                <div className="flex flex-col gap-2 max-w-xs">
                                   {caseStudy.case_study_material_url && (
                                     <a
                                       href={caseStudy.case_study_material_url}
@@ -1284,7 +1284,7 @@ export const DashboardPageNew: React.FC = () => {
                                     )}
                                   </div>
                                 )}
-                                <div className="flex flex-col gap-2">
+                                <div className="flex flex-col gap-2 max-w-xs">
                                   {caseStudy.video_correction_url && (
                                     <button
                                       onClick={(e) => {
@@ -1506,7 +1506,7 @@ export const DashboardPageNew: React.FC = () => {
                             <div className="mt-4 space-y-3 animate-in slide-in-from-top-2 duration-300">
                               <div className="bg-gray-50 p-3 rounded border border-gray-200">
                                 <p className="text-sm text-gray-800 font-medium mb-2">📚 Deine Unterlagen:</p>
-                                <div className="flex flex-col gap-2">
+                                <div className="flex flex-col gap-2 max-w-xs">
                                   {caseStudy.case_study_material_url && (
                                     <a
                                       href={caseStudy.case_study_material_url}
@@ -1580,7 +1580,7 @@ export const DashboardPageNew: React.FC = () => {
                                     )}
                                   </div>
                                 )}
-                                <div className="flex flex-col gap-2">
+                                <div className="flex flex-col gap-2 max-w-xs">
                                   {caseStudy.video_correction_url && (
                                     <button
                                       onClick={(e) => {
