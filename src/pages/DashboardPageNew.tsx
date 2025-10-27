@@ -7,6 +7,7 @@ import { NotificationService } from '../services/notificationService'
 import { FeedbackForm } from '../components/FeedbackForm'
 import { FeedbackPDFPreview } from '../components/FeedbackPDFPreview'
 import { previewFeedbackPDF, downloadFeedbackPDF } from '../utils/pdfGenerator'
+import { getGradeDescription } from '../utils/gradeUtils'
 
 interface UserProfile {
   account_credits: number
@@ -43,6 +44,9 @@ interface CaseStudyRequest {
     last_name: string | null;
     email: string;
   } | null;
+  // Grade information from submissions table
+  grade?: number | null;
+  grade_text?: string | null;
 }
 
 interface CaseStudyRating {
@@ -93,6 +97,7 @@ export const DashboardPageNew: React.FC = () => {
   const [showPDFPreview, setShowPDFPreview] = useState(false)
   const [currentPDFData, setCurrentPDFData] = useState<string>('')
   const [currentPDFFilename, setCurrentPDFFilename] = useState<string>('')
+  const [submissions, setSubmissions] = useState<Map<string, {grade: number | null, grade_text: string | null}>>(new Map())
 
   // Track video view
   const handleVideoView = useCallback(async (caseStudyId: string) => {
@@ -541,6 +546,28 @@ export const DashboardPageNew: React.FC = () => {
 
       if (caseStudyError) throw caseStudyError
       setCaseStudies(caseStudyData || [])
+
+      // Fetch submissions with grades
+      if (caseStudyData && caseStudyData.length > 0) {
+        const caseStudyIds = caseStudyData.map(cs => cs.id)
+        const { data: submissionData, error: submissionError } = await supabase
+          .from('submissions')
+          .select('case_study_request_id, grade, grade_text')
+          .in('case_study_request_id', caseStudyIds)
+
+        if (submissionError) {
+          console.error('Error fetching submissions:', submissionError)
+        } else {
+          const submissionsMap = new Map()
+          submissionData?.forEach(submission => {
+            submissionsMap.set(submission.case_study_request_id, {
+              grade: submission.grade,
+              grade_text: submission.grade_text
+            })
+          })
+          setSubmissions(submissionsMap)
+        }
+      }
 
     } catch (error) {
       console.error('Error fetching user data:', error)
@@ -1174,6 +1201,29 @@ export const DashboardPageNew: React.FC = () => {
                               
                               <div className="bg-white p-3 rounded border border-green-200">
                                 <p className="text-sm text-green-800 font-medium mb-2">🎓 Deine Korrekturen:</p>
+                                {/* Grade Display for New Corrections */}
+                                {submissions.has(caseStudy.id) && submissions.get(caseStudy.id)?.grade !== null && (
+                                  <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm font-medium text-blue-800">📊 Deine Note:</span>
+                                      <div className="text-right">
+                                        <span className="text-lg font-bold text-blue-900">
+                                          {submissions.get(caseStudy.id)?.grade} Punkte
+                                        </span>
+                                        {submissions.get(caseStudy.id)?.grade && (
+                                          <div className="text-xs text-blue-700">
+                                            ({getGradeDescription(submissions.get(caseStudy.id)?.grade)})
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {submissions.get(caseStudy.id)?.grade_text && (
+                                      <div className="mt-2 text-sm text-blue-700">
+                                        <strong>Bewertung:</strong> {submissions.get(caseStudy.id)?.grade_text}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                                 <div className="flex flex-wrap gap-2">
                                   {caseStudy.video_correction_url && (
                                     <button
@@ -1401,6 +1451,29 @@ export const DashboardPageNew: React.FC = () => {
                               
                               <div className="bg-white p-3 rounded border border-green-200">
                                 <p className="text-sm text-green-800 font-medium mb-2">🎓 Deine Korrekturen:</p>
+                                {/* Grade Display for Viewed Corrections */}
+                                {submissions.has(caseStudy.id) && submissions.get(caseStudy.id)?.grade !== null && (
+                                  <div className="mb-3 p-2 bg-blue-50 border border-blue-200 rounded">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-sm font-medium text-blue-800">📊 Deine Note:</span>
+                                      <div className="text-right">
+                                        <span className="text-lg font-bold text-blue-900">
+                                          {submissions.get(caseStudy.id)?.grade} Punkte
+                                        </span>
+                                        {submissions.get(caseStudy.id)?.grade && (
+                                          <div className="text-xs text-blue-700">
+                                            ({getGradeDescription(submissions.get(caseStudy.id)?.grade)})
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    {submissions.get(caseStudy.id)?.grade_text && (
+                                      <div className="mt-2 text-sm text-blue-700">
+                                        <strong>Bewertung:</strong> {submissions.get(caseStudy.id)?.grade_text}
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
                                 <div className="flex flex-wrap gap-2">
                                   {caseStudy.video_correction_url && (
                                     <button
