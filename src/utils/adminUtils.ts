@@ -45,19 +45,23 @@ export async function createUserAsAdmin(userData: CreateUserData) {
 
     console.log('✅ User created successfully via Edge Function:', data.message)
 
-    // Create welcome notification in database using regular supabase client
-    try {
-      console.log('📢 Creating welcome notification...')
-      await NotificationService.createWelcomeNotification(
-        data.user.id,
-        `${userData.firstName} ${userData.lastName}`,
-        userData.role,
-        userData.instructorLegalArea
-      )
-      console.log('✅ Welcome notification created successfully')
-    } catch (notificationError) {
-      console.warn('⚠️ Welcome notification error:', notificationError)
-      // Don't fail the user creation if notification fails
+    // Create welcome notification ONLY for instructor, springer, and admin roles - NOT for students
+    if (userData.role === 'instructor' || userData.role === 'springer' || userData.role === 'admin') {
+      try {
+        console.log(`📢 Creating welcome notification for ${userData.role}...`)
+        await NotificationService.createWelcomeNotification(
+          data.user.id,
+          `${userData.firstName} ${userData.lastName}`,
+          userData.role,
+          userData.instructorLegalArea
+        )
+        console.log('✅ Welcome notification created successfully')
+      } catch (notificationError) {
+        console.warn('⚠️ Welcome notification error:', notificationError)
+        // Don't fail the user creation if notification fails
+      }
+    } else {
+      console.log(`ℹ️ Skipping welcome notification for role: ${userData.role} (only sent to instructor/springer/admin)`)
     }
 
     return {

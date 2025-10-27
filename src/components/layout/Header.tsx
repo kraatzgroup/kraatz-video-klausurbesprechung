@@ -91,7 +91,7 @@ export const Header: React.FC = () => {
     <header className="bg-box-bg shadow-sm border-b border-gray-200">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
-          <div className="flex items-center">
+          <div className="flex items-center space-x-8">
             <Link to="/" className="flex items-center">
               <img 
                 src="/4 Kopie (1).png" 
@@ -99,36 +99,18 @@ export const Header: React.FC = () => {
                 className="h-8 sm:h-10 w-auto object-contain" 
               />
             </Link>
-          </div>
 
-          <nav className="hidden md:flex items-center space-x-8">
+            <nav className="hidden md:flex items-center space-x-8">
             {user && (
               <>
                 {userRole === 'admin' ? (
                   <>
                     <Link
-                      to="/admin"
+                      to="/admin/dashboard"
                       className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
                     >
                       <Users className="w-4 h-4" />
                       Admin Dashboard
-                    </Link>
-                    <Link
-                      to="/masterclass"
-                      className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
-                    >
-                      <Video className="w-4 h-4" />
-                      Masterclass verwalten
-                    </Link>
-                    <Link
-                      to="/admin?tab=ratings"
-                      onClick={() => {
-                        console.log('Bewertungen Dashboard Link clicked')
-                      }}
-                      className="text-text-secondary hover:text-primary transition-colors flex items-center gap-1"
-                    >
-                      <Star className="w-4 h-4" />
-                      Bewertungen Dashboard
                     </Link>
                     <Link
                       to="/chat"
@@ -186,7 +168,8 @@ export const Header: React.FC = () => {
                 )}
               </>
             )}
-          </nav>
+            </nav>
+          </div>
 
           <div className="flex items-center space-x-4">
             {user ? (

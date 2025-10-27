@@ -144,26 +144,30 @@ serve(async (req) => {
 
     console.log('✅ User record verified:', finalUser)
 
-    // Send welcome email
-    try {
-      console.log('📧 Sending welcome email...')
-      const { data: emailData, error: emailError } = await supabase.functions.invoke('send-welcome-email', {
-        body: {
-          email: email,
-          firstName: firstName,
-          lastName: lastName,
-          role: role,
-          legalArea: instructorLegalArea || null
-        }
-      })
+    // Send welcome email ONLY for instructor, springer, and admin roles - NOT for students
+    if (role === 'instructor' || role === 'springer' || role === 'admin') {
+      try {
+        console.log(`📧 Sending welcome email to ${role}...`)
+        const { data: emailData, error: emailError } = await supabase.functions.invoke('send-welcome-email', {
+          body: {
+            email: email,
+            firstName: firstName,
+            lastName: lastName,
+            role: role,
+            legalArea: instructorLegalArea || null
+          }
+        })
 
-      if (emailError) {
-        console.warn('⚠️ Welcome email failed:', emailError)
-      } else {
-        console.log('✅ Welcome email sent:', emailData)
+        if (emailError) {
+          console.warn('⚠️ Welcome email failed:', emailError)
+        } else {
+          console.log('✅ Welcome email sent:', emailData)
+        }
+      } catch (emailError) {
+        console.warn('⚠️ Welcome email error:', emailError)
       }
-    } catch (emailError) {
-      console.warn('⚠️ Welcome email error:', emailError)
+    } else {
+      console.log(`ℹ️ Skipping welcome email for role: ${role} (only sent to instructor/springer/admin)`)
     }
 
     return new Response(

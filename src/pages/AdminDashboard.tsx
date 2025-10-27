@@ -67,9 +67,10 @@ const AdminDashboard: React.FC = () => {
   const location = useLocation()
   const [users, setUsers] = useState<User[]>([])
   const [loading, setLoading] = useState(true)
-  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'ratings'>('overview')
+  const [activeTab, setActiveTab] = useState<'overview' | 'users' | 'ratings' | 'masterclass'>('overview')
   const [roleFilter, setRoleFilter] = useState<'all' | 'student' | 'instructor' | 'admin' | 'springer'>('all')
   const [ratings, setRatings] = useState<CaseStudyRating[]>([])
+  const [instructorFilter, setInstructorFilter] = useState<string>('all')
   
   // Modal states
   const [selectedUser, setSelectedUser] = useState<User | null>(null)
@@ -99,7 +100,14 @@ const AdminDashboard: React.FC = () => {
   useEffect(() => {
     fetchUsers()
     
-    // Handle navigation state
+    // Parse URL query parameter for tab
+    const searchParams = new URLSearchParams(location.search)
+    const tabParam = searchParams.get('tab')
+    if (tabParam === 'ratings' || tabParam === 'users' || tabParam === 'overview' || tabParam === 'masterclass') {
+      setActiveTab(tabParam as 'overview' | 'users' | 'ratings' | 'masterclass')
+    }
+    
+    // Handle navigation state (fallback)
     if (location.state?.activeTab) {
       setActiveTab(location.state.activeTab)
     }
@@ -162,9 +170,9 @@ const AdminDashboard: React.FC = () => {
           feedback,
           created_at,
           user_id,
-          case_study_request_id,
+          case_study_id,
           users!inner(id, first_name, last_name, email),
-          case_study_requests!inner(
+          case_study_requests!case_study_id(
             id,
             legal_area,
             sub_area,
@@ -182,7 +190,12 @@ const AdminDashboard: React.FC = () => {
         .order('created_at', { ascending: false })
         .limit(50)
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Error fetching ratings:', error)
+        throw error
+      }
+      
+      console.log('✅ Fetched ratings:', data)
       
       // Transform the data to match our interface
       const transformedData = (data || []).map((item: any) => ({
@@ -211,9 +224,10 @@ const AdminDashboard: React.FC = () => {
         }
       })) as CaseStudyRating[]
       
+      console.log('✅ Transformed ratings:', transformedData)
       setRatings(transformedData)
     } catch (error) {
-      console.error('Error fetching ratings:', error)
+      console.error('❌ Error fetching ratings:', error)
     }
   }
 
@@ -222,6 +236,81 @@ const AdminDashboard: React.FC = () => {
       day: '2-digit',
       month: '2-digit',
       year: 'numeric'
+    })
+  }
+
+  // Get all instructors from users list (not just those with ratings)
+  const getAllInstructors = () => {
+    return instructors.sort((a, b) => {
+      const nameA = `${a.first_name} ${a.last_name}`.toLowerCase()
+      const nameB = `${b.first_name} ${b.last_name}`.toLowerCase()
+      return nameA.localeCompare(nameB)
+    })
+  }
+
+  // Filter and group ratings by instructor
+  const getFilteredRatings = () => {
+    if (instructorFilter === 'all') {
+      return ratings
+    }
+    return ratings.filter(rating => 
+      rating.case_study_request?.assigned_instructor?.id === instructorFilter
+    )
+  }
+
+  // Group ratings by instructor with statistics (includes all instructors, even without ratings)
+  const getRatingsByInstructor = () => {
+    const grouped = new Map<string, {
+      instructor: any,
+      ratings: CaseStudyRating[],
+      averageRating: number,
+      totalRatings: number
+    }>()
+
+    // Get all instructors or filtered instructor
+    const instructorsToShow = instructorFilter === 'all' 
+      ? getAllInstructors() 
+      : instructors.filter(i => i.id === instructorFilter)
+
+    // Initialize all instructors with empty ratings
+    instructorsToShow.forEach(instructor => {
+      grouped.set(instructor.id, {
+        instructor,
+        ratings: [],
+        averageRating: 0,
+        totalRatings: 0
+      })
+    })
+
+    // Add ratings to instructors
+    const filteredRatings = getFilteredRatings()
+    filteredRatings.forEach(rating => {
+      const instructor = rating.case_study_request?.assigned_instructor
+      if (instructor && grouped.has(instructor.id)) {
+        const group = grouped.get(instructor.id)!
+        group.ratings.push(rating)
+      }
+    })
+
+    // Calculate averages
+    grouped.forEach(group => {
+      group.totalRatings = group.ratings.length
+      if (group.totalRatings > 0) {
+        group.averageRating = group.ratings.reduce((sum, r) => sum + r.rating, 0) / group.totalRatings
+      }
+    })
+
+    // Sort by average rating (descending), instructors without ratings at the end
+    return Array.from(grouped.values()).sort((a, b) => {
+      if (a.totalRatings === 0 && b.totalRatings === 0) {
+        // Both have no ratings, sort alphabetically
+        return `${a.instructor.first_name} ${a.instructor.last_name}`.localeCompare(
+          `${b.instructor.first_name} ${b.instructor.last_name}`
+        )
+      }
+      if (a.totalRatings === 0) return 1 // a has no ratings, put at end
+      if (b.totalRatings === 0) return -1 // b has no ratings, put at end
+      return b.averageRating - a.averageRating // Sort by rating
     })
   }
 
@@ -407,6 +496,19 @@ const AdminDashboard: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <Star className="w-4 h-4" />
                   Bewertungen
+                </div>
+              </button>
+              <button
+                onClick={() => window.location.href = '/masterclass'}
+                className={`py-2 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'masterclass'
+                    ? 'border-kraatz-primary text-kraatz-primary'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <FileText className="w-4 h-4" />
+                  Masterclass
                 </div>
               </button>
             </nav>
@@ -665,28 +767,104 @@ const AdminDashboard: React.FC = () => {
                   <h3 className="text-lg font-medium text-gray-900">Bewertungen & Feedback</h3>
                 </div>
 
-                <div className="bg-white shadow rounded-lg">
-                  <div className="px-6 py-4 border-b border-gray-200">
-                    <h2 className="text-lg font-medium text-gray-900">
-                      Aktuelle Bewertungen ({ratings.length})
-                    </h2>
+                {/* Instructor Filter */}
+                <div className="bg-white shadow rounded-lg p-4">
+                  <div className="flex items-center gap-4">
+                    <label htmlFor="instructorFilter" className="text-sm font-medium text-gray-700">
+                      Dozent filtern:
+                    </label>
+                    <select
+                      id="instructorFilter"
+                      value={instructorFilter}
+                      onChange={(e) => setInstructorFilter(e.target.value)}
+                      className="flex-1 max-w-md rounded-md border-gray-300 shadow-sm focus:border-kraatz-primary focus:ring-kraatz-primary"
+                    >
+                      <option value="all">Alle Dozenten</option>
+                      {getAllInstructors().map((instructor) => (
+                        <option key={instructor.id} value={instructor.id}>
+                          {instructor.first_name} {instructor.last_name} - {instructor.instructor_legal_area || 'Kein Rechtsgebiet'}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="divide-y divide-gray-200">
-                    {ratings.length === 0 ? (
-                      <div className="p-6 text-center">
-                        <Star className="mx-auto h-12 w-12 text-gray-400" />
-                        <h3 className="mt-2 text-sm font-medium text-gray-900">Keine Bewertungen</h3>
-                        <p className="mt-1 text-sm text-gray-500">
-                          Noch keine Bewertungen von Studenten erhalten.
-                        </p>
-                      </div>
-                    ) : (
-                      ratings.map((rating) => (
+                </div>
+
+                {/* Ratings grouped by instructor */}
+                <div className="space-y-6">
+                  {getRatingsByInstructor().length === 0 ? (
+                    <div className="bg-white shadow rounded-lg p-6 text-center">
+                      <Star className="mx-auto h-12 w-12 text-gray-400" />
+                      <h3 className="mt-2 text-sm font-medium text-gray-900">Keine Bewertungen</h3>
+                      <p className="mt-1 text-sm text-gray-500">
+                        {instructorFilter === 'all' 
+                          ? 'Noch keine Bewertungen von Studenten erhalten.'
+                          : 'Dieser Dozent hat noch keine Bewertungen erhalten.'}
+                      </p>
+                    </div>
+                  ) : (
+                    getRatingsByInstructor().map((group) => (
+                      <div key={group.instructor.id} className="bg-white shadow rounded-lg">
+                        {/* Instructor Header with Statistics */}
+                        <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-green-50">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-4">
+                              <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-green-500 flex items-center justify-center">
+                                <Shield className="h-6 w-6 text-white" />
+                              </div>
+                              <div>
+                                <h2 className="text-lg font-semibold text-gray-900">
+                                  {group.instructor.first_name} {group.instructor.last_name}
+                                </h2>
+                                <p className="text-sm text-gray-600">{group.instructor.email}</p>
+                                {group.instructor.instructor_legal_area && (
+                                  <p className="text-xs text-blue-600 font-medium mt-1">
+                                    {group.instructor.instructor_legal_area}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className="flex items-center gap-2 mb-1">
+                                {[1, 2, 3, 4, 5].map((star) => (
+                                  <Star
+                                    key={star}
+                                    className={`h-6 w-6 ${
+                                      star <= Math.round(group.averageRating)
+                                        ? 'text-yellow-400 fill-current'
+                                        : 'text-gray-300'
+                                    }`}
+                                  />
+                                ))}
+                              </div>
+                              <div className="text-center">
+                                <span className="text-2xl font-bold text-gray-900">
+                                  {group.averageRating.toFixed(1)}/5
+                                </span>
+                                <p className="text-xs text-gray-500">
+                                  Ø aus {group.totalRatings} Bewertung{group.totalRatings !== 1 ? 'en' : ''}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Individual Ratings for this instructor */}
+                        <div className="divide-y divide-gray-200">
+                          {group.totalRatings === 0 ? (
+                            <div className="p-6 text-center">
+                              <Star className="mx-auto h-12 w-12 text-gray-400" />
+                              <h3 className="mt-2 text-sm font-medium text-gray-900">Keine Bewertungen</h3>
+                              <p className="mt-1 text-sm text-gray-500">
+                                Dieser Dozent hat noch keine Bewertungen von Studenten erhalten.
+                              </p>
+                            </div>
+                          ) : (
+                            group.ratings.map((rating) => (
                         <div key={rating.id} className="p-6 border-l-4 border-l-blue-500">
                           <div className="flex items-start justify-between mb-4">
                             <div className="flex items-center">
                               <div className="flex-shrink-0">
-                                <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 flex items-center justify-center">
+                                <div className="h-12 w-12 rounded-full bg-gradient-to-r from-blue-500 to-blue-600 flex items-center justify-center">
                                   <Users className="h-6 w-6 text-white" />
                                 </div>
                               </div>
@@ -730,28 +908,28 @@ const AdminDashboard: React.FC = () => {
                           
                           {/* Klausur-Informationen */}
                           {rating.case_study_request && (
-                            <div className="bg-purple-50 rounded-lg p-4 mb-4">
-                              <h4 className="text-sm font-semibold text-purple-800 mb-3 flex items-center gap-2">
-                                <FileText className="w-4 h-4 text-purple-600" />
+                            <div className="bg-blue-50 rounded-lg p-4 mb-4">
+                              <h4 className="text-sm font-semibold text-blue-800 mb-3 flex items-center gap-2">
+                                <FileText className="w-4 h-4 text-blue-600" />
                                 Bewertete Klausur
                               </h4>
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                                 <div>
-                                  <span className="text-purple-600 font-medium">Rechtsgebiet:</span>
-                                  <div className="font-semibold text-purple-900">
+                                  <span className="text-blue-600 font-medium">Rechtsgebiet:</span>
+                                  <div className="font-semibold text-blue-900">
                                     {rating.case_study_request.legal_area}
                                   </div>
                                 </div>
                                 <div>
-                                  <span className="text-purple-600 font-medium">Teilgebiet:</span>
-                                  <div className="font-semibold text-purple-900">
+                                  <span className="text-blue-600 font-medium">Teilgebiet:</span>
+                                  <div className="font-semibold text-blue-900">
                                     {rating.case_study_request.sub_area}
                                   </div>
                                 </div>
                                 {rating.case_study_request.focus_area && (
                                   <div className="md:col-span-2">
-                                    <span className="text-purple-600 font-medium">Schwerpunkt:</span>
-                                    <div className="font-semibold text-purple-900">
+                                    <span className="text-blue-600 font-medium">Schwerpunkt:</span>
+                                    <div className="font-semibold text-blue-900">
                                       {rating.case_study_request.focus_area}
                                     </div>
                                   </div>
@@ -762,24 +940,24 @@ const AdminDashboard: React.FC = () => {
 
                           {/* Dozenten-Informationen */}
                           {rating.case_study_request?.assigned_instructor && (
-                            <div className="bg-indigo-50 rounded-lg p-4 mb-4">
-                              <h4 className="text-sm font-semibold text-indigo-800 mb-3 flex items-center gap-2">
-                                <Shield className="w-4 h-4 text-indigo-600" />
+                            <div className="bg-green-50 rounded-lg p-4 mb-4">
+                              <h4 className="text-sm font-semibold text-green-800 mb-3 flex items-center gap-2">
+                                <Shield className="w-4 h-4 text-green-600" />
                                 Bewerteter Dozent
                               </h4>
                               <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-indigo-200 flex items-center justify-center">
-                                  <Shield className="h-5 w-5 text-indigo-700" />
+                                <div className="h-10 w-10 rounded-full bg-green-200 flex items-center justify-center">
+                                  <Shield className="h-5 w-5 text-green-700" />
                                 </div>
                                 <div>
-                                  <div className="font-semibold text-indigo-900">
+                                  <div className="font-semibold text-green-900">
                                     {rating.case_study_request.assigned_instructor.first_name} {rating.case_study_request.assigned_instructor.last_name}
                                   </div>
-                                  <div className="text-sm text-indigo-700">
+                                  <div className="text-sm text-green-700">
                                     {rating.case_study_request.assigned_instructor.email}
                                   </div>
                                   {rating.case_study_request.assigned_instructor.instructor_legal_area && (
-                                    <div className="text-xs text-indigo-600 font-medium">
+                                    <div className="text-xs text-green-600 font-medium">
                                       Spezialisierung: {rating.case_study_request.assigned_instructor.instructor_legal_area}
                                     </div>
                                   )}
@@ -833,9 +1011,12 @@ const AdminDashboard: React.FC = () => {
                             </div>
                           )}
                         </div>
-                      ))
-                    )}
-                  </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             )}
