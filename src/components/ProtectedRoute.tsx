@@ -31,7 +31,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({
     // Redirect based on user's actual role
     if (userProfile?.role === 'student') {
       return <Navigate to="/dashboard" replace />
-    } else if (userProfile?.role === 'instructor') {
+    } else if (userProfile?.role === 'instructor' || userProfile?.role === 'springer') {
       return <Navigate to="/instructor" replace />
     } else {
       return <Navigate to="/admin/users" replace />

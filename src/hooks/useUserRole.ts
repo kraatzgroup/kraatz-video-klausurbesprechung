@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth } from '../contexts/AuthContext'
 import { supabase } from '../lib/supabase'
 
-export type UserRole = 'admin' | 'instructor' | 'student'
+export type UserRole = 'admin' | 'instructor' | 'student' | 'springer'
 
 interface UserProfile {
   role: UserRole
@@ -67,6 +67,7 @@ export const useUserRole = () => {
     const roleHierarchy: Record<UserRole, number> = {
       student: 1,
       instructor: 2,
+      springer: 2,
       admin: 3
     }
 
@@ -84,6 +85,7 @@ export const useUserRole = () => {
     canAccessRoute,
     isAdmin: userProfile?.role === 'admin',
     isInstructor: userProfile?.role === 'instructor',
-    isStudent: userProfile?.role === 'student'
+    isStudent: userProfile?.role === 'student',
+    isSpringer: userProfile?.role === 'springer'
   }
 }
