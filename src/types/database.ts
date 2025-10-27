@@ -80,6 +80,12 @@ export interface Database {
           correction_viewed_at: string | null
           solution_pdf_url: string | null
           instructor_id: string | null
+          assigned_instructor_id: string | null
+          previous_instructor_id: string | null
+          assignment_date: string | null
+          assignment_reason: string | null
+          federal_state: string | null
+          scoring_sheet_url: string | null
           created_at: string
           updated_at: string | null
         }
@@ -105,6 +111,12 @@ export interface Database {
           correction_viewed_at?: string | null
           solution_pdf_url?: string | null
           instructor_id?: string | null
+          assigned_instructor_id?: string | null
+          previous_instructor_id?: string | null
+          assignment_date?: string | null
+          assignment_reason?: string | null
+          federal_state?: string | null
+          scoring_sheet_url?: string | null
           created_at?: string
           updated_at?: string | null
         }
@@ -130,6 +142,12 @@ export interface Database {
           correction_viewed_at?: string | null
           solution_pdf_url?: string | null
           instructor_id?: string | null
+          assigned_instructor_id?: string | null
+          previous_instructor_id?: string | null
+          assignment_date?: string | null
+          assignment_reason?: string | null
+          federal_state?: string | null
+          scoring_sheet_url?: string | null
           created_at?: string
           updated_at?: string | null
         }

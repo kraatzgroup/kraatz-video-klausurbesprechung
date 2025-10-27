@@ -218,23 +218,52 @@ const AdminUserManagement: React.FC = () => {
     setDeleteLoading(true);
 
     try {
-      // First delete from users table
+      console.log('🗑️ Starting user deletion process for:', selectedUserForDeletion.email);
+
+      // Step 1: Clean up foreign key references
+      console.log('🔧 Step 1: Cleaning up foreign key references...');
+      
+      // Reassign any case studies assigned to this instructor to null (admin can reassign later)
+      const { error: reassignError } = await supabaseAdmin
+        .from('case_study_requests')
+        .update({ 
+          assigned_instructor_id: null,
+          updated_at: new Date().toISOString()
+        })
+        .eq('assigned_instructor_id', selectedUserForDeletion.id);
+
+      if (reassignError) {
+        console.warn('Warning: Could not reassign case studies:', reassignError);
+        // Continue anyway - might not have any assigned cases
+      } else {
+        console.log('✅ Case studies reassigned/unassigned');
+      }
+
+      // Step 2: Delete from users table
+      console.log('🔧 Step 2: Deleting from users table...');
       const { error: userError } = await supabaseAdmin
         .from('users')
         .delete()
         .eq('id', selectedUserForDeletion.id);
 
-      if (userError) throw userError;
+      if (userError) {
+        console.error('❌ Error deleting from users table:', userError);
+        throw new Error(`Database deletion failed: ${userError.message}`);
+      }
+      console.log('✅ User deleted from users table');
 
-      // Then delete from Supabase Auth
+      // Step 3: Delete from Supabase Auth
+      console.log('🔧 Step 3: Deleting from Supabase Auth...');
       const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
         selectedUserForDeletion.id
       );
 
       if (authError) {
-        console.warn('Warning: User deleted from database but auth deletion failed:', authError);
-        // Continue anyway as the main user record is deleted
+        console.error('❌ Auth deletion failed:', authError);
+        // This is more serious - the user record is gone but auth remains
+        throw new Error(`Auth deletion failed: ${authError.message}. User record deleted but auth account remains.`);
       }
+      console.log('✅ User deleted from Supabase Auth');
 
       alert(`Benutzer ${selectedUserForDeletion.first_name} ${selectedUserForDeletion.last_name} wurde erfolgreich gelöscht.`);
       
@@ -244,7 +273,20 @@ const AdminUserManagement: React.FC = () => {
 
     } catch (error) {
       console.error('Error deleting user:', error);
-      alert('Fehler beim Löschen des Benutzers. Bitte versuchen Sie es erneut.');
+      
+      // Provide more specific error messages
+      let errorMessage = 'Fehler beim Löschen des Benutzers.';
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      
+      if (errorMsg.includes('Database deletion failed')) {
+        errorMessage = 'Fehler beim Löschen aus der Datenbank. Der Benutzer hat möglicherweise noch zugewiesene Daten.';
+      } else if (errorMsg.includes('Auth deletion failed')) {
+        errorMessage = 'Benutzer wurde aus der Datenbank gelöscht, aber das Auth-Konto konnte nicht entfernt werden. Kontaktieren Sie den Support.';
+      } else if (errorMsg.includes('Database error deleting user')) {
+        errorMessage = 'Datenbank-Constraint-Fehler. Der Benutzer hat noch verknüpfte Daten, die eine Löschung verhindern.';
+      }
+      
+      alert(`${errorMessage}\n\nTechnische Details: ${errorMsg}`);
     } finally {
       setDeleteLoading(false);
     }

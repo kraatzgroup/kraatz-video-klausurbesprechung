@@ -44,6 +44,10 @@ interface CaseStudyRequest {
   federal_state?: string;
   solution_pdf_url?: string;
   scoring_sheet_url?: string;
+  assigned_instructor_id?: string;
+  previous_instructor_id?: string;
+  assignment_date?: string;
+  assignment_reason?: string;
   created_at: string;
   updated_at: string;
   user?: {
@@ -124,10 +128,21 @@ const InstructorDashboard: React.FC = () => {
         `);
 
       // Apply filtering based on user role
-      if (currentUser?.role === 'instructor' || currentUser?.role === 'springer') {
-        // Instructors and Springer only see cases assigned to them specifically
-        query = query.eq('assigned_instructor_id', currentUser.id);
-        console.log(`🎯 Filtering cases for ${currentUser.role} - showing only assigned cases for user ID: ${currentUser.id}`);
+      if (currentUser?.role === 'instructor') {
+        // Instructors see cases from their legal area AND cases specifically assigned to them
+        // This ensures they see their cases even during vacation mode transfers
+        if (currentUser.instructor_legal_area) {
+          query = query.or(`legal_area.eq.${currentUser.instructor_legal_area},assigned_instructor_id.eq.${user?.id},previous_instructor_id.eq.${user?.id}`);
+          console.log(`🎯 Filtering cases for instructor - legal area: ${currentUser.instructor_legal_area}, user ID: ${user?.id}`);
+        } else {
+          // Fallback: show only assigned cases if no legal area specified
+          query = query.or(`assigned_instructor_id.eq.${user?.id},previous_instructor_id.eq.${user?.id}`);
+          console.log(`🎯 Filtering cases for instructor - user ID only: ${user?.id}`);
+        }
+      } else if (currentUser?.role === 'springer') {
+        // Springer only see cases currently assigned to them (during vacation coverage)
+        query = query.eq('assigned_instructor_id', user?.id);
+        console.log(`🎯 Filtering cases for springer - showing only assigned cases for user ID: ${user?.id}`);
       } else if (currentUser?.role === 'admin') {
         // Admins see all cases (no filtering)
         console.log('👑 Admin user - showing all cases');
