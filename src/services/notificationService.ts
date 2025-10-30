@@ -150,6 +150,52 @@ export class NotificationService {
     })
   }
 
+  static async notifyAdminsOfNewChatMessage(
+    senderName: string,
+    senderRole: string,
+    messageContent: string,
+    conversationId: string
+  ) {
+    try {
+      // Get all admin users
+      const { data: admins, error } = await supabase
+        .from('users')
+        .select('id')
+        .eq('role', 'admin')
+
+      if (error) {
+        console.error('❌ Error fetching admin users:', error)
+        return { success: false, error }
+      }
+
+      if (!admins || admins.length === 0) {
+        console.log('⚠️ No admin users found to notify')
+        return { success: true, message: 'No admins to notify' }
+      }
+
+      console.log(`🔔 Notifying ${admins.length} admin(s) of new chat message`)
+
+      // Create notifications for all admins
+      const notificationPromises = admins.map(admin =>
+        this.createNotification({
+          userId: admin.id,
+          title: '💬 Neue Chat-Nachricht',
+          message: `${senderName} (${senderRole}): ${messageContent.length > 50 ? messageContent.substring(0, 50) + '...' : messageContent}`,
+          type: 'info',
+          relatedCaseStudyId: conversationId
+        })
+      )
+
+      await Promise.all(notificationPromises)
+      console.log(`✅ Successfully notified ${admins.length} admin(s)`)
+
+      return { success: true, notifiedCount: admins.length }
+    } catch (error) {
+      console.error('❌ Error notifying admins of chat message:', error)
+      return { success: false, error }
+    }
+  }
+
   static async createWelcomeNotification(
     userId: string,
     userName: string,

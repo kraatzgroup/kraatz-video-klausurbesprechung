@@ -336,6 +336,26 @@ export const useMessages = (conversationId: string | null) => {
 
           await Promise.all(notificationPromises);
           console.log('🔔 Chat notifications processed for', participants.length, 'participants');
+          
+          // Also notify all admins of the new chat message
+          try {
+            console.log('🔔 Notifying admins of new chat message...');
+            const senderRoleDisplay = senderData.role === 'instructor' ? 'Dozent' : 
+                                     senderData.role === 'springer' ? 'Springer' : 
+                                     senderData.role === 'admin' ? 'Admin' : 
+                                     'Student';
+            
+            await NotificationService.notifyAdminsOfNewChatMessage(
+              senderName,
+              senderRoleDisplay,
+              content.trim(),
+              conversationId
+            );
+            console.log('✅ Admin notifications sent successfully');
+          } catch (adminNotificationError) {
+            console.error('❌ Error notifying admins:', adminNotificationError);
+            // Don't fail the message send if admin notifications fail
+          }
         }
       } catch (notificationError) {
         console.error('❌ Error creating chat notifications:', notificationError);

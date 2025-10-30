@@ -36,6 +36,8 @@ export const ResultsPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [totalSubmissions, setTotalSubmissions] = useState<number>(0)
   const [chartData, setChartData] = useState<any[]>([])
+  const [selectedLegalArea, setSelectedLegalArea] = useState<string>('all')
+  const [filteredResults, setFilteredResults] = useState<SubmissionResult[]>([])
 
   useEffect(() => {
     if (user) {
@@ -43,6 +45,15 @@ export const ResultsPage: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
+
+  useEffect(() => {
+    // Filter results when legal area selection changes
+    if (selectedLegalArea === 'all') {
+      setFilteredResults(results)
+    } else {
+      setFilteredResults(results.filter(r => r.legal_area === selectedLegalArea))
+    }
+  }, [selectedLegalArea, results])
 
   const fetchResults = async () => {
     try {
@@ -86,6 +97,7 @@ export const ResultsPage: React.FC = () => {
       }))
 
       setResults(formattedResults)
+      setFilteredResults(formattedResults)
       calculateStatistics(formattedResults)
       prepareChartData(formattedResults)
     } catch (error) {
@@ -245,9 +257,43 @@ export const ResultsPage: React.FC = () => {
         <h1 className="text-3xl font-bold text-text-primary mb-4">
           Meine Klausurergebnisse
         </h1>
-        <p className="text-text-secondary">
+        <p className="text-text-secondary mb-6">
           Verfolge Deinen Fortschritt und analysiere Deine Leistung nach Rechtsgebieten
         </p>
+        
+        {/* Legal Area Filter */}
+        {legalAreaStats.length > 1 && (
+          <div className="flex justify-center items-center space-x-3">
+            <span className="text-sm text-text-secondary font-medium">Rechtsgebiet:</span>
+            <div className="flex space-x-2">
+              <button
+                onClick={() => setSelectedLegalArea('all')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                  selectedLegalArea === 'all'
+                    ? 'bg-primary text-white'
+                    : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                }`}
+              >
+                Alle Gebiete
+              </button>
+              {legalAreaStats.map(stat => (
+                <button
+                  key={stat.area}
+                  onClick={() => setSelectedLegalArea(stat.area)}
+                  className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    selectedLegalArea === stat.area
+                      ? stat.area === 'Zivilrecht' ? 'bg-blue-600 text-white' :
+                        stat.area === 'Strafrecht' ? 'bg-red-600 text-white' :
+                        'bg-green-600 text-white'
+                      : 'bg-gray-100 text-text-secondary hover:bg-gray-200'
+                  }`}
+                >
+                  {stat.area}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Performance Overview - Deine Ergebnisse */}
@@ -382,29 +428,54 @@ export const ResultsPage: React.FC = () => {
 
       {/* Individual Exam Cards - Deine Klausuren */}
       <div className="bg-box-bg rounded-lg p-6">
-        <h2 className="text-xl font-semibold text-text-primary mb-6">
-          Deine Klausuren
-        </h2>
+        <div className="flex items-center justify-between mb-6">
+          <h2 className="text-xl font-semibold text-text-primary">
+            Deine Klausuren {selectedLegalArea !== 'all' && `- ${selectedLegalArea}`}
+          </h2>
+          <span className="text-sm text-text-secondary">
+            {filteredResults.length} {filteredResults.length === 1 ? 'Klausur' : 'Klausuren'}
+          </span>
+        </div>
         <div className="space-y-4">
-          {results.map((result, index) => (
-            <div key={result.id} className="bg-white rounded-lg p-4 border border-gray-200 shadow-sm">
+          {filteredResults.map((result, index) => (
+            <div key={result.id} className={`bg-white rounded-lg p-4 border-l-4 shadow-sm ${
+              result.legal_area === 'Zivilrecht' ? 'border-l-blue-600 border-t border-r border-b border-gray-200' :
+              result.legal_area === 'Strafrecht' ? 'border-l-red-600 border-t border-r border-b border-gray-200' :
+              'border-l-green-600 border-t border-r border-b border-gray-200'
+            }`}>
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-4">
-                  <div className="flex items-center justify-center w-10 h-10 bg-blue-100 text-blue-600 rounded-full font-semibold">
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-full font-semibold ${
+                    result.legal_area === 'Zivilrecht' ? 'bg-blue-100 text-blue-600' :
+                    result.legal_area === 'Strafrecht' ? 'bg-red-100 text-red-600' :
+                    'bg-green-100 text-green-600'
+                  }`}>
                     {index + 1}
                   </div>
                   <div className="flex-1">
-                    <h3 className="font-medium text-text-primary text-lg">
-                      Klausur {index + 1}
-                    </h3>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="font-medium text-text-primary text-lg">
+                        Klausur {index + 1}
+                      </h3>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        result.legal_area === 'Zivilrecht' ? 'bg-blue-100 text-blue-800' :
+                        result.legal_area === 'Strafrecht' ? 'bg-red-100 text-red-800' :
+                        'bg-green-100 text-green-800'
+                      }`}>
+                        {result.legal_area}
+                      </span>
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${getGradeBadgeColor(result.grade)}`}>
+                        {formatGrade(result.grade)} Punkte
+                      </span>
+                    </div>
                     <p className="text-text-primary font-medium">
-                      {result.legal_area} - {result.sub_area}
+                      {result.sub_area}
                     </p>
                     <p className="text-sm text-text-secondary">
                       Schwerpunkt: {result.focus_area}
                     </p>
                     <p className="text-xs text-text-secondary">
-                      Angefordert: {formatDate(result.submitted_at)}
+                      Korrigiert: {formatDate(result.corrected_at)}
                     </p>
                   </div>
                 </div>
@@ -430,43 +501,62 @@ export const ResultsPage: React.FC = () => {
       {/* Legal Area Statistics */}
       <div className="bg-box-bg rounded-lg p-6">
         <h2 className="text-xl font-semibold text-text-primary mb-6">
-          Statistik nach Rechtsgebieten
+          Detaillierte Statistik nach Rechtsgebieten
         </h2>
-        <div className="space-y-4">
+        <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-3">
           {legalAreaStats.map((stat) => (
-            <div key={stat.area} className="border border-gray-200 rounded-lg p-4">
-              <div className="flex justify-between items-center mb-3">
-                <h3 className="font-medium text-text-primary">{stat.area}</h3>
+            <div key={stat.area} className={`border-l-4 rounded-lg p-5 shadow-sm bg-white ${
+              stat.area === 'Zivilrecht' ? 'border-l-blue-600' :
+              stat.area === 'Strafrecht' ? 'border-l-red-600' :
+              'border-l-green-600'
+            }`}>
+              <div className="flex justify-between items-center mb-4">
+                <h3 className={`font-bold text-lg ${
+                  stat.area === 'Zivilrecht' ? 'text-blue-700' :
+                  stat.area === 'Strafrecht' ? 'text-red-700' :
+                  'text-green-700'
+                }`}>{stat.area}</h3>
                 <div className="flex items-center space-x-2">
-                  {stat.trend === 'up' && <TrendingUp className="w-5 h-5 text-green-500" />}
-                  {stat.trend === 'down' && <TrendingDown className="w-5 h-5 text-red-500" />}
-                  {stat.trend === 'stable' && <div className="w-5 h-5" />}
-                  <span className={`text-sm ${getGradeColor(stat.average_grade)}`}>
-                    ⌀ {formatGrade(stat.average_grade)} Punkte
-                  </span>
+                  {stat.trend === 'up' && <TrendingUp className="w-6 h-6 text-green-500" />}
+                  {stat.trend === 'down' && <TrendingDown className="w-6 h-6 text-red-500" />}
+                  {stat.trend === 'stable' && <div className="w-6 h-6" />}
                 </div>
               </div>
               
-              <div className="grid grid-cols-3 gap-4 text-sm">
-                <div>
-                  <p className="text-text-secondary">Klausuren</p>
-                  <p className="font-medium">{stat.total_submissions}</p>
-                </div>
-                <div>
-                  <p className="text-text-secondary">Letzte Note</p>
-                  <p className={`font-medium ${getGradeColor(stat.latest_grade)}`}>
-                    {formatGrade(stat.latest_grade)}
+              <div className="space-y-3">
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-text-secondary mb-1">Durchschnitt</p>
+                  <p className={`text-2xl font-bold ${getGradeColor(stat.average_grade)}`}>
+                    {formatGrade(stat.average_grade)} Punkte
                   </p>
                 </div>
-                <div>
-                  <p className="text-text-secondary">Tendenz</p>
-                  <p className={`font-medium ${
-                    stat.trend === 'up' ? 'text-green-600' : 
-                    stat.trend === 'down' ? 'text-red-600' : 'text-gray-600'
-                  }`}>
-                    {stat.trend === 'up' ? 'Verbesserung' : 
-                     stat.trend === 'down' ? 'Verschlechterung' : 'Stabil'}
-                  </p>
+                
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-text-secondary mb-1">Klausuren</p>
+                    <p className="text-lg font-bold text-text-primary">{stat.total_submissions}</p>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <p className="text-xs text-text-secondary mb-1">Letzte Note</p>
+                    <p className={`text-lg font-bold ${getGradeColor(stat.latest_grade)}`}>
+                      {formatGrade(stat.latest_grade)}
+                    </p>
+                  </div>
+                </div>
+                
+                <div className="bg-gray-50 rounded-lg p-3">
+                  <p className="text-xs text-text-secondary mb-1">Tendenz</p>
+                  <div className="flex items-center space-x-2">
+                    {stat.trend === 'up' && <TrendingUp className="w-4 h-4 text-green-500" />}
+                    {stat.trend === 'down' && <TrendingDown className="w-4 h-4 text-red-500" />}
+                    <p className={`text-sm font-medium ${
+                      stat.trend === 'up' ? 'text-green-600' : 
+                      stat.trend === 'down' ? 'text-red-600' : 'text-gray-600'
+                    }`}>
+                      {stat.trend === 'up' ? '📈 Verbesserung' : 
+                       stat.trend === 'down' ? '📉 Verschlechterung' : '➡️ Stabil'}
+                    </p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -477,16 +567,27 @@ export const ResultsPage: React.FC = () => {
       {/* Recent Results */}
       <div className="bg-box-bg rounded-lg p-6">
         <h2 className="text-xl font-semibold text-text-primary mb-6">
-          Aktuelle Ergebnisse
+          Letzte 10 Ergebnisse {selectedLegalArea !== 'all' && `- ${selectedLegalArea}`}
         </h2>
-        <div className="space-y-4">
-          {results.slice(0, 10).map((result) => (
-            <div key={result.id} className="border border-gray-200 rounded-lg p-4">
+        <div className="space-y-3">
+          {filteredResults.slice(0, 10).map((result) => (
+            <div key={result.id} className={`border-l-4 rounded-lg p-4 bg-white shadow-sm ${
+              result.legal_area === 'Zivilrecht' ? 'border-l-blue-600' :
+              result.legal_area === 'Strafrecht' ? 'border-l-red-600' :
+              'border-l-green-600'
+            }`}>
               <div className="flex justify-between items-start">
                 <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      result.legal_area === 'Zivilrecht' ? 'bg-blue-100 text-blue-800' :
+                      result.legal_area === 'Strafrecht' ? 'bg-red-100 text-red-800' :
+                      'bg-green-100 text-green-800'
+                    }`}>
+                      {result.legal_area}
+                    </span>
                     <h3 className="font-medium text-text-primary">
-                      {result.legal_area} - {result.sub_area}
+                      {result.sub_area}
                     </h3>
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${getGradeBadgeColor(result.grade)}`}>
                       {formatGrade(result.grade)} Punkte
