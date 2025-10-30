@@ -220,26 +220,21 @@ const AdminUserManagement: React.FC = () => {
     try {
       console.log('🗑️ Starting user deletion process for:', selectedUserForDeletion.email);
 
-      // Step 1: Clean up foreign key references
-      console.log('🔧 Step 1: Cleaning up foreign key references...');
-      
-      // Reassign any case studies assigned to this instructor to null (admin can reassign later)
-      const { error: reassignError } = await supabaseAdmin
-        .from('case_study_requests')
-        .update({ 
-          assigned_instructor_id: null,
-          updated_at: new Date().toISOString()
-        })
-        .eq('assigned_instructor_id', selectedUserForDeletion.id);
+      // Step 1: Delete from Supabase Auth first
+      console.log('🔧 Step 1: Deleting from Supabase Auth...');
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
+        selectedUserForDeletion.id
+      );
 
-      if (reassignError) {
-        console.warn('Warning: Could not reassign case studies:', reassignError);
-        // Continue anyway - might not have any assigned cases
-      } else {
-        console.log('✅ Case studies reassigned/unassigned');
+      if (authError) {
+        console.error('❌ Auth deletion failed:', authError);
+        throw new Error(`Auth deletion failed: ${authError.message}`);
       }
+      console.log('✅ User deleted from Supabase Auth');
 
-      // Step 2: Delete from users table
+      // Step 2: Delete from users table (CASCADE will handle related records)
+      // Foreign keys with ON DELETE SET NULL will automatically unassign cases
+      // Foreign keys with ON DELETE CASCADE will automatically delete related records
       console.log('🔧 Step 2: Deleting from users table...');
       const { error: userError } = await supabaseAdmin
         .from('users')
@@ -251,19 +246,7 @@ const AdminUserManagement: React.FC = () => {
         throw new Error(`Database deletion failed: ${userError.message}`);
       }
       console.log('✅ User deleted from users table');
-
-      // Step 3: Delete from Supabase Auth
-      console.log('🔧 Step 3: Deleting from Supabase Auth...');
-      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(
-        selectedUserForDeletion.id
-      );
-
-      if (authError) {
-        console.error('❌ Auth deletion failed:', authError);
-        // This is more serious - the user record is gone but auth remains
-        throw new Error(`Auth deletion failed: ${authError.message}. User record deleted but auth account remains.`);
-      }
-      console.log('✅ User deleted from Supabase Auth');
+      console.log('✅ Related case assignments automatically unassigned (set to NULL)');
 
       alert(`Benutzer ${selectedUserForDeletion.first_name} ${selectedUserForDeletion.last_name} wurde erfolgreich gelöscht.`);
       
